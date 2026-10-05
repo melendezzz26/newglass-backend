@@ -103,6 +103,9 @@ class Retazo(Base):
     area_mm2: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     estado: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     fecha_registro: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    id_ejecucion_origen: Mapped[int | None] = mapped_column(
+        ForeignKey("ejecuciones_optimizacion.id_ejecucion"), nullable=True
+    )
 
     id_tipo_vidrio: Mapped[int] = mapped_column(
         ForeignKey("tipos_vidrio.id_tipo_vidrio"),
@@ -194,28 +197,80 @@ class Configuracion(Base):
     fecha_creacion: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class Optimizacion(Base):
+    __tablename__ = "optimizaciones"
+    __table_args__ = (
+        CheckConstraint(
+            "estado IN ('EN_EJECUCION', 'COMPLETADA', 'SIN_SOLUCION', 'FALLIDA')",
+            name="ck_optimizaciones_estado",
+        ),
+        Index("ix_optimizaciones_pedido_fecha", "id_pedido", "fecha_inicio"),
+    )
+
+    id_optimizacion: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fecha_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    estado: Mapped[str] = mapped_column(String(20), nullable=False)
+    id_pedido: Mapped[int] = mapped_column(ForeignKey("pedidos.id_pedido"), nullable=False)
+    id_configuracion: Mapped[int] = mapped_column(
+        ForeignKey("configuraciones.id_configuracion"), nullable=False
+    )
+    id_usuario_ejecutor: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"), nullable=False)
+    criterio_seleccion_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    id_ejecucion_seleccionada: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "ejecuciones_optimizacion.id_ejecucion",
+            name="fk_optimizaciones_ejecucion_seleccionada",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
+
+
 class EjecucionOptimizacion(Base):
     __tablename__ = "ejecuciones_optimizacion"
+    __table_args__ = (
+        CheckConstraint("metodo IN ('FF', 'BF', 'WF')", name="ck_ejecuciones_metodo"),
+        CheckConstraint(
+            "estado IN ('EN_EJECUCION', 'COMPLETADA', 'FALLIDA')",
+            name="ck_ejecuciones_estado",
+        ),
+        UniqueConstraint("id_optimizacion", "metodo", name="ejecuciones_optimizacion_metodo_key"),
+    )
 
     id_ejecucion: Mapped[int] = mapped_column(Integer, primary_key=True)
-    metodo: Mapped[str] = mapped_column(String(30), nullable=False)
-    fecha_ejecucion: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.now
+    id_optimizacion: Mapped[int] = mapped_column(
+        ForeignKey(
+            "optimizaciones.id_optimizacion",
+            name="ejecuciones_optimizacion_id_optimizacion_fkey",
+        ), nullable=False
     )
-    tiempo_computacional: Mapped[float | None] = mapped_column(Float)
-    seleccionada: Mapped[bool] = mapped_column(Boolean, default=False)
+    metodo: Mapped[str] = mapped_column(String(10), nullable=False)
+    fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fecha_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    estado: Mapped[str] = mapped_column(String(20), nullable=False)
+    completo: Mapped[bool] = mapped_column(Boolean, nullable=False)
     patron_resultado: Mapped[dict | None] = mapped_column(JSONB)
 
-    id_pedido: Mapped[int] = mapped_column(
-        ForeignKey("pedidos.id_pedido"),
-        nullable=False
+
+class MaterialUtilizado(Base):
+    __tablename__ = "materiales_utilizados"
+    __table_args__ = (
+        CheckConstraint("cantidad_utilizada > 0", name="ck_materiales_cantidad"),
+        CheckConstraint(
+            "(id_plancha IS NOT NULL) <> (id_retazo IS NOT NULL)",
+            name="ck_materiales_fuente",
+        ),
+        Index("ix_materiales_ejecucion", "id_ejecucion"),
     )
 
-    id_configuracion: Mapped[int] = mapped_column(
-        ForeignKey("configuraciones.id_configuracion"),
-        nullable=False
+    id_material_utilizado: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_ejecucion: Mapped[int] = mapped_column(
+        ForeignKey("ejecuciones_optimizacion.id_ejecucion"), nullable=False
     )
+    id_plancha: Mapped[int | None] = mapped_column(ForeignKey("planchas.id_plancha"), nullable=True)
+    id_retazo: Mapped[int | None] = mapped_column(ForeignKey("retazos.id_retazo"), nullable=True)
+    cantidad_utilizada: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 
 
 class MetricaEjecucion(Base):
