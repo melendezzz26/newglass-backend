@@ -3,7 +3,7 @@ import asyncio
 import json
 from decimal import Decimal as D
 from functools import partial
-from threading import Event
+from threading import Event, current_thread
 
 import pytest
 from sqlalchemy import event, func, select
@@ -75,7 +75,7 @@ def test_timeout_during_geometric_work_is_failed_not_no_fit(
 
     def raster(self, *args, **kwargs):
         mask = original(self, *args, **kwargs)
-        if phase == 'base' or args[0]['type'] == 'POLIGONO_CONVEXO':
+        if current_thread().name.startswith('optimization-') and (phase == 'base' or args[0]['type'] == 'POLIGONO_CONVEXO'):
             now[0] = 2.0
         return mask
 
@@ -103,7 +103,8 @@ def test_base_memory_failure_is_durable_technical_failure_without_inventory_chan
         run_api, session_factory, monkeypatch):
     from app.modules.optimization.domain import run_geometry
     client, ids, headers, *_ = run_api
-    monkeypatch.setattr(run_geometry, 'RasterCache', lambda: RasterCache(max_cache_bytes=1))
+    monkeypatch.setattr(run_geometry, 'RasterCache', lambda: RasterCache(max_cache_bytes=1)
+                        if current_thread().name.startswith('optimization-') else RasterCache())
     response = client.post(BASE, json={'order_ids': ids}, headers=headers)
     events = parse(response)
     assert [entry['event'] for entry in events] == ['optimization_started', 'optimization_failed']
