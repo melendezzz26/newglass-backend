@@ -1,0 +1,87 @@
+name: EN-REPO-001 - Restaurar dependencias de pruebas backend
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.event.head_commit.message == 'ci(EN-REPO-001): restaurar dependencias de pruebas del backend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout backend independiente
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Checkout de archivos experimentales originales
+        uses: actions/checkout@v7
+        with:
+          repository: melendezzz26/optimizador-vidrio
+          ref: 137f2ccd7a542c73e99fd40a792287595cdcd9c8
+          path: historical-source
+          persist-credentials: false
+      - name: Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Recuperar las dependencias que estaban fuera de backend/
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p experiments docs/spikes/sp-005-heuristica-m5 docs/evidence/sprint-02/TA-043/B03
+          cp -a historical-source/experiments/optimization experiments/
+          cp -a historical-source/docs/spikes/sp-005-heuristica-m5/. docs/spikes/sp-005-heuristica-m5/
+          cp historical-source/docs/evidence/sprint-02/TA-043/B03/adapter-validation.json docs/evidence/sprint-02/TA-043/B03/
+          python - <<'PY'
+          from pathlib import Path
+          fixes = 0
+          for path in Path('tests/unit/optimization').rglob('*.py'):
+              old = path.read_text(encoding='utf-8')
+              new = old.replace('Path(__file__).resolve().parents[4]', 'Path(__file__).resolve().parents[3]')
+              if new != old:
+                  path.write_text(new, encoding='utf-8')
+                  fixes += 1
+          for file, a, b in [
+              ('tests/optimization/final_audit_support.py', 'parents[3]', 'parents[2]'),
+              ('tests/unit/test_backend_failure_summary.py', 'parents[3]', 'parents[2]'),
+          ]:
+              path = Path(file)
+              old = path.read_text(encoding='utf-8')
+              if a not in old:
+                  raise SystemExit(f'Ruta histórica no encontrada: {path}')
+              path.write_text(old.replace(a,b), encoding='utf-8')
+              fixes += 1
+          if fixes < 10:
+              raise SystemExit(f'Solo {fixes} rutas adaptadas; se esperaba >=10')
+          print('Dependencias de test backend copiadas y rutas adaptadas:', fixes)
+          PY
+          # El origen temporal solo sirve para recuperación: no formará parte del repositorio.
+          rm -rf historical-source
+          git status --short | head -50
+      - name: Verificar recolección real de pruebas
+        shell: bash
+        env:
+          NEWGLASS_REQUIRE_POSTGRES: '1'
+          PYTHON_DOTENV_DISABLED: '1'
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements.txt
+          python -m pytest tests --collect-only -q --tb=short
+      - name: Commit de reparación con perfil Git del responsable
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'Wilder Fabricio'
+          git config user.email 'wmelendezq1@upao.edu.pe'
+          git add experiments/optimization docs/spikes/sp-005-heuristica-m5 docs/evidence/sprint-02/TA-043/B03/adapter-validation.json tests
+          git diff --cached --stat
+          git commit -m 'fix(EN-REPO-001): restaurar fixtures experimentales y ajustar rutas de pruebas'
+          test "$(git log -1 --format='%an <%ae>')" = "Wilder Fabricio <wmelendezq1@upao.edu.pe>"
+          gh auth setup-git
+          git push origin HEAD:main
