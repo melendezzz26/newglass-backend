@@ -21,7 +21,7 @@ from app.modules.optimization.domain.rotation import RasterPreparationError
 from tests.unit.optimization.test_beam_memory import large_problem
 from tests.unit.optimization.test_first_fit import config, piece, problem, stock
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("experimental_cases", ROOT / "experiments/optimization/loader.py")
 loader = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(loader)

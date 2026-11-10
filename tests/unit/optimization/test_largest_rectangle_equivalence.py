@@ -19,7 +19,7 @@ from app.modules.optimization.domain.first_fit import FirstFitOptimizer
 from app.modules.optimization.domain.metrics import calculate_metrics, largest_rectangle
 from scripts.benchmark_load_engines import build_problem
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("experimental_cases", ROOT / "experiments/optimization/loader.py")
 loader = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(loader)

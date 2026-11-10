@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 M5_SCRIPT = PROJECT_ROOT / "docs" / "spikes" / "sp-005-heuristica-m5" / "experimento_m5.py"
 sys.path.insert(0, str(PROJECT_ROOT))
 M5_SPEC = importlib.util.spec_from_file_location("sp005_experimento_m5", M5_SCRIPT)

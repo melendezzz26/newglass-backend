@@ -11,7 +11,7 @@ from app.modules.optimization.domain.beam_search import (
 )
 from app.modules.optimization.domain.problem import MaterialSource
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location(
     "experimental_cases", ROOT / "experiments/optimization/loader.py"
 )

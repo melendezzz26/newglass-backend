@@ -24,7 +24,7 @@ from app.modules.optimization.presentation.comparison_v2_schemas import (
 from app.modules.optimization.presentation.run_serialization import config_response
 from tests.unit.optimization.test_comparison_snapshot import example
 
-FIXTURE = Path(__file__).resolve().parents[4] / "docs/contracts/optimization/comparison-v2.json"
+FIXTURE = Path(__file__).resolve().parents[3] / "docs/contracts/optimization/comparison-v2.json"
 
 
 def calculated(definition, problem, *, partial=False):

@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 
 
-path = Path(__file__).resolve().parents[3] / '.github/scripts/backend_failure_summary.py'
+path = Path(__file__).resolve().parents[2] / '.github/scripts/backend_failure_summary.py'
 spec = importlib.util.spec_from_file_location('backend_failure_summary', path)
 reporter = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(reporter)

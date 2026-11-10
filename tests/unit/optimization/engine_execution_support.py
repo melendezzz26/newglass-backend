@@ -18,7 +18,7 @@ from app.modules.optimization.infrastructure.comparison_snapshot import canonica
 from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v3
 from tests.unit.optimization.test_engine_execution import parity_cases
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def digest(value):

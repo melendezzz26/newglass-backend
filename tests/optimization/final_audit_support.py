@@ -19,7 +19,7 @@ from app.modules.optimization.domain.run_geometry import prepare_run_geometry
 from app.modules.optimization.infrastructure.comparison_snapshot import canonical_json
 from app.modules.optimization.infrastructure.run_snapshot import json_value
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('final_audit_cases', ROOT / 'experiments/optimization/final_audit_cases.py')
 fixtures = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixtures)

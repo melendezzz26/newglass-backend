@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from app.modules.optimization.presentation.comparison_schemas import ComparisonSummary, ComparisonEvent, ComparisonMaskPayload, ExecutionResponse
 from app.modules.optimization.presentation.run_schemas import RunResponseV1
 
-FIXTURE = Path(__file__).resolve().parents[4] / "docs/contracts/optimization/comparison-v1.json"
+FIXTURE = Path(__file__).resolve().parents[3] / "docs/contracts/optimization/comparison-v1.json"
 
 
 def test_real_engine_fixture_has_three_results_and_typed_visual_facts():

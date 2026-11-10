@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from app.modules.optimization.domain.first_fit import FirstFitOptimizer

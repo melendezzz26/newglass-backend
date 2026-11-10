@@ -20,7 +20,7 @@ from app.modules.optimization.infrastructure.sequential_worker import calculatio
 from app.modules.optimization.infrastructure.process_lifecycle import process_identity, protect_against_parent_exit
 from app.modules.optimization.infrastructure.comparison_snapshot import decode_problem
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def inputs():
