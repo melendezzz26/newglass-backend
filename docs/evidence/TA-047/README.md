@@ -30,3 +30,4 @@ Todos usan `detail.code` y `detail.message`; el rechazo previo en comparación i
 - Frontend: prueba RED de pérdida de referencia tras rechazo, GREEN con recuperación persistida; ver la evidencia del PR frontend coordinado.
 
 Los resultados no sustituyen al CI. La compatibilidad post-merge y el humo aún no se han ejecutado.
+- Repeticion de pruebas de temporizacion del worker: 5 PASS. Limites, estres, recuperacion, runs y visualizacion: 63 PASS, 1 aviso Starlette/httpx. Una pasada previa fallo porque su fixture no contemplaba la cantidad reducida; se corrigio la expectativa conservando la comprobacion de stock sin mutacion y se repitio.
