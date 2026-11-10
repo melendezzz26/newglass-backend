@@ -15,14 +15,14 @@ Este nuevo recorrido requiere **Linux con procfs, un proceso web y capacidad
 agregada disponible**; rechaza entornos insuficientes sin degradar a secuencial.
 Incluye la migración aditiva `s2cmp01a1b2c`. Revisar rutas, límites, idempotencia,
 recuperación y compatibilidad en la
-[guía comparison-v1](../docs/contracts/optimization/comparison-v1.md) y sus
-[pruebas/evidencia](../docs/evidence/sprint-02/OPT-MULTIMOTOR-VISUAL/README.md)
+[guía comparison-v1](https://github.com/melendezzz26/optimizador-vidrio/blob/137f2ccd7a542c73e99fd40a792287595cdcd9c8/docs/contracts/optimization/comparison-v1.md) y sus
+[pruebas/evidencia](https://github.com/melendezzz26/optimizador-vidrio/blob/137f2ccd7a542c73e99fd40a792287595cdcd9c8/docs/evidence/sprint-02/OPT-MULTIMOTOR-VISUAL/README.md)
 antes de habilitarlo en otro entorno. La implementación no acredita un despliegue.
 
 En Windows, ejecutar el backend en **WSL2**, conservando el frontend Vite en
 Windows si se desea. Python nativo de Windows devuelve 503 de forma intencional
 porque carece de los controles Linux del supervisor. Ver el
-[arranque y diagnóstico local con WSL2](../docs/development/optimization-wsl2.md).
+[arranque y diagnóstico local con WSL2](https://github.com/melendezzz26/optimizador-vidrio/blob/137f2ccd7a542c73e99fd40a792287595cdcd9c8/docs/development/optimization-wsl2.md).
 Desde `backend/`, `python -m scripts.check_comparison_environment` verifica la
 plataforma y admisión por memoria sin acceder a la base ni revelar credenciales.
 
@@ -99,7 +99,7 @@ El lanzador usa un proceso web y no recarga por defecto. Para editar código:
 migraciones de las recargas; una recarga legítima de la aplicación igualmente
 descarta eventos/máscaras en memoria. Para comparaciones y evidencia usar el
 modo estable. El supervisor multimétodo requiere Linux/WSL2; ver la
-[guía de WSL2](../docs/development/optimization-wsl2.md).
+[guía de WSL2](https://github.com/melendezzz26/optimizador-vidrio/blob/137f2ccd7a542c73e99fd40a792287595cdcd9c8/docs/development/optimization-wsl2.md).
 
 El pool PostgreSQL usa por defecto `DB_POOL_SIZE=5`, `DB_MAX_OVERFLOW=0` y
 `DB_POOL_TIMEOUT=30`. Son límites por proceso; no aumentan la cuota del proveedor.
@@ -202,4 +202,4 @@ PostgreSQL ni Supabase en ejecución, ni un `.env` real para esas pruebas.
 - `tests/`: pruebas organizadas según su propósito, con las existentes preservadas.
 
 Consultar [CONTRIBUTING.md](../CONTRIBUTING.md) y las
-[convenciones de pruebas](../docs/testing/README.md).
+[convenciones de pruebas](https://github.com/melendezzz26/optimizador-vidrio/blob/137f2ccd7a542c73e99fd40a792287595cdcd9c8/docs/testing/README.md).
