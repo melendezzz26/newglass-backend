@@ -166,7 +166,8 @@ def test_reconciliation_and_late_failure_preserve_terminal_outcomes(session_fact
     actor, ids, uow = prepared
     if terminal == 'no_solution':
         with session_factory() as db:
-            db.get(Plancha, 5).cantidad = 0
+            # All pieces fit alone, but one sheet cannot hold the whole batch.
+            db.get(Plancha, 5).cantidad = 1
             db.commit()
     accepted = AcceptRun(uow).execute(ids, actor)
     final = calculator(session_factory, uow).execute(accepted.optimization_id)

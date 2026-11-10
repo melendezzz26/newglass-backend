@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
-from app.models import Configuracion, Optimizacion
+from app.models import Configuracion, Optimizacion, Plancha
 from app.modules.optimization.application.errors import RunError
 from app.modules.optimization.application.runs import AcceptRun
 from app.modules.optimization.infrastructure.configuration_publication import (
@@ -57,9 +57,14 @@ def test_publication_creates_a_5_degree_version_and_unblocks_runs(prepared, sess
         assert new.id_usuario_creacion == actor
         db.refresh(old)
         assert snapshot(old) == {**before, "vigente": False}  # solo cambia la marca de vigencia
+        new_id = new.id_configuracion
+        # Preserve the 4 mm margin while supplying a source that can fit the pieces.
+        sheet = db.get(Plancha, 5)
+        sheet.ancho_mm = sheet.alto_mm = Decimal('20')
+        db.commit()
     run = AcceptRun(uow).execute(ids, actor)
     with session_factory() as db:
-        assert db.get(Optimizacion, run.optimization_id).id_configuracion == new.id_configuracion
+        assert db.get(Optimizacion, run.optimization_id).id_configuracion == new_id
 
 
 def test_repeating_the_publication_changes_nothing(prepared, session_factory):
