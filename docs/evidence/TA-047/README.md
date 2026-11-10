@@ -31,3 +31,4 @@ Todos usan `detail.code` y `detail.message`; el rechazo previo en comparación i
 
 Los resultados no sustituyen al CI. La compatibilidad post-merge y el humo aún no se han ejecutado.
 - Repeticion de pruebas de temporizacion del worker: 5 PASS. Limites, estres, recuperacion, runs y visualizacion: 63 PASS, 1 aviso Starlette/httpx. Una pasada previa fallo porque su fixture no contemplaba la cantidad reducida; se corrigio la expectativa conservando la comprobacion de stock sin mutacion y se repitio.
+- Regresion adicional de configuracion angular, admision y preflight: 49 PASS. El fixture unitario de configuracion se actualizo para proporcionar stock compatible real al nuevo preflight.

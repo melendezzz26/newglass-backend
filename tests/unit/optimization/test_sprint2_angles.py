@@ -68,6 +68,7 @@ def test_five_degree_operational_configuration_reaches_preparation():
     uow.__enter__.return_value = uow
     uow.configuration.return_value = (1, OptimizationConfig(resolution_mm=1, margin_mm=0, separation_mm=0))
     uow.orders.lock_pending.return_value = [piece()]
+    uow.stock.capture.return_value = {(1, D(6)): (stock(),)}
     AcceptRun(lambda: uow).execute([1], 1)
     assert uow.runs.create.call_args.args[0].config.angular_step_deg == 5
 
