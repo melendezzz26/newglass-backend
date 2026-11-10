@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           git config user.name 'Wilder Fabricio'
           git config user.email 'wmelendezq1@upao.edu.pe'
-          git add experiments/optimization docs/spikes/sp-005-heuristica-m5 docs/evidence/sprint-02/TA-043/B03/adapter-validation.json tests
+          git add experiments/optimization experiments/sp-006-m6 docs/spikes/sp-005-heuristica-m5 docs/evidence/sprint-02/TA-043/B03/adapter-validation.json tests
           git diff --cached --stat
           git commit -m 'fix(EN-REPO-001): restaurar fixtures experimentales y ajustar rutas de pruebas'
           test "$(git log -1 --format='%an <%ae>')" = "Wilder Fabricio <wmelendezq1@upao.edu.pe>"
