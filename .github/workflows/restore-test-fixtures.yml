@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   restore:
-    if: github.event.head_commit.message == 'ci(EN-REPO-001): restaurar dependencias de pruebas del backend'
+    if: startsWith(github.event.head_commit.message, 'ci(EN-REPO-001)')
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
