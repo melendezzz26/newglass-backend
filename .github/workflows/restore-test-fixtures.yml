@@ -34,6 +34,7 @@ jobs:
           set -euo pipefail
           mkdir -p experiments docs/spikes/sp-005-heuristica-m5 docs/evidence/sprint-02/TA-043/B03
           cp -a historical-source/experiments/optimization experiments/
+          cp -a historical-source/experiments/sp-006-m6 experiments/
           cp -a historical-source/docs/spikes/sp-005-heuristica-m5/. docs/spikes/sp-005-heuristica-m5/
           cp historical-source/docs/evidence/sprint-02/TA-043/B03/adapter-validation.json docs/evidence/sprint-02/TA-043/B03/
           python - <<'PY'
