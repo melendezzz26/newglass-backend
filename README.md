@@ -1,8 +1,15 @@
 # Backend de NewGlass
 
+> **Repositorio independiente:** `melendezzz26/newglass-backend`. Todos los
+> comandos se ejecutan desde la raíz del repositorio. La API, las migraciones
+> Alembic, los scripts y las pruebas están ahora en esa raíz. El origen
+> histórico y la correspondencia del filtrado Git están descritos en
+> [docs/MIGRATION.md](docs/MIGRATION.md).
+
+
 API FastAPI organizada progresivamente como monolito modular.
 La versión de Python actualmente validada es **3.11.9**.
-Los comandos siguientes se ejecutan desde `backend/`.
+Los comandos siguientes se ejecutan desde la raíz del repositorio.
 
 ## Comparación concurrente de motores
 
@@ -116,7 +123,7 @@ su bloque de integración; no se resuelve durante la instalación del entorno.
 
 ## Configuración inicial de corte para desarrollo/demo
 
-Con la base de destino autorizada en el entorno, desde `backend/`:
+Con la base de destino autorizada en el entorno, desde la raíz del repositorio:
 
 ```text
 python -m alembic upgrade head
@@ -153,7 +160,7 @@ El motor permite pasos explícitos para experimentos y reproducción histórica.
 
 Para una base que ya conserva una versión vigente de 90° u otro paso válido,
 el PR #88 aporta una publicación administrativa versionada. Ejecutar solo tras
-autorizar el destino y con una cuenta activa existente, desde `backend/`:
+autorizar el destino y con una cuenta activa existente, desde la raíz del repositorio:
 
 ```bash
 python -m scripts.publish_configuration --responsable USUARIO_ACTIVO
@@ -168,7 +175,7 @@ vigente y por eso no sustituye esta operación.
 ## Primer Administrador
 
 La gestión de usuarios exige una sesión de Administrador, así que la primera
-cuenta se crea una sola vez con un comando, desde `backend/`:
+cuenta se crea una sola vez con un comando, desde la raíz del repositorio:
 
 ```bash
 python -m scripts.create_first_admin
@@ -181,7 +188,7 @@ ya existe un Administrador activo. Requiere que los roles estén cargados
 
 ## Pruebas
 
-Con el entorno activado y desde `backend/`:
+Con el entorno activado y desde la raíz del repositorio:
 
 ```bash
 python -m pytest tests --ignore=tests/unit/optimization/test_comparison_runner.py -q -ra
