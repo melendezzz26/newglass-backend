@@ -422,6 +422,7 @@ class LoadLimitV1(ContractV1):
 class ErrorDetailV1(ContractV1):
     code: Literal["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "STATE_CONFLICT", "CONFIG_CONFLICT",
                   "STOCK_CONFLICT", "ALREADY_CONFIRMED", "INVALID_INPUT", "NOT_CONFIRMABLE", "INTERNAL_ERROR",
+                  "NO_COMPATIBLE_STOCK", "PIECE_DOES_NOT_FIT", "RESOURCE_UNAVAILABLE",
                   "LOAD_LIMIT_EXCEEDED", "OPTIMIZER_BUSY"]
     message: str
     limit: LoadLimitV1 | None = None

@@ -1,5 +1,7 @@
 """Multipedido preflight. The unit of work owns exactly one commit/rollback."""
+from dataclasses import replace
 from .errors import RunError
+from .geometric_preflight import validate_individual_feasibility
 from .load_budget import DEFAULT_RUN_LOAD_BUDGET, check_pieces, check_selection, check_stock
 from .preparation import prepare_persisted_problem
 from ..domain.problem import SPRINT_2_ANGULAR_STEP_DEG
@@ -11,7 +13,7 @@ class AcceptRun:
         # stock_counter=None keeps direct callers working; the HTTP route always injects it.
         self.unit_of_work, self.stock_counter, self.budget = unit_of_work, stock_counter, budget
 
-    def execute(self, order_ids, actor_id):
+    def execute(self, order_ids, actor_id, *, preflight_only=False):
         ids = tuple(order_ids)
         if not ids or any(type(i) is not int or not 0 < i <= 2147483647 for i in ids) or len(set(ids)) != len(ids):
             raise RunError("INVALID_INPUT", "Selecciona pedidos distintos y válidos.")
@@ -39,8 +41,14 @@ class AcceptRun:
                         key: self.stock_counter.count_compatible(key) for key in units_by_material
                     }, self.budget)
                 problem = prepare_persisted_problem(ids, pieces, config)
+                stock = uow.stock.capture(units_by_material, self.budget)
+                populated = replace(problem, groups=tuple(replace(group, stock_candidates=stock[group.key])
+                                                         for group in problem.groups))
+                validate_individual_feasibility(populated, budget=self.budget)
             except ValueError as exc:
                 raise RunError("INVALID_INPUT", "Las piezas o parámetros exceden las condiciones válidas de cálculo.") from exc
+            if preflight_only:
+                return None
             run = uow.runs.create(problem, configuration_id, actor_id)
             uow.orders.transition(ids, "PENDIENTE", "EN_OPTIMIZACION")
         return run

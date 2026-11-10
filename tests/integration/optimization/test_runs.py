@@ -107,6 +107,8 @@ def test_multimaterial_snapshot_is_detached(session_factory, prepared):
     with session_factory() as s:
         p = s.scalar(select(Pieza).where(Pieza.id_pedido == ids[1]))
         p.id_tipo_vidrio, p.espesor_mm = 8, Decimal('4')
+        s.add(Plancha(id_plancha=6, ancho_mm=4, alto_mm=2, espesor_mm=4, cantidad=1,
+                      estado=True, fecha_registro=datetime.now(timezone.utc), id_tipo_vidrio=8))
         s.commit()
     run = AcceptRun(uow).execute(ids, actor)
     assert [g.key for g in run.result.problem.groups] == [(7, Decimal(6)), (8, Decimal(4))]
@@ -117,7 +119,7 @@ def test_multimaterial_snapshot_is_detached(session_factory, prepared):
         assert tx.runs.get(run.optimization_id).result.total_units == 4
 
 
-@pytest.mark.parametrize('availability,placed,complete', [(2, 4, True), (1, 2, False), (0, 0, False)])
+@pytest.mark.parametrize('availability,placed,complete', [(2, 4, True), (1, 2, False)])
 def test_durable_results_metrics_physical_stock_and_no_consumption(session_factory, prepared, availability, placed, complete, monkeypatch):
     from app.models import MaterialUtilizado, MetricaEjecucion, Retazo
     from app.modules.optimization.application.calculation import CalculateRun

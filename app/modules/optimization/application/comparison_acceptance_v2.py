@@ -4,7 +4,7 @@ import re
 
 from .comparison_v2_contracts import ComparisonInputV2
 from .errors import RunError
-from .geometric_preflight import validate_comparison_geometry
+from .geometric_preflight import validate_individual_feasibility
 from .load_budget import DEFAULT_RUN_LOAD_BUDGET, check_selection, check_pieces
 from .preparation import prepare_persisted_problem
 
@@ -26,6 +26,36 @@ class AcceptComparisonV2:
             raise RunError("INVALID_INPUT", "Lote o clave inválidos.")
         return tuple(sorted(ids))
 
+    def _freeze(self, tx, ids):
+        config_id, version, config, width, height = tx.captured_configuration()
+        if config.angular_step_deg != 5:
+            raise RunError("CONFIG_CONFLICT", "Se requiere paso angular vigente de 5°.")
+        pieces = tx.orders.lock_pending(ids)
+        try:
+            stock = tx.stock.capture(check_pieces(pieces, config, self.budget), self.budget)
+            problem = prepare_persisted_problem(ids, pieces, config)
+            problem = replace(problem, groups=tuple(replace(g, stock_candidates=stock[g.key]) for g in problem.groups))
+            validate_individual_feasibility(problem, budget=self.budget)
+            return ComparisonInputV2(problem=problem, configuration_id=config_id, configuration_version=version,
+                requested_pieces=pieces, minimum_width_mm=width, minimum_height_mm=height)
+        except ValueError as error:
+            raise RunError("INVALID_INPUT", "La entrada excede las condiciones válidas.") from error
+
+    def preflight(self, order_ids, actor_id, key):
+        """Validate without business writes; acceptance rechecks a fresh snapshot."""
+        ids = self.validate_request(order_ids, actor_id, key)
+        check_selection(ids, self.budget)
+        with self.unit_of_work() as tx:
+            tx.consistent_snapshot()
+            self.authorize(tx, actor_id)
+            previous = tx.comparisons_v2.find_by_key(actor_id, key)
+            if previous is not None:
+                if previous.problem.order_ids != ids:
+                    raise RunError("STATE_CONFLICT", "La clave corresponde a otro lote.")
+                return previous
+            self._freeze(tx, ids)
+        return None
+
     def execute(self, order_ids, actor_id, key):
         ids = self.validate_request(order_ids,actor_id,key)
         check_selection(ids, self.budget)
@@ -39,19 +69,7 @@ class AcceptComparisonV2:
                         if previous.problem.order_ids != ids:
                             raise RunError("STATE_CONFLICT", "La clave corresponde a otro lote.")
                         return previous
-                    config_id, version, config, width, height = tx.captured_configuration()
-                    if config.angular_step_deg != 5:
-                        raise RunError("CONFIG_CONFLICT", "Se requiere paso angular vigente de 5°.")
-                    pieces = tx.orders.lock_pending(ids)
-                    try:
-                        stock = tx.stock.capture(check_pieces(pieces, config, self.budget), self.budget)
-                        problem = prepare_persisted_problem(ids, pieces, config)
-                        problem = replace(problem, groups=tuple(replace(g,stock_candidates=stock[g.key]) for g in problem.groups))
-                        validate_comparison_geometry(problem, self.budget)
-                        frozen = ComparisonInputV2(problem=problem,configuration_id=config_id,configuration_version=version,
-                            requested_pieces=pieces,minimum_width_mm=width,minimum_height_mm=height)
-                    except ValueError as error:
-                        raise RunError("INVALID_INPUT", "La entrada excede las condiciones válidas.") from error
+                    frozen = self._freeze(tx, ids)
                     current = tx.comparisons_v2.create(frozen, actor_id, key, managed=True)
                     tx.orders.transition(ids,"PENDIENTE","EN_OPTIMIZACION")
                 return current

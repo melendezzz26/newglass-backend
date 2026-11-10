@@ -230,6 +230,8 @@ class SqlRunUnitOfWork:
         self.session = self.session_factory()
         self.orders = SqlOrdersBatch(self.session)
         self.runs = SqlRunRepository(self.session)
+        from .comparison_stock import SqlComparisonStock
+        self.stock = SqlComparisonStock(self.session)
         from .confirmation_adapter import SqlConfirmationRepository
         self.confirmation = SqlConfirmationRepository(self.session, self.runs)
         return self

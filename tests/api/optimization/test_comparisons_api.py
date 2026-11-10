@@ -21,6 +21,23 @@ from tests.integration.optimization.test_runs import prepared  # noqa: F401
 BASE = "/api/optimization/comparisons"
 
 
+@pytest.mark.parametrize('scenario,code', [('no_stock', 'NO_COMPATIBLE_STOCK'), ('no_fit', 'PIECE_DOES_NOT_FIT')])
+def test_individual_infeasibility_is_rejected_before_admission(api, session_factory, run_admission, monkeypatch, scenario, code):
+    client, ids, headers, runtime, _ = api
+    def forbidden(*args, **kwargs):
+        pytest.fail('Invalid comparison acquired admission')
+    monkeypatch.setattr(run_admission, 'acquire_comparison', forbidden)
+    with session_factory() as session:
+        sheet = session.get(Plancha, 5)
+        if scenario == 'no_stock': sheet.cantidad = 0
+        else: sheet.ancho_mm = sheet.alto_mm = 1
+        session.commit()
+    response = client.post(BASE, json={'order_ids': ids}, headers={**headers, 'Idempotency-Key': 'ta047-v1-invalid'})
+    assert response.status_code == 422, response.text
+    assert response.json()['detail']['code'] == code
+    assert runtime.job is None
+
+
 @pytest.fixture
 def api(client, session_factory, prepared):
     actor, ids, _ = prepared

@@ -23,6 +23,27 @@ def remnant(session, geometry):
         geometria=geometry, area_mm2=4, estado=True, fecha_registro=datetime.now(timezone.utc)))
 
 
+def test_stock_change_after_read_only_preflight_is_revalidated(api, session_factory, monkeypatch):
+    client, _, ids, headers, coordinator, _ = api
+    acquire = coordinator.admission.acquire_comparison
+    def change_stock_then_acquire(*args, **kwargs):
+        with session_factory() as session:
+            session.get(Plancha, 5).cantidad = 0
+            session.commit()
+        return acquire(*args, **kwargs)
+    monkeypatch.setattr(coordinator.admission, 'acquire_comparison', change_stock_then_acquire)
+    response = client.post('/api/optimization/comparisons-v2', json={'order_ids': ids},
+        headers={**headers, 'Idempotency-Key': 'ta047-stock-race-0001'})
+    assert response.status_code == 422, response.text
+    assert response.json()['detail']['code'] == 'NO_COMPATIBLE_STOCK'
+    assert coordinator.admission.active() == 0 and coordinator.job is None
+    from app.models import Optimizacion, EjecucionOptimizacion, Pedido
+    with session_factory() as session:
+        assert session.scalars(select(Optimizacion)).all() == []
+        assert session.scalars(select(EjecucionOptimizacion)).all() == []
+        assert all(session.get(Pedido, identifier).estado == 'PENDIENTE' for identifier in ids)
+
+
 @pytest.mark.parametrize('invalid,code,status', [
     ('stock_extent', 'INVALID_INPUT', 422),
     ('stock_cells', 'INVALID_INPUT', 422),
@@ -34,6 +55,10 @@ def remnant(session, geometry):
     ('piece_dimensions', 'INVALID_INPUT', 422),
     ('piece_contour', 'INVALID_INPUT', 422),
     ('empty_order', 'INVALID_INPUT', 422),
+    ('no_stock', 'NO_COMPATIBLE_STOCK', 422),
+    ('no_fit', 'PIECE_DOES_NOT_FIT', 422),
+    ('margin', 'PIECE_DOES_NOT_FIT', 422),
+    ('irregular_no_fit', 'PIECE_DOES_NOT_FIT', 422),
     ('units', 'LOAD_LIMIT_EXCEEDED', 422),
     ('stock_units', 'LOAD_LIMIT_EXCEEDED', 422),
     ('angle', 'CONFIG_CONFLICT', 409),
@@ -67,6 +92,17 @@ def test_rejection_has_no_writes_workers_or_leaked_reservations(
             piece.geometria = dict(type='POLIGONO_CONVEXO', vertices_mm=[[0, 0], [4, 4], [0, 4], [4, 0]])
         if invalid == 'empty_order':
             for row in session.scalars(select(Pieza).where(Pieza.id_pedido == ids[-1])): session.delete(row)
+        if invalid == 'no_stock': session.get(Plancha, 5).cantidad = 0
+        if invalid == 'no_fit': session.get(Plancha, 5).ancho_mm = session.get(Plancha, 5).alto_mm = 1
+        if invalid == 'margin': config.margen_mm = Decimal('0.01')
+        if invalid == 'irregular_no_fit':
+            session.get(Plancha, 5).cantidad = 0
+            remnant(session, dict(type='POLIGONO_CONVEXO', vertices_mm=[[0, 0], [4, 0], [0, 4]]))
+            session.flush()
+            session.scalar(select(Retazo)).area_mm2 = 8
+            for item in session.scalars(select(Pieza)):
+                item.geometria = dict(type='RECTANGULO', width_mm=3, height_mm=3)
+                item.area_mm2 = 9
         if invalid == 'units': piece.cantidad = 801  # ACADEMIC-800
         if invalid == 'stock_units': session.get(Plancha, 5).cantidad = 51
         if invalid == 'angle': config.paso_angular_grados = 10
@@ -79,6 +115,12 @@ def test_rejection_has_no_writes_workers_or_leaked_reservations(
             writes.append(statement)
     def forbidden(*args, **kwargs): raise AssertionError('Rejected input started engine execution')
     monkeypatch.setattr(SequentialProcessRunner, 'events', forbidden)
+    admission_calls = []
+    original_admission = coordinator.admission.acquire_comparison
+    def count_admission(*args, **kwargs):
+        admission_calls.append(True)
+        return original_admission(*args, **kwargs)
+    monkeypatch.setattr(coordinator.admission, 'acquire_comparison', count_admission)
     engine = session_factory.kw['bind']
     event.listen(engine, 'before_cursor_execute', sql)
     try:
@@ -90,6 +132,7 @@ def test_rejection_has_no_writes_workers_or_leaked_reservations(
     assert response.json()['detail']['code'] == code
     assert 'location' not in response.headers
     assert writes == []
+    assert admission_calls == []
     assert database_state(session_factory) == before
     assert coordinator.job is None and coordinator.recovery_lease is None
     assert coordinator.admission.active() == 0
@@ -98,11 +141,9 @@ def test_rejection_has_no_writes_workers_or_leaked_reservations(
 
 
 @pytest.mark.parametrize('scenario,expected', [
-    ('no_stock', 'SIN_SOLUCION'), ('no_fit', 'SIN_SOLUCION'),
-    ('margin', 'SIN_SOLUCION'), ('separation', 'SIN_SOLUCION'),
+    ('separation', 'SIN_SOLUCION'),
     ('rotation', 'COMPLETADA'), ('fractional', 'COMPLETADA'),
     ('negative_origin', 'COMPLETADA'), ('circle', 'COMPLETADA'),
-    ('irregular_no_fit', 'SIN_SOLUCION'),
 ])
 def test_valid_geometry_runs_all_six_engines_including_no_solution(api, session_factory, scenario, expected):
     client, _, ids, headers, coordinator, _ = api

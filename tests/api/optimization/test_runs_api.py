@@ -49,7 +49,7 @@ def parse(response):
     return events
 
 
-@pytest.mark.parametrize('quantity,expected',[(2,'COMPLETADA'),(1,'SIN_SOLUCION'),(0,'SIN_SOLUCION')])
+@pytest.mark.parametrize('quantity,expected',[(2,'COMPLETADA'),(1,'SIN_SOLUCION')])
 def test_stream_real_ff_canonical_decimal_and_inventory_intact(run_api, session_factory, quantity, expected, monkeypatch):
     client, ids, headers, uow, _ = run_api
     with session_factory() as s:
@@ -76,6 +76,28 @@ def test_stream_real_ff_canonical_decimal_and_inventory_intact(run_api, session_
         assert s.get(Plancha, 5).cantidad == quantity
         assert s.scalar(select(func.count()).select_from(Retazo)) == 0
         assert s.scalar(select(func.count()).select_from(MovimientoInventario)) == 0
+
+
+@pytest.mark.parametrize('scenario,code', [('no_stock', 'NO_COMPATIBLE_STOCK'), ('no_fit', 'PIECE_DOES_NOT_FIT')])
+def test_infeasible_run_rejects_before_admission(run_api, session_factory, monkeypatch, scenario, code):
+    from app.modules.optimization.presentation.run_routes import get_run_admission
+    client, ids, headers, *_ = run_api
+    admission = get_run_admission()
+    def forbidden(*args, **kwargs):
+        pytest.fail('Rejected input consumed run admission')
+    monkeypatch.setattr(admission, 'acquire', forbidden)
+    with session_factory() as session:
+        sheet = session.get(Plancha, 5)
+        if scenario == 'no_stock': sheet.cantidad = 0
+        else: sheet.ancho_mm = sheet.alto_mm = 1
+        session.commit()
+    response = client.post(BASE, json={'order_ids': ids}, headers=headers)
+    assert response.status_code == 422
+    assert response.json()['detail']['code'] == code
+    assert ErrorResponseV1.model_validate(response.json()).detail.code == code
+    with session_factory() as session:
+        assert session.scalars(select(Optimizacion)).all() == []
+        assert all(session.get(Pedido, identifier).estado == 'PENDIENTE' for identifier in ids)
 
 
 @pytest.mark.parametrize('path,method',[('/runs','post'),('/runs/1','get')])
