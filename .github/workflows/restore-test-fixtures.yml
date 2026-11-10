@@ -53,11 +53,12 @@ jobs:
               path = Path(file)
               old = path.read_text(encoding='utf-8')
               if a not in old:
-                  raise SystemExit(f'Ruta histórica no encontrada: {path}')
+                  if b not in old:
+                      raise SystemExit(f'Ruta adaptada no encontrada: {path}')
+                  continue
               path.write_text(old.replace(a,b), encoding='utf-8')
               fixes += 1
-          if fixes < 10:
-              raise SystemExit(f'Solo {fixes} rutas adaptadas; se esperaba >=10')
+          print('Validación idempotente de rutas; cambios nuevos:', fixes)
           print('Dependencias de test backend copiadas y rutas adaptadas:', fixes)
           PY
           # El origen temporal solo sirve para recuperación: no formará parte del repositorio.
