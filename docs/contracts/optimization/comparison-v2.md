@@ -1,5 +1,43 @@
 # comparison-v2 — Catálogo y contratos de seis motores (TA-043 / B01)
 
+## Extensión EN-UX-004 — cancelación segura (PR backend #6, pendiente de revisión)
+
+Esta extensión es **aditiva y optativa** para el perfil `comparison-v2`. No
+se cambia el catálogo FF/BF/WF/HF/M5/M6-BS, `snapshot_version` de resultados ni
+contratos de optimización v1. Los cuerpos de respuesta actuales agregan
+`cancellation_status` con `NONE`, `REQUESTED`, `CANCELLED` o
+`COMPLETED_BEFORE_CANCEL`. La respuesta solo puede decir `CANCELLED` cuando
+todos los workers y descendientes están terminados y el supervisor confirmó el
+cierre durable; el estado `REQUESTED` no es terminal.
+
+- `POST /api/optimization/comparisons-v2/{comparison_id}/cancel`: permiso
+  `optimization.execute`, propietario, encabezado `Idempotency-Key` (8–64
+  caracteres `[A-Za-z0-9_-]`) y cuerpo `{"expected_version": 42}`.
+  Devuelve 202 mientras la solicitud está pendiente y 200 para una solicitud
+  idempotente ya resuelta. El cuerpo
+  `{profile:"comparison-v2",schema_version:2,comparison_id,version,cancel_state,terminal,supervisor_stopped}`
+  se valida sin admitir claves extras.
+- `GET /api/optimization/comparisons-v2/{comparison_id}/cancel`: permiso
+  `optimization.view`, mismo cuerpo, lectura de snapshot persistido.
+- Repetir la misma clave (actor+comparación) no duplica la orden. Otra clave
+  sobre el mismo trabajo es conflicto 409; el trabajo que ya terminó antes
+  de recibir cancelación no puede reescribirse. Propiedad ajena no se revela
+  (404). Cierre no verificable mantiene recuperación bloqueada (503/estado
+  no terminal).
+- Los resultados de motores terminados permanecen consultables. Una comparación
+  `CANCELLED` deshabilita selección, confirmación y liberación; su pedido se
+  devuelve a `PENDIENTE` solamente tras cierre seguro. No se consume inventario.
+  `COMPLETED_BEFORE_CANCEL` indica finalización natural, sin simular interrupción.
+- El bloque `cancellation` en el snapshot durable guarda clave, propietario,
+  instante y estado final, sin alterar la entrada congelada ni inventar geometría.
+  La recuperación tras reinicio no mata PIDs desconocidos y conserva el bloqueo
+  si existen procesos o descendientes sin prueba de parada.
+
+**Integración:** los PR backend y frontend EN-UX-004 deben pasar pruebas de
+contrato, PostgreSQL aislado, procesos reales y navegador antes de actualizar el
+SHA del backend usado por el gate E2E. No desplegar mientras estén en Draft.
+
+
 Adición S2 finalización: `GET /api/optimization/comparisons-v2/history` permite
 consultar comparaciones v1/v2 propias sin ejecutar motores. Parámetros `limit`
 (1–20, por defecto 20) y `before_id` (int32 positivo). Devuelve `items` con
