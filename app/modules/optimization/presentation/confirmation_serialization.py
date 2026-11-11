@@ -10,5 +10,5 @@ def confirmation_response(result):
     return ConfirmResponseV1(schema_version=1, id_optimizacion=result.optimization_id, confirmed=True,
         orders=[dict(id_pedido=i, estado="CONFIRMADO") for i in result.order_ids],
         materials_consumed=[stock_reference(s) for s in result.materials_consumed],
-        remnants_created=[dict(id_retazo=r.remnant_id, source=stock_reference(r.source), x_mm=r.x_mm, y_mm=r.y_mm,
+        remnants_created=[dict(id_retazo=r.remnant_id, codigo=r.codigo, source=stock_reference(r.source), x_mm=r.x_mm, y_mm=r.y_mm,
                                geometria=dict(r.geometry), area_mm2=r.area_mm2) for r in result.remnants_created])

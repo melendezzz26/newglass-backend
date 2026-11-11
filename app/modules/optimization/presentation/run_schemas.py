@@ -87,6 +87,7 @@ class StockRefV1(ContractV1):
 class StockV1(StockRefV1, MaterialKeyV1):
     geometria: Geometry
     area_mm2: PositiveDecimal
+    codigo: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def rectangular_sheet(self):
@@ -386,6 +387,7 @@ class ConfirmedOrderV1(ContractV1):
 
 class CreatedRemnantV1(ContractV1):
     id_retazo: PositiveId
+    codigo: str | None = Field(default=None, exclude_if=lambda value: value is None)
     source: StockRefV1
     x_mm: NonnegativeDecimal
     y_mm: NonnegativeDecimal

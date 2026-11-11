@@ -146,7 +146,7 @@ class SqlConfirmationRepository:
             self.session.add(row)
             self.session.flush()
             created.append(CreatedRemnant(remnant_id=row.id_retazo, source=source, x_mm=r.x_mm, y_mm=r.y_mm,
-                geometry=geometry, area_mm2=area, exact_area_mm2=r.area_mm2))
+                geometry=geometry, area_mm2=area, exact_area_mm2=r.area_mm2, codigo=row.codigo))
         return tuple(created)
 
     def mark_confirmed(self, context, receipt, actor_id):

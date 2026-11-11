@@ -24,12 +24,12 @@ class SqlComparisonStock:
             Plancha.id_tipo_vidrio.label("glass"), Plancha.espesor_mm.label("thickness"),
             Plancha.cantidad.label("quantity"), Plancha.fecha_registro.label("date"),
             null().cast(JSONB).label("geometry"), (Plancha.ancho_mm * Plancha.alto_mm).label("area"),
-            Plancha.ancho_mm.label("width"), Plancha.alto_mm.label("height")).where(
+            Plancha.ancho_mm.label("width"), Plancha.alto_mm.label("height"), null().label("codigo")).where(
                 Plancha.estado.is_(True), Plancha.cantidad > 0,
                 tuple_(Plancha.id_tipo_vidrio, Plancha.espesor_mm).in_(keys))
         remnants = select(literal("RETAZO"), Retazo.id_retazo, Retazo.id_tipo_vidrio,
             Retazo.espesor_mm, literal(1), Retazo.fecha_registro, Retazo.geometria, Retazo.area_mm2,
-            null().cast(Numeric), null().cast(Numeric)).where(Retazo.estado.is_(True),
+            null().cast(Numeric), null().cast(Numeric), Retazo.codigo).where(Retazo.estado.is_(True),
                 tuple_(Retazo.id_tipo_vidrio, Retazo.espesor_mm).in_(keys))
         rows = self.session.execute(union_all(sheets, remnants)).mappings().all()
         counts = {key: 0 for key in keys}
@@ -47,5 +47,5 @@ class SqlComparisonStock:
             for index in range(1, row["quantity"] + 1):
                 captured[key].append(StockCandidate(source=MaterialSource(row["source"]),
                     material_id=row["id"], physical_unit_index=index, glass_type_id=key[0],
-                    thickness_mm=key[1], geometry=geometry, area_mm2=row["area"]))
+                    thickness_mm=key[1], geometry=geometry, area_mm2=row["area"], codigo=row["codigo"]))
         return {key: tuple(value) for key, value in captured.items()}

@@ -12,6 +12,7 @@ from app.models import Configuracion, MovimientoInventario, Pedido, Pieza, Planc
 from app.modules.optimization.domain.first_fit import FirstFitOptimizer
 from app.modules.optimization.domain.best_fit import BestFitOptimizer
 from app.modules.optimization.domain.worst_fit import WorstFitOptimizer
+from app.modules.optimization.domain.problem import MaterialSource
 from app.modules.optimization.infrastructure.comparison_runner import ENGINES, ComparisonProcessRunner
 from app.modules.optimization.infrastructure.comparison_snapshot import problem_fingerprint
 from app.modules.optimization.infrastructure.run_snapshot import json_value
@@ -71,6 +72,13 @@ def inventory(session_factory):
             for model in (Plancha, Retazo, MovimientoInventario)}
 
 
+def expected_problem(data):
+    value = fixtures.build_problem(data)
+    return replace(value, groups=tuple(replace(group, stock_candidates=tuple(
+        replace(source, codigo=f'AUDIT-{source.material_id}') if source.source is MaterialSource.REMNANT else source
+        for source in group.stock_candidates)) for group in value.groups))
+
+
 @pytest.mark.parametrize('case_id', fixtures.CASES)
 def test_real_persisted_policies_geometry_metrics_and_determinism(api, session_factory, record_property, case_id):
     client, existing_orders, headers, runtime, uow = api
@@ -87,7 +95,7 @@ def test_real_persisted_policies_geometry_metrics_and_determinism(api, session_f
     runtime.runner_factory = ObservedRunner
     assert ENGINES == {'FF':FirstFitOptimizer, 'BF':BestFitOptimizer, 'WF':WorstFitOptimizer}
     data = seed_case(session_factory, fixtures.read_case(case_id), existing_orders)
-    expected_input = fixtures.build_problem(data)
+    expected_input = expected_problem(data)
     before = inventory(session_factory)
     response = client.post('/api/optimization/comparisons', headers={**headers,'Idempotency-Key':'audit-'+case_id},
         json={'order_ids':data['order_ids']})
@@ -110,9 +118,9 @@ def test_real_persisted_policies_geometry_metrics_and_determinism(api, session_f
             (current.minimum_width_mm,current.minimum_height_mm))
         decisions = trace_policy(result)
         # A second independent run retains original method, placement and snapshot.
-        direct = ENGINES[execution.method]().optimize(fixtures.build_problem(data))
+        direct = ENGINES[execution.method]().optimize(expected_problem(data))
         assert result.placements == direct.placements and result.unplaced_units == direct.unplaced_units
-        assert expected_input == fixtures.build_problem(data)
+        assert expected_input == expected_problem(data)
         read = client.get(f'{path}/executions/{execution.execution_id}', headers=headers)
         assert read.status_code == 200 and read.json()['result']['metodo'] == execution.method
         results[execution.method] = result

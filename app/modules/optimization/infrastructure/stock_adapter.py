@@ -52,7 +52,7 @@ class InventoryStockAdapter:
         sheets.sort(key=lambda s: (s.fecha_registro, s.id_plancha), reverse=True)
         result = [StockCandidate(
             source=MaterialSource.REMNANT, material_id=r.id_retazo, physical_unit_index=1,
-            glass_type_id=glass, thickness_mm=thickness, geometry=r.geometria, area_mm2=r.area_mm2,
+            glass_type_id=glass, thickness_mm=thickness, geometry=r.geometria, area_mm2=r.area_mm2, codigo=r.codigo,
         ) for r in remnants]
         for sheet in sheets:
             geometry = dict(type="RECTANGULO", width_mm=_canonical_measure(sheet.ancho_mm),

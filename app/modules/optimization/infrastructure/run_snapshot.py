@@ -17,7 +17,8 @@ def json_value(value):
     if isinstance(value, (tuple, list)):
         return [json_value(v) for v in value]
     if hasattr(value, "__dataclass_fields__"):
-        return {f.name: json_value(getattr(value, f.name)) for f in fields(value)}
+        return {f.name: json_value(getattr(value, f.name)) for f in fields(value)
+                if not (isinstance(value, StockCandidate) and f.name == 'codigo' and value.codigo is None)}
     return value
 
 
