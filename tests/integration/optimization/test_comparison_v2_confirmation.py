@@ -230,6 +230,14 @@ def test_selected_remnant_consumed_once_without_touching_sheets(setup_v2, sessio
     current = create(setup_v2)
     for method in METHODS_V2:
         current = save(setup_v2, current, method)
+    for execution in current.executions:
+        assert execution.result.materials_used[0].codigo == 'B08-OWNED-REMNANT'
+    with session_factory() as s:
+        s.get(Retazo, identifier).codigo = 'B08-EDITED-LATER'
+        s.commit()
+    with setup_v2[2]() as tx:
+        historical = tx.comparisons_v2.get_owned(current.comparison_id, setup_v2[0])
+        assert all(e.result.materials_used[0].codigo == 'B08-OWNED-REMNANT' for e in historical.executions)
     with setup_v2[2]() as tx:
         current = tx.comparisons_v2.record_supervisor_stopped(current.comparison_id, datetime.now(timezone.utc), current.version)
         for order in current.problem.order_ids:
@@ -237,6 +245,7 @@ def test_selected_remnant_consumed_once_without_touching_sheets(setup_v2, sessio
     selected = choose(setup_v2, current, 'HF')
     receipt = confirm(setup_v2, selected)
     assert len(receipt.materials_consumed) == 1 and receipt.materials_consumed[0].material_id == identifier
+    assert receipt.materials_consumed[0].codigo == 'B08-OWNED-REMNANT'
     assert confirm(setup_v2, selected) == receipt
     with session_factory() as s:
         assert not s.get(Retazo, identifier).estado and s.get(Plancha, 5).cantidad == 2
