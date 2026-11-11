@@ -8,6 +8,7 @@ import re
 from .errors import RunError
 from .load_budget import DEFAULT_RUN_LOAD_BUDGET, check_pieces, check_selection
 from .preparation import prepare_persisted_problem
+from .geometric_preflight import validate_individual_feasibility
 from ..domain.problem import SPRINT_2_ANGULAR_STEP_DEG
 
 
@@ -15,7 +16,7 @@ class AcceptComparison:
     def __init__(self, unit_of_work, budget=DEFAULT_RUN_LOAD_BUDGET):
         self.unit_of_work, self.budget = unit_of_work, budget
 
-    def execute(self, order_ids, actor_id, idempotency_key):
+    def execute(self, order_ids, actor_id, idempotency_key, *, preflight_only=False):
         ids = tuple(order_ids)
         if (not ids or any(type(i) is not int or not 0 < i <= 2147483647 for i in (*ids, actor_id))
                 or len(set(ids)) != len(ids) or not isinstance(idempotency_key, str)
@@ -39,8 +40,11 @@ class AcceptComparison:
                 problem = prepare_persisted_problem(ids, pieces, config)
                 problem = replace(problem, groups=tuple(replace(group, stock_candidates=stock[group.key])
                                                         for group in problem.groups))
+                validate_individual_feasibility(problem, budget=self.budget)
             except ValueError as error:
                 raise RunError("INVALID_INPUT", "Las piezas, parámetros o stock exceden las condiciones válidas.") from error
+            if preflight_only:
+                return None
             result = uow.comparisons.create(problem, configuration_id, actor_id, idempotency_key, pieces)
             uow.orders.transition(ids, "PENDIENTE", "EN_OPTIMIZACION")
         return result

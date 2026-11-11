@@ -77,9 +77,11 @@ def test_p4_stock_rejection_never_expands_or_writes(no_expansion):
     assert_nothing_written(uow)
 
 
-def test_exact_limits_are_accepted_with_the_same_problem_as_before():
+def test_exact_limits_are_accepted_with_the_same_problem_as_before(monkeypatch):
     """RN-03: dentro del presupuesto, el problema preparado es idéntico al de antes de TA-037."""
     rows = [row(identifier=1, quantity=500), row(identifier=2, quantity=300, geometry=polygon(128))]
+    # This suite isolates the load limit; geometry feasibility has its own tests.
+    monkeypatch.setattr(runs, 'validate_individual_feasibility', lambda *_args, **_kwargs: None)
     uow, counter = unit_of_work(rows), Counter(50)
     AcceptRun(lambda: uow, counter).execute([1], 1)
     accepted = uow.runs.create.call_args.args[0]
@@ -89,14 +91,16 @@ def test_exact_limits_are_accepted_with_the_same_problem_as_before():
     uow.orders.transition.assert_called_once()
 
 
-def test_three_large_distinct_shapes_are_accepted():
+def test_three_large_distinct_shapes_are_accepted(monkeypatch):
+    monkeypatch.setattr(runs, 'validate_individual_feasibility', lambda *_args, **_kwargs: None)
     rows = [row(identifier=i + 1, width=1300, height=1000 + i) for i in range(3)]
     uow = unit_of_work(rows)
     AcceptRun(lambda: uow, Counter(2)).execute([1], 1)
     uow.runs.create.assert_called_once()
 
 
-def test_without_stock_counter_p4_is_skipped_for_direct_callers():
+def test_without_stock_counter_p4_is_skipped_for_direct_callers(monkeypatch):
+    monkeypatch.setattr(runs, 'validate_individual_feasibility', lambda *_args, **_kwargs: None)
     uow = unit_of_work([row()])
     AcceptRun(lambda: uow).execute([1], 1)
     uow.runs.create.assert_called_once()

@@ -62,6 +62,15 @@ def start(request: RunRequestV1, response: Response, key: Key,
             raise RunError("STATE_CONFLICT", "La clave de solicitud ya corresponde a otro lote.")
         response.headers["Location"] = f"/api/optimization/comparisons/{previous.comparison_id}"
         return comparison_response(load(previous.comparison_id, uow, runtime))
+    try:
+        admission.check_available(user.user_id, comparison=True)
+        previous = AcceptComparison(uow).execute(request.order_ids, user.user_id, key, preflight_only=True)
+    except RunError as error:
+        error.details = {**(error.details or {}), 'request_accepted': False}
+        raise
+    if previous is not None:
+        response.headers["Location"] = f"/api/optimization/comparisons/{previous.comparison_id}"
+        return comparison_response(load(previous.comparison_id, uow, runtime))
     lease, job, accepted = admission.acquire_comparison(user.user_id), None, None
     try:
         job = runtime.reserve()

@@ -128,6 +128,12 @@ class ComparisonV2Coordinator:
                 return previous
             try:
                 self._retry_recovery()
+                self.admission.check_available(actor_id, comparison=True)
+                previous = AcceptComparisonV2(self.uow, self.authorize).preflight(order_ids, actor_id, key)
+                if previous is not None:
+                    if not previous.terminal and (self.job is None or self.job.comparison.comparison_id != previous.comparison_id):
+                        self.recover_pending()
+                    return previous
                 lease = self.admission.acquire_comparison(actor_id)
             except RunError as error:
                 error.details = {**(error.details or {}), "request_accepted": False}

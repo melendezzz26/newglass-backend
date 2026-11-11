@@ -14,7 +14,7 @@ from tests.api.optimization.test_runs_api import BASE, parse, run_api  # noqa: F
 from tests.integration.optimization.test_runs import prepared  # noqa: F401
 
 
-def assert_released(factory, ids, identifier, code):
+def assert_released(factory, ids, identifier, code, expected_stock=2):
     with factory() as db:
         parent = db.get(Optimizacion, identifier)
         execution = db.scalar(select(EjecucionOptimizacion).where(
@@ -24,7 +24,7 @@ def assert_released(factory, ids, identifier, code):
         assert parent.id_ejecucion_seleccionada is None
         assert execution.patron_resultado['failure_code'] == code
         assert [db.get(Pedido, i).estado for i in ids] == ['PENDIENTE'] * len(ids)
-        assert db.get(Plancha, 5).cantidad == 2
+        assert db.get(Plancha, 5).cantidad == expected_stock
         for model in (MovimientoInventario, MaterialUtilizado, MetricaEjecucion):
             assert db.scalar(select(func.count()).select_from(model)) == 0
 
@@ -103,13 +103,13 @@ def test_deadline_after_last_engine_checkpoint_cannot_commit_no_solution(
 
     monkeypatch.setattr(FirstFitOptimizer, 'optimize', overtime)
     with session_factory() as db:
-        db.get(Plancha, 5).ancho_mm = 1  # Valid input with legitimate NO_FIT.
+        db.get(Plancha, 5).cantidad = 1  # Individual fit, but insufficient capacity for the full batch.
         db.commit()
     response = client.post(BASE, json={'order_ids': ids}, headers=headers)
     terminal = parse(response)[-1]
     assert terminal['event'] == 'optimization_failed'
     assert terminal['data']['code'] == 'TIME_BUDGET_EXCEEDED'
-    assert_released(session_factory, ids, terminal['id_optimizacion'], 'TIME_BUDGET_EXCEEDED')
+    assert_released(session_factory, ids, terminal['id_optimizacion'], 'TIME_BUDGET_EXCEEDED', expected_stock=1)
 
 
 def test_worker_start_failure_recovers_accepted_orders(run_api, session_factory, monkeypatch):

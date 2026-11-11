@@ -183,8 +183,24 @@ def test_new_request_retries_safe_recovery_before_reserving_capacity(monkeypatch
     monkeypatch.setattr(coordinator, "_close" if owner == "local" else "recover_pending", recovered)
     if coordinator.job is not None:
         coordinator.job.lease = lease
+    def geometry_preflight(*_args, **_kwargs):
+        assert admission.active() == 0
+    monkeypatch.setattr('app.modules.optimization.application.comparison_acceptance_v2.AcceptComparisonV2.preflight', geometry_preflight)
     coordinator.runner_factory = lambda: SimpleNamespace(preflight=reached_preflight)
     with pytest.raises(RunError) as resumed:
         coordinator.start([2], 1, "retry-recovery")
     assert resumed.value.code == "RESOURCE_UNAVAILABLE"
     assert admission.active() == 0
+
+
+def test_read_only_capacity_check_does_not_reserve_and_acquire_rechecks():
+    admission = InProcessRunAdmission()
+    admission.check_available(1, comparison=True)
+    assert admission.active() == 0
+    lease = admission.acquire(2)
+    try:
+        with pytest.raises(OptimizerBusy):
+            admission.acquire_comparison(1)
+        assert admission.active() == 1
+    finally:
+        lease.release()

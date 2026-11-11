@@ -108,7 +108,8 @@ def test_common_capture_independent_commits_external_join_and_no_consumption(ses
         coordinator.shutdown()
         event.remove(engine,'before_cursor_execute',sql)
     assert dispatch==commits==list(METHODS_V2)
-    assert hashes==[accepted.input_sha256]*6 and len(reads)==1
+    # One read-only feasibility snapshot and one fresh atomic acceptance snapshot.
+    assert hashes==[accepted.input_sha256]*6 and len(reads)==2
     assert len({e.execution_id for e in current.executions})==6
     assert all(e.eligible and e.result.problem==accepted.problem for e in current.executions)
     assert all(e.diagnostic.termination_reason=='COMPLETED' for e in current.executions)
@@ -273,7 +274,8 @@ def test_failed_closure_commit_keeps_lease_until_successful_retry(session_factor
         coordinator.runner_factory = reject_after_recovery
         with pytest.raises(RunError) as resumed:
             coordinator.start(ids,actor,'b05-close-retry-0001')
-        assert resumed.value.code == "RESOURCE_UNAVAILABLE"
+        # Recovery completes first; the previously completed orders are no longer pending.
+        assert resumed.value.code == "STATE_CONFLICT"
         current=wait_closed(coordinator)
     finally: coordinator.shutdown()
     evidence('closure-retry',coordinator,current)

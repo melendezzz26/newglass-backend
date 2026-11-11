@@ -113,7 +113,8 @@ def test_no_client_body_can_change_the_solution(run_api,session_factory,body):
 def test_no_solution_422_and_no_inventory_mutation(run_api,session_factory):
     client,ids,headers,*_=run_api
     with session_factory() as s:
-        s.get(Plancha,5).cantidad=0
+        # Every piece fits individually, but the batch exceeds the available stock.
+        s.get(Plancha,5).cantidad=1
         s.commit()
     url,headers=completed(run_api)
     before=snapshot(session_factory)

@@ -35,6 +35,7 @@ class RunRoute(APIRoute):
             except RunError as error:
                 status = {"NOT_FOUND":404, "STATE_CONFLICT":409, "CONFIG_CONFLICT":409, "INVALID_INPUT":422,
                           "STOCK_CONFLICT":409, "ALREADY_CONFIRMED":409, "NOT_CONFIRMABLE":422,
+                          "NO_COMPATIBLE_STOCK":422, "PIECE_DOES_NOT_FIT":422,
                           "LOAD_LIMIT_EXCEEDED":422, "OPTIMIZER_BUSY":503,
                           "VISUAL_DATA_UNAVAILABLE":410, "RESOURCE_UNAVAILABLE":503,
                           "EVENT_CURSOR_EXPIRED":409, "COMPARISON_PROFILE_MISMATCH":409,
@@ -111,6 +112,8 @@ def start_run(request: RunRequestV1, user=Depends(run_permission("optimization.e
               unit_of_work=Depends(get_run_unit_of_work), calculator=Depends(get_run_calculator),
               stock_counter=Depends(get_stock_counter), admission=Depends(get_run_admission),
               profile=Depends(get_stream_profile), visual_store=Depends(get_visual_store)):
+    admission.check_available(user.user_id)
+    AcceptRun(unit_of_work, stock_counter).execute(request.order_ids, user.user_id, preflight_only=True)
     lease = admission.acquire(user.user_id)                                 # TA-037 P2: 503 if busy
     visual_session = None
     accepted = None

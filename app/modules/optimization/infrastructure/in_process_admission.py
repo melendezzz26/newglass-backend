@@ -37,15 +37,23 @@ class InProcessRunAdmission:
         """Una comparación reserva todo el proceso; nunca coexiste con legacy."""
         return self._acquire(user_id, comparison=True)
 
+    def check_available(self, user_id, *, comparison=False):
+        """Read-only early check; _acquire repeats it atomically after preflight."""
+        with self._lock:
+            self._check(user_id, comparison=comparison)
+
+    def _check(self, user_id, *, comparison):
+        mine = sum(1 for owner, _ in self._leases.values() if owner == user_id)
+        if mine >= self.max_per_user:
+            raise OptimizerBusy("active_runs_per_user", self.max_per_user, mine)
+        if self._comparison_token is not None or comparison and self._leases:
+            raise OptimizerBusy("active_runs", 1, len(self._leases))
+        if len(self._leases) >= self.max_active:
+            raise OptimizerBusy("active_runs", self.max_active, len(self._leases))
+
     def _acquire(self, user_id, *, comparison):
         with self._lock:
-            mine = sum(1 for owner, _ in self._leases.values() if owner == user_id)
-            if mine >= self.max_per_user:                                   # L-11
-                raise OptimizerBusy("active_runs_per_user", self.max_per_user, mine)
-            if self._comparison_token is not None or comparison and self._leases:
-                raise OptimizerBusy("active_runs", 1, len(self._leases))
-            if len(self._leases) >= self.max_active:                        # L-10
-                raise OptimizerBusy("active_runs", self.max_active, len(self._leases))
+            self._check(user_id, comparison=comparison)
             token = object()
             self._leases[token] = (user_id, self.clock())
             if comparison:

@@ -33,25 +33,16 @@ def test_capacity_rejections_and_order_lifecycle_are_explicit(api, session_facto
         session.commit()
     response = client.post('/api/optimization/comparisons',headers={**headers,'Idempotency-Key':'capacity-'+scenario},json={'order_ids':ids})
     detail, final = None, None
-    if scenario in ('oversized-piece','stock-count','raster-estimate'):
+    if scenario in ('no-fit','oversized-piece','stock-count','raster-estimate','oversized-stock-with-usable-source'):
         assert response.status_code == 422, response.text
         detail = response.json()['detail']
-        assert detail['code'] == ('INVALID_INPUT' if scenario=='oversized-piece' else 'LOAD_LIMIT_EXCEEDED')
+        expected = {'no-fit': 'PIECE_DOES_NOT_FIT', 'oversized-piece': 'INVALID_INPUT',
+                    'oversized-stock-with-usable-source': 'INVALID_INPUT'}.get(scenario, 'LOAD_LIMIT_EXCEEDED')
+        assert detail['code'] == expected
         if scenario == 'raster-estimate':
             assert detail['limit']['name'] == 'raster_memory'
             assert detail['limit']['actual'] > detail['limit']['maximum'] == 64 * 1024 * 1024
         assert runtime.job is None
-    else:
-        assert response.status_code == 201, response.text
-        final = completed(api,response.headers['location'])
-        runtime.job.thread.join(timeout=5)
-        assert runtime.job.runner.last_report['all_workers_stopped']
-        if scenario=='oversized-stock-with-usable-source':
-            assert final['status']=='FALLIDA'
-            assert all(e['failure_code']=='EXECUTION_FAILED' for e in final['executions'])
-        else:
-            assert final['status']=='SIN_SOLUCION' and not final['incomplete']
-            assert all(e['status']=='COMPLETADA' and not e['complete'] for e in final['executions'])
     with session_factory() as session:
         assert [session.get(Pedido,i).estado for i in ids] == ['PENDIENTE']*len(ids)
         assert [(p.id_plancha,p.cantidad,p.estado) for p in session.scalars(select(Plancha).order_by(Plancha.id_plancha))] == before_stock

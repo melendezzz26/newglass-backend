@@ -165,7 +165,8 @@ def test_failed_method_keeps_other_results_and_becomes_incomplete(comparison_set
 def test_no_eligible_result_returns_orders_after_safe_finish(session_factory, comparison_setup, failure):
     actor, ids, uow = comparison_setup
     with session_factory() as s:
-        s.get(Plancha, 5).cantidad = 0
+        # The individual pieces fit, but the batch cannot fit in one sheet.
+        s.get(Plancha, 5).cantidad = 1
         s.commit()
     current = accept(comparison_setup)
     for execution in current.executions:
