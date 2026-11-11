@@ -194,6 +194,8 @@ class ComparisonV2Coordinator:
             with self.uow() as tx:
                 self.authorize(tx, actor_id)
                 current = tx.comparisons_v2.get_owned(identifier, actor_id)
+            if current.terminal and current.cancellation is None:
+                raise RunError("STATE_CONFLICT", "El trabajo ya finalizó antes de solicitar cancelación.")
             job = self.job
             # Never signal a different owner or a process obtained from an
             # unverified PID. A restarted service must reconcile ownership first.
