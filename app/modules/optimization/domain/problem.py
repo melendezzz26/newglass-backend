@@ -127,6 +127,7 @@ class StockCandidate:
     thickness_mm: Decimal
     geometry: Mapping
     area_mm2: Decimal
+    codigo: str | None = None
 
     def __post_init__(self):
         if not isinstance(self.source, MaterialSource):
@@ -135,6 +136,8 @@ class StockCandidate:
             positive_int(getattr(self, name), name)
         if self.source is MaterialSource.REMNANT and self.physical_unit_index != 1:
             raise ValueError("A remnant represents exactly one physical unit.")
+        if self.codigo is not None and (self.source is not MaterialSource.REMNANT or not isinstance(self.codigo, str) or not self.codigo.strip() or len(self.codigo) > 40):
+            raise ValueError("Invalid remnant code.")
         for name in ("thickness_mm", "area_mm2"):
             object.__setattr__(self, name, decimal_value(getattr(self, name), name, positive=True))
         object.__setattr__(self, "geometry", geometry_snapshot(self.geometry))

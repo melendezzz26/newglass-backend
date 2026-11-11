@@ -28,6 +28,7 @@ class CreatedRemnant:
     geometry: Mapping
     area_mm2: Decimal
     exact_area_mm2: Decimal
+    codigo: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

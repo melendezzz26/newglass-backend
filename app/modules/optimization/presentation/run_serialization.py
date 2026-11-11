@@ -22,7 +22,7 @@ def unit_response(unit: PieceUnit) -> PieceUnitV1:
 def stock_response(stock: StockCandidate) -> StockV1:
     return StockV1(material_source=stock.source, material_id=stock.material_id,
                    stock_unit_index=stock.physical_unit_index, id_tipo_vidrio=stock.glass_type_id,
-                   espesor_mm=stock.thickness_mm, geometria=dict(stock.geometry), area_mm2=stock.area_mm2)
+                   espesor_mm=stock.thickness_mm, geometria=dict(stock.geometry), area_mm2=stock.area_mm2, codigo=stock.codigo)
 
 
 def placement_response(placement: Placement, config: OptimizationConfig) -> PlacementV1:
