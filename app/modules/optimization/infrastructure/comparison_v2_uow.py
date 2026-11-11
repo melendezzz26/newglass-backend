@@ -156,13 +156,19 @@ class SqlComparisonV2Repository:
             runtime_metadata(runtime, [e.id_ejecucion for _, e in pairs if e is not None])
             cancel = stored.get("cancellation")
             if cancel is not None:
-                if (not isinstance(cancel, dict) or set(cancel) != {"requested_at", "requested_by", "request_key"}
+                if (not isinstance(cancel, dict)
+                    or not {"requested_at", "requested_by", "request_key"} <= set(cancel)
+                    or set(cancel) - {"requested_at", "requested_by", "request_key", "status", "verified_at"}
                     or type(cancel["requested_by"]) is not int
                     or cancel["requested_by"] != row.id_usuario_ejecutor
                     or not isinstance(cancel["request_key"], str)
-                    or re.fullmatch(r"[A-Za-z0-9_-]{8,64}", cancel["request_key"]) is None):
+                    or re.fullmatch(r"[A-Za-z0-9_-]{8,64}", cancel["request_key"]) is None
+                    or cancel.get("status", "REQUESTED") not in
+                       ("REQUESTED", "CANCELLED", "COMPLETED_BEFORE_CANCEL")
+                    or ("verified_at" in cancel) != (cancel.get("status") in ("CANCELLED", "COMPLETED_BEFORE_CANCEL"))):
                     raise ValueError("Invalid cancellation request identity")
                 _utc(cancel["requested_at"])
+                if "verified_at" in cancel: _utc(cancel["verified_at"])
             stopped = runtime["supervisor_stopped_at"] is not None
             release_fields = {"released_at", "released_by", "released_selection_id"}
             release_keys = set(stored) & release_fields
@@ -177,6 +183,9 @@ class SqlComparisonV2Repository:
             if stopped:
                 if row.fecha_fin is None or _utc(runtime["supervisor_stopped_at"]) != row.fecha_fin:
                     raise ValueError("Inconsistent supervisor stop marker")
+            if cancel is not None:
+                if stopped != ("verified_at" in cancel):
+                    raise ValueError("Cancellation finality disagrees with supervisor closure")
             by_method = {e.metodo: e for _, e in pairs if e is not None}
             if len(pairs) != len(frozen.methods) or set(by_method) != set(frozen.methods):
                 raise ValueError("Missing or inconsistent execution identities")
@@ -189,6 +198,12 @@ class SqlComparisonV2Repository:
                 "FALLIDA" if any(e.status == "FALLIDA" for e in executions) else "SIN_SOLUCION")
             if row.estado != expected_status:
                 raise ValueError("Aggregate state does not match persisted executions")
+            if cancel is not None and stopped:
+                interrupted = any(e.diagnostic is not None and
+                    e.diagnostic.termination_reason == "CANCELLED" for e in executions)
+                expected_cancel = "CANCELLED" if interrupted else "COMPLETED_BEFORE_CANCEL"
+                if cancel["status"] != expected_cancel:
+                    raise ValueError("Cancellation finality differs from execution diagnostics")
             selected = next((e for e in executions if e.execution_id == row.id_ejecucion_seleccionada), None)
             if row.id_ejecucion_seleccionada is not None and (not stopped or selected is None or not selected.eligible):
                 raise ValueError("Selected execution is not an eligible owned result")
@@ -230,7 +245,7 @@ class SqlComparisonV2Repository:
                 configuration_id=frozen.configuration_id, configuration_version=frozen.configuration_version,
                 minimum_width_mm=frozen.minimum_width_mm, minimum_height_mm=frozen.minimum_height_mm,
                 executions=executions, selected_execution_id=row.id_ejecucion_seleccionada, workers_stopped=stopped,
-                runtime=runtime, released=released, confirmation=confirmation)
+                runtime=runtime, released=released, confirmation=confirmation, cancellation=cancel)
         except (KeyError, TypeError, ValueError, ArithmeticError, OverflowError) as error:
             logger.warning("Invalid persisted v2 trace for comparison %s: %s", identifier, error)
             raise RunError("INTERNAL_ERROR", "La trazabilidad persistida v2 requiere revisión.") from error
@@ -266,7 +281,8 @@ class SqlComparisonV2Repository:
         if current.version != expected_version:
             raise RunError("STATE_CONFLICT", "La versión del trabajo cambió.")
         row.comparison_snapshot = {**row.comparison_snapshot, "cancellation": {
-            "requested_at": now().isoformat(), "requested_by": actor_id, "request_key": key}}
+            "requested_at": now().isoformat(), "requested_by": actor_id, "request_key": key,
+            "status": "REQUESTED"}}
         row.comparison_version += 1
         self.session.flush()
         return self.get(identifier)
@@ -278,6 +294,8 @@ class SqlComparisonV2Repository:
             if expected_version not in (current.version-1,current.version):
                 raise RunError("STATE_CONFLICT", "La versión del trabajo cambió.")
             return current
+        if current.cancellation is not None and current.cancellation["status"] == "CANCELLED":
+            raise RunError("STATE_CONFLICT", "La cancelación cerró este trabajo; el pedido ya está libre.")
         if current.version != expected_version or not current.terminal or not current.supervisor_stopped:
             raise RunError("STATE_CONFLICT", "El trabajo debe tener cierre seguro y versión vigente.")
         if current.confirmation is not None:
@@ -297,7 +315,8 @@ class SqlComparisonV2Repository:
         current = self.get_owned(identifier, actor_id)
         if (type(expected_version) is not int or current.version != expected_version
             or not current.terminal or not current.supervisor_stopped or current.released
-            or current.confirmation is not None):
+            or current.confirmation is not None
+            or current.cancellation is not None and current.cancellation["status"] == "CANCELLED"):
             raise RunError("STATE_CONFLICT", "La comparación no admite cambios en este estado o versión.")
         if type(execution_id) is not int or not any(
                 e.execution_id == execution_id and e.eligible for e in current.executions):
@@ -480,8 +499,16 @@ class SqlComparisonV2Repository:
         if any(e.dispatch_state != "TERMINATED" for e in current.executions):
             raise RunError("STATE_CONFLICT", "Todavía hay ejecuciones sin resolver.")
         stamp = _utc(stopped_at)
+        cancellation = row.comparison_snapshot.get("cancellation")
+        if cancellation is not None:
+            cancelled = any(e.diagnostic is not None and
+                e.diagnostic.termination_reason == "CANCELLED" for e in current.executions)
+            cancellation = {**cancellation, "status":
+                "CANCELLED" if cancelled else "COMPLETED_BEFORE_CANCEL",
+                "verified_at": stamp.isoformat()}
         row.comparison_snapshot = {**row.comparison_snapshot, "runtime": {
-            **row.comparison_snapshot["runtime"], "supervisor_stopped_at": stamp.isoformat()}}
+            **row.comparison_snapshot["runtime"], "supervisor_stopped_at": stamp.isoformat()},
+            **({"cancellation": cancellation} if cancellation is not None else {})}
         row.estado = ("COMPLETADA" if any(e.eligible for e in current.executions) else
                       "FALLIDA" if any(e.status == "FALLIDA" for e in current.executions) else "SIN_SOLUCION")
         row.fecha_fin = stamp
