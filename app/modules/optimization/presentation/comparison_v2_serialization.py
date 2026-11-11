@@ -12,7 +12,9 @@ def execution_summary_v2(current, execution):
     return ExecutionSummaryV2(execution_id=execution.execution_id, method=execution.method,
         status=execution.status, dispatch_state=execution.dispatch_state, outcome=execution.outcome,
         result_available=result is not None, complete=bool(result and result.complete),
-        eligible=execution.eligible and current.terminal and not current.released and current.confirmation is None,
+        eligible=(execution.eligible and current.terminal and not current.released
+            and current.confirmation is None
+            and not (current.cancellation is not None and current.cancellation["status"] == "CANCELLED")),
         placed_units=result.placed_units if result else 0, total_units=len(current.problem.units),
         metrics=metrics_response(result), computation_time_ms=result.computation_time_ms if result else None,
         diagnostic=execution.diagnostic.public() if execution.diagnostic else None)
@@ -29,7 +31,8 @@ def comparison_response_v2(current):
         terminal=current.terminal,incomplete=current.incomplete,released=current.released,
         confirmed=current.confirmation is not None,confirmation=plain(current.confirmation),
         selection_allowed=any(e.eligible for e in executions),confirmable=bool(selected and selected.eligible),
-        supervisor_stopped=current.supervisor_stopped)
+        supervisor_stopped=current.supervisor_stopped,
+        cancellation_status=current.cancellation["status"] if current.cancellation else "NONE")
 
 
 def execution_response_v2(current, execution):
