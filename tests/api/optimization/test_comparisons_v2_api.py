@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select,func,delete
 
-from app.models import Optimizacion,EjecucionOptimizacion,Plancha,Permiso,RolPermiso
+from app.models import Optimizacion,EjecucionOptimizacion,Plancha,Pedido,MovimientoInventario,Permiso,RolPermiso
 from app.shared.security import create_access_token
 from app.modules.optimization.application.comparison_acceptance_v2 import AcceptComparisonV2
 from app.modules.optimization.application.comparison_limits import ComparisonBudget
@@ -382,3 +382,65 @@ def test_one_connection_suffices_for_auth_capture_observation_and_query(api,sess
     finally:
         coordinator.shutdown()
         session_factory.configure(bind=original); engine.dispose()
+
+
+def test_user_cancellation_proves_worker_closure_restores_orders_and_survives_read(api,session_factory,create_user):
+    """EN-UX-004: real HTTP, RBAC, durable intent, runner and no consumption."""
+    client,actor,ids,headers,coordinator,uow = api
+    before = inventory(session_factory)
+    coordinator.runner_factory = partial(SequentialProcessRunner,worker_target=started_then_blocked)
+    path, accepted = start(api, key='enux004-cancel-api-0001')
+    deadline=time.monotonic()+12
+    while time.monotonic()<deadline:
+        report=coordinator.job.runner.last_report
+        if report and report['executions']['FF'].get('engine_started'): break
+        time.sleep(.01)
+    else: pytest.fail('Controlled FF worker never started')
+    foreign=create_user('O73000002')
+    theirs={'Authorization':'Bearer '+create_access_token(foreign,'O73000002','Operario')}
+    assert client.post(path+'/cancel',json={'expected_version':accepted.version},
+        headers={**theirs,'Idempotency-Key':'enux004-foreign-0001'}).status_code==404
+    latest=client.get(path,headers=headers).json()
+    response=client.post(path+'/cancel',json={'expected_version':latest['version']},
+        headers={**headers,'Idempotency-Key':'enux004-user-0001'})
+    assert response.status_code in (200,202),response.text
+    value=response.json()
+    assert value['comparison_id']==accepted.comparison_id
+    assert value['cancel_state'] in ('REQUESTED','CANCELLED')
+    if value['cancel_state']=='REQUESTED':
+        assert not value['terminal'] and not value['supervisor_stopped']
+    repeated=client.post(path+'/cancel',json={'expected_version':latest['version']},
+        headers={**headers,'Idempotency-Key':'enux004-user-0001'})
+    assert repeated.status_code in (200,202),repeated.text
+    assert client.post(path+'/cancel',json={'expected_version':latest['version']},
+        headers={**headers,'Idempotency-Key':'enux004-other-0001'}).status_code==409
+    final=completed(api,path)
+    assert final.terminal and final.supervisor_stopped
+    assert final.cancellation_status == 'CANCELLED'
+    assert not final.selection_allowed and not final.confirmable
+    assert all(not e.eligible for e in final.executions)
+    assert any(e.diagnostic.termination_reason=='CANCELLED' for e in final.executions)
+    assert final.executions[0].diagnostic.termination_reason == 'CANCELLED'
+    cancelled=client.get(path+'/cancel',headers=headers)
+    assert cancelled.status_code==200
+    assert cancelled.json()['cancel_state']=='CANCELLED' and cancelled.json()['terminal']
+    assert client.get(path+'/cancel',headers=theirs).status_code==404
+    assert client.post(path+'/release',json={'expected_version':final.version},headers=headers).status_code==409
+    assert client.post(path+'/confirm',json={'execution_id':final.executions[0].execution_id,
+        'expected_version':final.version},headers={**headers,'Idempotency-Key':'enux004-confirm-0001'}).status_code==409
+    assert inventory(session_factory)==before
+    with session_factory() as session:
+        assert all(session.get(Pedido,oid).estado=='PENDIENTE' for oid in ids)
+        assert session.scalar(select(func.count()).select_from(MovimientoInventario))==0
+    assert coordinator.job.runner.last_report['all_workers_stopped']
+
+
+def test_cancel_on_completed_comparison_does_not_overwrite_results(api,session_factory):
+    client,actor,ids,headers,coordinator,uow=api
+    path,_=start(api,key='enux004-completed-0001')
+    current=completed(api,path)
+    response=client.post(path+'/cancel',json={'expected_version':current.version},
+        headers={**headers,'Idempotency-Key':'enux004-too-late-0001'})
+    assert response.status_code==409,response.text
+    assert client.get(path+'/cancel',headers=headers).json()['cancel_state']=='NONE'
+    assert client.get(path,headers=headers).json()==current.model_dump(mode='json')
