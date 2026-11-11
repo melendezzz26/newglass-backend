@@ -199,16 +199,19 @@ class ComparisonV2Coordinator:
             job = self.job
             # Never signal a different owner or a process obtained from an
             # unverified PID. A restarted service must reconcile ownership first.
+            owner = current.runtime.get("supervisor")
             if current.cancellation is None and (job is None
                 or job.comparison.comparison_id != identifier
-                or job.closed.is_set()):
+                or job.closed.is_set() or owner is None
+                or owner["token"] != job.token or dict(owner["identity"]) != job.identity):
                 raise RunError("RECOVERY_BLOCKED",
                     "No se puede identificar un supervisor activo y seguro para cancelar.")
             with self.uow() as tx:
                 current = tx.comparisons_v2.request_cancellation(
                     identifier, actor_id, key, expected_version)
             if not current.terminal and job is not None and not job.closed.is_set() \
-                    and job.comparison.comparison_id == identifier:
+                    and job.comparison.comparison_id == identifier \
+                    and current.runtime.get("supervisor", {}).get("token") == job.token:
                 job.cancel.set()
                 job.mark("user_cancel_requested")
             return current
