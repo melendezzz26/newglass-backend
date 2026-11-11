@@ -447,3 +447,51 @@ def test_recovery_on_unsupported_platform_keeps_block_without_pid_inference(setu
     coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission(),runner_factory=Unsupported)
     assert not coordinator.recover_pending() and coordinator.admission.active()==1
     with uow() as tx: assert not tx.comparisons_v2.get(accepted.comparison_id).terminal
+
+
+def test_cancel_request_without_verified_local_owner_never_persists_or_stops_unrelated_job(setup):
+    """No local owner means no safe signal; do not accept a cancellation blindly."""
+    actor,ids,uow=setup
+    accepted=AcceptComparisonV2(uow,authorize_actor).execute(ids,actor,'enux004-ownerless-0001')
+    coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission())
+    with pytest.raises(RunError) as error:
+        coordinator.request_cancel(accepted.comparison_id,actor,'enux004-stop-0001',accepted.version)
+    assert error.value.code=='RECOVERY_BLOCKED'
+    with uow() as tx:
+        fresh=tx.comparisons_v2.get(accepted.comparison_id)
+        assert fresh.cancellation is None and fresh.version==accepted.version
+        assert not fresh.terminal
+
+
+def test_cancel_intent_recovery_never_assumes_process_death_and_marks_safe_terminal(setup):
+    """Restart: only proven-dead identities can resolve durable intent."""
+    actor,ids,uow=setup
+    accepted=AcceptComparisonV2(uow,authorize_actor).execute(ids,actor,'enux004-recovery-0001')
+    token=uuid4().hex
+    owner=process_identity(os.getpid())
+    absent=dict(pid=2147483647,start_ticks='1')
+    with uow() as tx:
+        assert tx.comparisons_v2.claim_supervisor(accepted.comparison_id,token,owner)
+    with uow() as tx:
+        current=tx.comparisons_v2.get(accepted.comparison_id)
+        tx.comparisons_v2.request_cancellation(current.comparison_id,actor,'enux004-stop-0002',current.version)
+    coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission())
+    assert not coordinator.recover_pending()
+    assert coordinator.admission.active()==1
+    with uow() as tx:
+        current=tx.comparisons_v2.get(accepted.comparison_id)
+        assert current.cancellation['status']=='REQUESTED' and not current.terminal
+    with uow() as tx:
+        row=tx.session.get(Optimizacion,accepted.comparison_id)
+        snapshot=dict(row.comparison_snapshot)
+        runtime=dict(snapshot['runtime'])
+        runtime['supervisor']={**runtime['supervisor'],'identity':absent}
+        row.comparison_snapshot={**snapshot,'runtime':runtime}
+    assert coordinator.recover_pending()
+    assert coordinator.admission.active()==0
+    with uow() as tx:
+        finished=tx.comparisons_v2.get(accepted.comparison_id)
+        assert finished.terminal and finished.supervisor_stopped
+        assert finished.cancellation['status']=='CANCELLED'
+        assert all(e.diagnostic.termination_reason=='CANCELLED' for e in finished.executions)
+        assert all(tx.session.get(Pedido,oid).estado=='PENDIENTE' for oid in ids)
