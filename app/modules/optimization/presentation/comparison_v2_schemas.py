@@ -47,6 +47,7 @@ class ComparisonCancelV2(ContractV1):
 
 class ComparisonCancelResponseV2(ContractV1):
     profile: Literal["comparison-v2"] = "comparison-v2"
+    schema_version: Literal[2] = 2
     comparison_id: PositiveIdV2
     version: PositiveIdV2
     cancel_state: Literal["NONE", "REQUESTED", "CANCELLED", "COMPLETED_BEFORE_CANCEL"]
