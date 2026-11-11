@@ -148,12 +148,21 @@ class SqlComparisonV2Repository:
         if stored.get("comparison_snapshot_version") == 1:
             raise RunError("COMPARISON_PROFILE_MISMATCH", "La comparación pertenece al perfil comparison-v1.")
         try:
-            operational = {"runtime", "released_at", "released_by", "released_selection_id", "confirmation"}
+            operational = {"runtime", "released_at", "released_by", "released_selection_id", "confirmation", "cancellation"}
             frozen = decode_comparison_input_v2({k: v for k, v in stored.items() if k not in operational})
             if row.criterio_seleccion_version != "CMP-v2" or row.id_configuracion != frozen.configuration_id:
                 raise ValueError("Aggregate profile/configuration identity mismatch")
             runtime = stored["runtime"]
             runtime_metadata(runtime, [e.id_ejecucion for _, e in pairs if e is not None])
+            cancel = stored.get("cancellation")
+            if cancel is not None:
+                if (not isinstance(cancel, dict) or set(cancel) != {"requested_at", "requested_by", "request_key"}
+                    or type(cancel["requested_by"]) is not int
+                    or cancel["requested_by"] != row.id_usuario_ejecutor
+                    or not isinstance(cancel["request_key"], str)
+                    or re.fullmatch(r"[A-Za-z0-9_-]{8,64}", cancel["request_key"]) is None):
+                    raise ValueError("Invalid cancellation request identity")
+                _utc(cancel["requested_at"])
             stopped = runtime["supervisor_stopped_at"] is not None
             release_fields = {"released_at", "released_by", "released_selection_id"}
             release_keys = set(stored) & release_fields
@@ -232,6 +241,34 @@ class SqlComparisonV2Repository:
             raise RunError("NOT_FOUND", "No se encontró la comparación.")
         if not row.comparison_snapshot or row.comparison_snapshot.get("profile") != "comparison-v2":
             raise RunError("COMPARISON_PROFILE_MISMATCH", "El recurso pertenece a otro perfil de optimización.")
+        return self.get(identifier)
+
+    def request_cancellation(self, identifier, actor_id, key, expected_version):
+        """Atomically persist a cancellation intention; does NOT stop or retire workers.
+
+        This is an internal repository primitive, not a public cancellation endpoint.
+        The orchestrator must signal only the matching supervised job *after* commit,
+        then prove descendant closure before reporting a cancelled terminal result.
+        """
+        if (type(actor_id) is not int or not 0 < actor_id <= 2147483647
+            or not isinstance(key, str) or re.fullmatch(r"[A-Za-z0-9_-]{8,64}", key) is None
+            or type(expected_version) is not int or expected_version <= 0):
+            raise RunError("INVALID_INPUT", "Identidad o versión de cancelación inválida.")
+        row = self._lock(identifier)
+        current = self.get_owned(identifier, actor_id)
+        prior = row.comparison_snapshot.get("cancellation")
+        if prior is not None:
+            if prior["request_key"] != key or prior["requested_by"] != actor_id:
+                raise RunError("STATE_CONFLICT", "El trabajo tiene otra solicitud de cancelación.")
+            return current
+        if current.terminal or current.released or current.confirmation is not None:
+            raise RunError("STATE_CONFLICT", "La comparación ya no admite cancelación.")
+        if current.version != expected_version:
+            raise RunError("STATE_CONFLICT", "La versión del trabajo cambió.")
+        row.comparison_snapshot = {**row.comparison_snapshot, "cancellation": {
+            "requested_at": now().isoformat(), "requested_by": actor_id, "request_key": key}}
+        row.comparison_version += 1
+        self.session.flush()
         return self.get(identifier)
 
     def release(self, identifier, actor_id, expected_version):

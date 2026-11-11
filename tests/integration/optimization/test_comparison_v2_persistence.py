@@ -271,3 +271,57 @@ def test_v1_key_and_reader_keep_original_three_execution_contract(setup_v2):
     with pytest.raises(RunError), factory() as tx:
         tx.comparisons_v2.get(historical.comparison_id)
     assert len(historical.executions) == 3
+
+
+def test_cancel_intent_is_durable_owned_idempotent_and_never_consumes_inventory(session_factory, setup_v2):
+    """EN-UX-004 storage step: no endpoint, process signal, or terminal claim."""
+    actor, ids, factory = setup_v2
+    original = create(setup_v2, key="enux004-seed-0001")
+    with factory() as tx:
+        stored = tx.comparisons_v2.request_cancellation(
+            original.comparison_id, actor, "enux004-cancel-0001", original.version)
+    assert stored.version == original.version + 1
+    assert stored.status == "EN_EJECUCION" and not stored.terminal
+    with factory() as tx:
+        repeated = tx.comparisons_v2.request_cancellation(
+            original.comparison_id, actor, "enux004-cancel-0001", original.version)
+        assert repeated == stored
+        with pytest.raises(RunError) as conflict:
+            tx.comparisons_v2.request_cancellation(
+                original.comparison_id, actor, "enux004-cancel-other", stored.version)
+        assert conflict.value.code == "STATE_CONFLICT"
+    with factory() as tx:
+        with pytest.raises(RunError) as denied:
+            tx.comparisons_v2.request_cancellation(
+                original.comparison_id, actor + 1, "enux004-foreign-01", stored.version)
+        assert denied.value.code == "NOT_FOUND"
+    with session_factory() as session:
+        row = session.get(Optimizacion, original.comparison_id)
+        record = row.comparison_snapshot["cancellation"]
+        assert record["requested_by"] == actor
+        assert record["request_key"] == "enux004-cancel-0001"
+        assert session.scalar(select(func.count()).select_from(MovimientoInventario)) == 0
+        assert session.get(Plancha, 5).cantidad == 2
+        assert all(session.get(Pedido, oid).estado == "PENDIENTE" for oid in ids)
+
+
+def test_cancel_intent_rejects_stale_version_and_invalid_persisted_owner(session_factory, setup_v2):
+    actor, _, factory = setup_v2
+    current = create(setup_v2, key="enux004-seed-0002")
+    with factory() as tx:
+        with pytest.raises(RunError) as conflict:
+            tx.comparisons_v2.request_cancellation(
+                current.comparison_id, actor, "enux004-cancel-0002", current.version + 1)
+        assert conflict.value.code == "STATE_CONFLICT"
+        assert tx.comparisons_v2.get(current.comparison_id) == current
+    with factory() as tx:
+        tx.comparisons_v2.request_cancellation(
+            current.comparison_id, actor, "enux004-cancel-0002", current.version)
+    with session_factory() as session:
+        row = session.get(Optimizacion, current.comparison_id)
+        snapshot = deepcopy(row.comparison_snapshot)
+        snapshot["cancellation"]["requested_by"] = actor + 1
+        row.comparison_snapshot = snapshot
+        session.commit()
+    with pytest.raises(RunError, match="trazabilidad"), factory() as tx:
+        tx.comparisons_v2.get(current.comparison_id)
