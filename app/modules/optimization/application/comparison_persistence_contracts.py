@@ -55,6 +55,7 @@ class PersistedComparisonV2(Comparison):
     methods: tuple[str, ...] = METHODS_V2
     profile: str = "comparison-v2"
     runtime: object = None
+    cancellation: object = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -62,6 +63,7 @@ class PersistedComparisonV2(Comparison):
         object.__setattr__(self, "methods", tuple(self.methods))
         object.__setattr__(self, "confirmation", immutable_json(self.confirmation))
         object.__setattr__(self, "runtime", immutable_json(self.runtime))
+        object.__setattr__(self, "cancellation", immutable_json(self.cancellation))
 
     @property
     def incomplete(self):
