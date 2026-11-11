@@ -426,8 +426,9 @@ def test_user_cancellation_proves_worker_closure_restores_orders_and_survives_re
     assert cancelled.json()['cancel_state']=='CANCELLED' and cancelled.json()['terminal']
     assert client.get(path+'/cancel',headers=theirs).status_code==404
     assert client.post(path+'/release',json={'expected_version':final.version},headers=headers).status_code==409
-    assert client.post(path+'/confirm',json={'execution_id':final.executions[0].execution_id,
-        'expected_version':final.version},headers={**headers,'Idempotency-Key':'enux004-confirm-0001'}).status_code==409
+    forbidden=client.post(path+'/confirm',json={'execution_id':final.executions[0].execution_id,
+        'expected_version':final.version},headers={**headers,'Idempotency-Key':'enux004-confirm-0001'})
+    assert forbidden.status_code==422 and forbidden.json()['detail']['code']=='NOT_CONFIRMABLE'
     assert inventory(session_factory)==before
     with session_factory() as session:
         assert all(session.get(Pedido,oid).estado=='PENDIENTE' for oid in ids)
