@@ -29,6 +29,7 @@ from app.modules.optimization.infrastructure.sequential_runner import Sequential
 from app.modules.optimization.infrastructure.comparison_snapshot import encode_problem
 from app.modules.optimization.presentation.comparison_supervision_v2 import ComparisonV2Coordinator, authorize_actor
 from tests.unit.optimization.test_sequential_runner import crash_hf, oversize_hf, limited_beam, started_then_blocked
+from app.modules.optimization.infrastructure.sequential_worker import calculation_worker_v2
 from .test_runs import prepared  # noqa: F401
 
 
@@ -447,3 +448,120 @@ def test_recovery_on_unsupported_platform_keeps_block_without_pid_inference(setu
     coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission(),runner_factory=Unsupported)
     assert not coordinator.recover_pending() and coordinator.admission.active()==1
     with uow() as tx: assert not tx.comparisons_v2.get(accepted.comparison_id).terminal
+
+
+def test_cancel_request_without_verified_local_owner_never_persists_or_stops_unrelated_job(setup):
+    """No local owner means no safe signal; do not accept a cancellation blindly."""
+    actor,ids,uow=setup
+    accepted=AcceptComparisonV2(uow,authorize_actor).execute(ids,actor,'enux004-ownerless-0001')
+    coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission())
+    with pytest.raises(RunError) as error:
+        coordinator.request_cancel(accepted.comparison_id,actor,'enux004-stop-0001',accepted.version)
+    assert error.value.code=='RECOVERY_BLOCKED'
+    with uow() as tx:
+        fresh=tx.comparisons_v2.get(accepted.comparison_id)
+        assert fresh.cancellation is None and fresh.version==accepted.version
+        assert not fresh.terminal
+
+
+def test_cancel_intent_recovery_never_assumes_process_death_and_marks_safe_terminal(setup):
+    """Restart: only proven-dead identities can resolve durable intent."""
+    actor,ids,uow=setup
+    accepted=AcceptComparisonV2(uow,authorize_actor).execute(ids,actor,'enux004-recovery-0001')
+    token=uuid4().hex
+    owner=process_identity(os.getpid())
+    absent=dict(pid=2147483647,start_ticks='1')
+    with uow() as tx:
+        assert tx.comparisons_v2.claim_supervisor(accepted.comparison_id,token,owner)
+    with uow() as tx:
+        current=tx.comparisons_v2.get(accepted.comparison_id)
+        tx.comparisons_v2.request_cancellation(current.comparison_id,actor,'enux004-stop-0002',current.version)
+    coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission())
+    assert not coordinator.recover_pending()
+    assert coordinator.admission.active()==1
+    with uow() as tx:
+        current=tx.comparisons_v2.get(accepted.comparison_id)
+        assert current.cancellation['status']=='REQUESTED' and not current.terminal
+    with uow() as tx:
+        row=tx.session.get(Optimizacion,accepted.comparison_id)
+        snapshot=dict(row.comparison_snapshot)
+        runtime=dict(snapshot['runtime'])
+        runtime['supervisor']={**runtime['supervisor'],'identity':absent}
+        row.comparison_snapshot={**snapshot,'runtime':runtime}
+    assert coordinator.recover_pending()
+    assert coordinator.admission.active()==0
+    with uow() as tx:
+        finished=tx.comparisons_v2.get(accepted.comparison_id)
+        assert finished.terminal and finished.supervisor_stopped
+        assert finished.cancellation['status']=='CANCELLED'
+        assert all(e.diagnostic.termination_reason=='CANCELLED' for e in finished.executions)
+        assert all(tx.session.get(Pedido,oid).estado=='PENDIENTE' for oid in ids)
+
+
+def first_fit_then_stall(*args):
+    """Spawn-safe controlled target: first engine completes, BF can be cancelled."""
+    if args[0]['method']=='FF':
+        return calculation_worker_v2(*args)
+    return started_then_blocked(*args)
+
+
+def test_user_cancel_during_bf_preserves_ff_result_and_prevents_later_dispatch(session_factory,setup):
+    actor,ids,uow=setup
+    done,started=Event(),Event()
+    signals=[]
+    def observer(signal):
+        signals.append((signal.kind,signal.method))
+        if signal.kind=='result_persisted' and signal.method=='FF': done.set()
+        if signal.kind=='started' and signal.method=='BF': started.set()
+    before=inventory(session_factory)
+    admission=InProcessRunAdmission()
+    coordinator=ComparisonV2Coordinator(uow,admission,
+        runner_factory=partial(SequentialProcessRunner,worker_target=first_fit_then_stall))
+    try:
+        accepted=coordinator.start(ids,actor,'enux004-bf-seed-0001',sink=observer)
+        assert done.wait(15) and started.wait(15)
+        with uow() as tx:
+            current=tx.comparisons_v2.get(accepted.comparison_id)
+            assert current.executions[0].result is not None
+            version=current.version
+        result=coordinator.request_cancel(accepted.comparison_id,actor,'enux004-bf-stop-0001',version)
+        assert result.cancellation['status']=='REQUESTED'
+        finished=wait_closed(coordinator)
+    finally: coordinator.shutdown()
+    assert finished.cancellation['status']=='CANCELLED'
+    assert finished.executions[0].diagnostic.termination_reason=='COMPLETED'
+    assert finished.executions[0].result is not None
+    assert all(e.diagnostic.termination_reason=='CANCELLED' for e in finished.executions[1:])
+    assert not any(method not in ('FF','BF') and kind=='dispatching' for kind,method in signals)
+    assert finished.runtime['workers'].keys()=={str(e.execution_id) for e in finished.executions[:2]}
+    assert inventory(session_factory)==before
+    with session_factory() as session:
+        assert all(session.get(Pedido,oid).estado=='PENDIENTE' for oid in ids)
+    evidence('cancel-mid-bf',coordinator,finished)
+
+
+def test_cancel_racing_natural_completion_keeps_completed_result(setup):
+    actor,ids,uow=setup
+    final_saved,release=Event(),Event()
+    def observer(signal):
+        if signal.kind=='result_persisted' and signal.method=='M6-BS':
+            final_saved.set()
+            assert release.wait(12)
+    coordinator=ComparisonV2Coordinator(uow,InProcessRunAdmission())
+    try:
+        accepted=coordinator.start(ids,actor,'enux004-race-seed-0001',sink=observer)
+        assert final_saved.wait(30)
+        with uow() as tx:
+            current=tx.comparisons_v2.get(accepted.comparison_id)
+            assert all(e.result is not None for e in current.executions)
+        requested=coordinator.request_cancel(accepted.comparison_id,actor,
+            'enux004-race-stop-0001',current.version)
+        assert requested.cancellation['status']=='REQUESTED'
+        release.set()
+        finished=wait_closed(coordinator)
+    finally:
+        release.set()
+        coordinator.shutdown()
+    assert finished.cancellation['status']=='COMPLETED_BEFORE_CANCEL'
+    assert all(e.diagnostic.termination_reason=='COMPLETED' for e in finished.executions)
+    assert all(e.result is not None for e in finished.executions)

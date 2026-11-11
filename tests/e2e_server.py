@@ -111,7 +111,29 @@ def main():
             if result.returncode:
                 raise RuntimeError("Alembic inspection failed")
         print("Synthetic local database: " + os.environ["DATABASE_URL"], flush=True)
-        uvicorn.run("main:app", host="127.0.0.1", port=8017, log_level="warning")
+
+        # Dedicated test-only control is registered on the isolated loopback
+        # application instance, never in the production FastAPI router.
+        from fastapi import HTTPException, Request
+        from main import app
+        from app.modules.optimization.presentation.comparison_supervision_v2 import get_comparison_v2_coordinator
+        from app.modules.optimization.infrastructure.sequential_runner import SequentialProcessRunner
+        from tests.e2e_cancellation_worker import blocked_until_cancel
+        from functools import partial
+
+        @app.post("/__e2e__/comparison-worker/{mode}", include_in_schema=False)
+        def comparison_worker(mode: str, request: Request):
+            if request.client.host not in ("127.0.0.1", "::1") or mode not in ("blocked", "normal"):
+                raise HTTPException(status_code=404)
+            coordinator = get_comparison_v2_coordinator()
+            with coordinator.lock:
+                if coordinator.job is not None and not coordinator.job.closed.is_set():
+                    raise HTTPException(status_code=409, detail="Comparison still owns admission")
+                coordinator.runner_factory = (partial(SequentialProcessRunner, worker_target=blocked_until_cancel)
+                    if mode == "blocked" else SequentialProcessRunner)
+            return {"worker_mode": mode}
+
+        uvicorn.run(app, host="127.0.0.1", port=8017, log_level="warning")
 
 
 if __name__ == "__main__":

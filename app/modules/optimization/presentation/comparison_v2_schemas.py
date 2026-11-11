@@ -41,6 +41,28 @@ class ComparisonReleaseV2(ContractV1):
     expected_version: PositiveIdV2
 
 
+class ComparisonCancelV2(ContractV1):
+    expected_version: PositiveIdV2
+
+
+class ComparisonCancelResponseV2(ContractV1):
+    profile: Literal["comparison-v2"] = "comparison-v2"
+    schema_version: Literal[2] = 2
+    comparison_id: PositiveIdV2
+    version: PositiveIdV2
+    cancel_state: Literal["NONE", "REQUESTED", "CANCELLED", "COMPLETED_BEFORE_CANCEL"]
+    terminal: StrictBool
+    supervisor_stopped: StrictBool
+
+    @model_validator(mode="after")
+    def terminal_contract(self):
+        if self.cancel_state == "CANCELLED" and (not self.terminal or not self.supervisor_stopped):
+            raise ValueError("Cancellation is only final after safe closure")
+        if self.cancel_state == "REQUESTED" and self.terminal:
+            raise ValueError("An accepted request must resolve at closure")
+        return self
+
+
 class ComparisonHistoryItemV2(ContractV1):
     comparison_id: PositiveIdV2
     profile: Literal["comparison-v1", "comparison-v2"]
@@ -126,6 +148,7 @@ class ComparisonSummaryV2(v1.ComparisonSummary):
     methods: list[MethodV2]
     executions: Annotated[list[ExecutionSummaryV2], Field(min_length=6, max_length=6)]
     supervisor_stopped: StrictBool
+    cancellation_status: Literal["NONE", "REQUESTED", "CANCELLED", "COMPLETED_BEFORE_CANCEL"] = "NONE"
 
     @model_validator(mode="after")
     def identities(self):
@@ -145,7 +168,12 @@ class ComparisonSummaryV2(v1.ComparisonSummary):
             "FALLIDA" if any(e.status == "FALLIDA" for e in self.executions) else "SIN_SOLUCION")
         if self.status != expected_status:
             raise ValueError("Aggregate status differs from its executions")
-        editable = self.terminal and not self.released and not self.confirmed
+        if self.cancellation_status == "CANCELLED" and not self.supervisor_stopped:
+            raise ValueError("Cancelled comparison requires proven supervisor stop")
+        if self.cancellation_status == "REQUESTED" and self.terminal:
+            raise ValueError("Pending cancellation cannot be terminal")
+        editable = (self.terminal and not self.released and not self.confirmed
+            and self.cancellation_status != "CANCELLED")
         for execution in self.executions:
             if execution.eligible != (editable and execution.complete and execution.result_available):
                 raise ValueError("Eligibility requires safe aggregate closure")

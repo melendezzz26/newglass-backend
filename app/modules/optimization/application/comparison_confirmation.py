@@ -51,6 +51,8 @@ class ConfirmComparisonV2(ConfirmComparison):
     def repository(self, uow, comparison_id, actor_id):
         uow.comparisons_v2.legacy._lock(comparison_id)
         current = uow.comparisons_v2.get_owned(comparison_id, actor_id)
+        if current.cancellation is not None and current.cancellation["status"] == "CANCELLED":
+            raise RunError("NOT_CONFIRMABLE", "El trabajo fue cancelado; no se pueden confirmar cortes.")
         if not current.terminal or not current.supervisor_stopped:
             raise RunError("NOT_CONFIRMABLE", "La comparación todavía no acredita cierre seguro.")
         return uow.comparison_confirmation_v2

@@ -13,7 +13,7 @@ from .comparison_routes import ObservationResponse
 from .comparison_supervision_v2 import get_comparison_v2_coordinator
 from .comparison_v2_schemas import ComparisonSummaryV2, ExecutionResponseV2, ComparisonReleaseV2, ComparisonMaskPayloadV2, PositiveIdV2
 from .comparison_v2_schemas import ComparisonSelectionV2, ComparisonConfirmationV2
-from .comparison_v2_schemas import ComparisonHistoryV2
+from .comparison_v2_schemas import ComparisonHistoryV2, ComparisonCancelV2, ComparisonCancelResponseV2
 from .confirmation_serialization import confirmation_response
 from .comparison_v2_serialization import comparison_response_v2, execution_response_v2
 from .run_auth import run_permission
@@ -181,6 +181,30 @@ def mask(comparison_id:Id,execution_id:Id,mask_ref:Annotated[str,Path(pattern=r'
         return visual_response(ComparisonMaskPayloadV2(**job.descriptor(method,describe_record(session,record)),
             geometria_original=dict(record.owner.geometry),geometria=dict(record.orientation.geometry),
             window=data,spans_by_row=spans))
+
+
+def cancel_response(current):
+    state = current.cancellation["status"] if current.cancellation else "NONE"
+    return ComparisonCancelResponseV2(comparison_id=current.comparison_id, version=current.version,
+        cancel_state=state, terminal=current.terminal, supervisor_stopped=current.supervisor_stopped)
+
+
+@router.post('/{comparison_id}/cancel',response_model=ComparisonCancelResponseV2)
+def request_cancel(comparison_id:Id, request:ComparisonCancelV2, response:Response, key:Key,
+                   user=Depends(run_permission('optimization.execute')),
+                   coordinator=Depends(get_comparison_v2_coordinator)):
+    current = coordinator.request_cancel(comparison_id,user.user_id,key,request.expected_version)
+    response.status_code = 200 if current.terminal else 202
+    return cancel_response(current)
+
+
+@router.get('/{comparison_id}/cancel',response_model=ComparisonCancelResponseV2)
+def cancellation_status(comparison_id:Id, response:Response,
+                        user=Depends(run_permission('optimization.view')),
+                        uow=Depends(get_comparison_v2_uow),
+                        coordinator=Depends(get_comparison_v2_coordinator)):
+    current = load(comparison_id,user.user_id,uow,coordinator,response=response,allow_blocked=True)
+    return cancel_response(current)
 
 
 @router.post('/{comparison_id}/release',response_model=ComparisonSummaryV2)

@@ -184,6 +184,38 @@ class ComparisonV2Coordinator:
                     self.recovery_errors = {accepted.comparison_id: "UnclaimedAcceptedComparison"}
                 raise
 
+    def request_cancel(self, identifier, actor_id, key, expected_version):
+        """Commit cancellation intent before signalling the matching live owner.
+
+        No acknowledgement represents safe terminality: only the existing reaper
+        may certify that every worker/descendant has stopped and release admission.
+        """
+        with self.lock:
+            with self.uow() as tx:
+                self.authorize(tx, actor_id)
+                current = tx.comparisons_v2.get_owned(identifier, actor_id)
+            if current.terminal and current.cancellation is None:
+                raise RunError("STATE_CONFLICT", "El trabajo ya finalizó antes de solicitar cancelación.")
+            job = self.job
+            # Never signal a different owner or a process obtained from an
+            # unverified PID. A restarted service must reconcile ownership first.
+            owner = current.runtime.get("supervisor")
+            if current.cancellation is None and (job is None
+                or job.comparison.comparison_id != identifier
+                or job.closed.is_set() or owner is None
+                or owner["token"] != job.token or dict(owner["identity"]) != job.identity):
+                raise RunError("RECOVERY_BLOCKED",
+                    "No se puede identificar un supervisor activo y seguro para cancelar.")
+            with self.uow() as tx:
+                current = tx.comparisons_v2.request_cancellation(
+                    identifier, actor_id, key, expected_version)
+            if not current.terminal and job is not None and not job.closed.is_set() \
+                    and job.comparison.comparison_id == identifier \
+                    and current.runtime.get("supervisor", {}).get("token") == job.token:
+                job.cancel.set()
+                job.mark("user_cancel_requested")
+            return current
+
     def _retry_recovery(self):
         job = self.job
         if (job is not None and not job.closed.is_set()
@@ -231,11 +263,17 @@ class ComparisonV2Coordinator:
                                 tx.comparisons_v2.record_worker(current.comparison_id,int(execution_id),job.token,actual)
                     elif process_identity(worker['pid'])==dict(worker): raise WorkersNotStopped("Worker is still alive")
                 job.mark("processes_verified")
-                fail_pending(self.uow,current.comparison_id,job.token,"RESULT_SAVE_FAILED" if job.error_type else "WORKER_STOPPED")
+                fail_pending(self.uow,current.comparison_id,job.token,
+                    "RESULT_SAVE_FAILED" if job.error_type else
+                    "CANCELLED" if current.cancellation is not None and job.cancel.is_set() else "WORKER_STOPPED")
                 with self.uow() as tx:
                     _, current=tx.comparisons_v2.require_supervisor(current.comparison_id,job.token)
                     if not current.terminal:
+                        cancelled = current.cancellation is not None and any(
+                            e.diagnostic is not None and e.diagnostic.termination_reason == "CANCELLED"
+                            for e in current.executions)
                         tx.orders.transition(current.problem.order_ids,"EN_OPTIMIZACION",
+                            "PENDIENTE" if cancelled else
                             "OPTIMIZADO" if any(e.eligible for e in current.executions) else "PENDIENTE")
                         current=tx.comparisons_v2.record_supervisor_stopped(current.comparison_id,
                             datetime.now(timezone.utc),current.version)
@@ -294,10 +332,15 @@ class ComparisonV2Coordinator:
                                 and e.diagnostic.statistics.get("runtime_dispatched") == 1}
                     if not current.runtime['workers'].keys() <= verified:
                         raise WorkersNotStopped("Restart requires external descendant-closure evidence")
-                    fail_pending(self.uow,identifier,owner['token'],"WORKER_STOPPED")
+                    fail_pending(self.uow,identifier,owner['token'],
+                        "CANCELLED" if current.cancellation is not None else "WORKER_STOPPED")
                     with self.uow() as tx:
                         _, current=tx.comparisons_v2.require_supervisor(identifier,owner['token'])
+                        cancelled = current.cancellation is not None and any(
+                            e.diagnostic is not None and e.diagnostic.termination_reason == "CANCELLED"
+                            for e in current.executions)
                         tx.orders.transition(current.problem.order_ids,"EN_OPTIMIZACION",
+                            "PENDIENTE" if cancelled else
                             "OPTIMIZADO" if any(e.eligible for e in current.executions) else "PENDIENTE")
                         tx.comparisons_v2.record_supervisor_stopped(identifier,datetime.now(timezone.utc),current.version)
                 except Exception as error: errors[identifier]=type(error).__name__
