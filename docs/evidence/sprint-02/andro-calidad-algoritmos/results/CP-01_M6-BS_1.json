@@ -1,0 +1,287 @@
+{
+  "row": {
+    "case_id": "CP-01",
+    "input_sha256": "b606e3070f9eecd9fa30a5fb22747d45621c22172a5043a63c7e7c2bb944e6fa",
+    "engine_code": "M6-BS",
+    "repetition": 1,
+    "status": "COMPLETO",
+    "termination_reason": "COMPLETED",
+    "total_units": 3,
+    "placed_units": 3,
+    "coverage_pct": "100",
+    "area_material_total_mm2": "2160000.00",
+    "area_piezas_colocadas_mm2": "720000.00",
+    "retazo_recuperable_mm2": "1060254",
+    "merma_mm2": "379746.00",
+    "merma_pct_derivada": "17.58083333333333333333333333",
+    "aprovechamiento_pct": "33.333",
+    "planchas_usadas": 1,
+    "retazos_usados": 0,
+    "total_fuentes": 1,
+    "computation_time_ms": 1168,
+    "valid": true,
+    "problem_sha256": "2358e43ddf4a1fa2b599f1ac65dde735bbc51d5800d7fb513f7b31c4d31b9ad7",
+    "layout_sha256": "ffb1502173c051f40209d23f9f69aa0b844a15729bc5c1654449f1dbc74c2dd2"
+  },
+  "validation": {
+    "valid": true,
+    "oracle": "raw raster bits + independent residual enumeration",
+    "checks": [
+      "containment",
+      "overlap",
+      "material",
+      "thickness",
+      "margin",
+      "separation",
+      "rotation",
+      "areas",
+      "counts",
+      "residuals"
+    ]
+  },
+  "snapshot": {
+    "diagnostic": {
+      "origin": "ENGINE",
+      "statistics": {
+        "alternatives_pruned": 0,
+        "bounded_candidates": 1,
+        "candidate_limit": 12,
+        "completed_levels": 3,
+        "expansions": 60,
+        "geometry_probes": 65,
+        "max_frontier": 2,
+        "parents": 5,
+        "positions_per_orientation": 1,
+        "state_bytes_bound": 11627405,
+        "state_bytes_peak": 11627405
+      },
+      "termination_reason": "COMPLETED"
+    },
+    "method": "M6-BS",
+    "profile": "comparison-v2",
+    "result": {
+      "computation_time_ms": 1168,
+      "metrics": {
+        "material_area_mm2": "2160000.00",
+        "new_sheets_used": 1,
+        "placed_piece_area_mm2": "720000.00",
+        "recoverable_remnant_mm2": "1060254",
+        "utilization_pct": "33.333",
+        "waste_mm2": "379746.00"
+      },
+      "placements": [
+        {
+          "geometry": {
+            "height_mm": 400.0,
+            "type": "RECTANGULO",
+            "width_mm": 600.0
+          },
+          "piece": {
+            "area_mm2": "240000.00",
+            "geometry": {
+              "height_mm": 600,
+              "type": "RECTANGULO",
+              "width_mm": 400
+            },
+            "glass_type_id": 1,
+            "order_id": 1,
+            "piece_id": 1,
+            "thickness_mm": "6",
+            "unit_index": 1
+          },
+          "rotation_deg": "90",
+          "stock": {
+            "area_mm2": "2160000.00",
+            "geometry": {
+              "height_mm": 1800,
+              "type": "RECTANGULO",
+              "width_mm": 1200
+            },
+            "glass_type_id": 1,
+            "material_id": 1,
+            "physical_unit_index": 1,
+            "source": "PLANCHA",
+            "thickness_mm": "6"
+          },
+          "x_mm": "3",
+          "y_mm": "3"
+        },
+        {
+          "geometry": {
+            "height_mm": 400.0,
+            "type": "RECTANGULO",
+            "width_mm": 600.0
+          },
+          "piece": {
+            "area_mm2": "240000.00",
+            "geometry": {
+              "height_mm": 600,
+              "type": "RECTANGULO",
+              "width_mm": 400
+            },
+            "glass_type_id": 1,
+            "order_id": 1,
+            "piece_id": 1,
+            "thickness_mm": "6",
+            "unit_index": 2
+          },
+          "rotation_deg": "90",
+          "stock": {
+            "area_mm2": "2160000.00",
+            "geometry": {
+              "height_mm": 1800,
+              "type": "RECTANGULO",
+              "width_mm": 1200
+            },
+            "glass_type_id": 1,
+            "material_id": 1,
+            "physical_unit_index": 1,
+            "source": "PLANCHA",
+            "thickness_mm": "6"
+          },
+          "x_mm": "3",
+          "y_mm": "406"
+        },
+        {
+          "geometry": {
+            "height_mm": 400.0,
+            "type": "RECTANGULO",
+            "width_mm": 600.0
+          },
+          "piece": {
+            "area_mm2": "240000.00",
+            "geometry": {
+              "height_mm": 600,
+              "type": "RECTANGULO",
+              "width_mm": 400
+            },
+            "glass_type_id": 1,
+            "order_id": 1,
+            "piece_id": 1,
+            "thickness_mm": "6",
+            "unit_index": 3
+          },
+          "rotation_deg": "90",
+          "stock": {
+            "area_mm2": "2160000.00",
+            "geometry": {
+              "height_mm": 1800,
+              "type": "RECTANGULO",
+              "width_mm": 1200
+            },
+            "glass_type_id": 1,
+            "material_id": 1,
+            "physical_unit_index": 1,
+            "source": "PLANCHA",
+            "thickness_mm": "6"
+          },
+          "x_mm": "3",
+          "y_mm": "809"
+        }
+      ],
+      "problem": {
+        "config": {
+          "angular_step_deg": "5",
+          "margin_mm": "3",
+          "resolution_mm": "1",
+          "separation_mm": "3"
+        },
+        "groups": [
+          {
+            "glass_type_id": 1,
+            "stock_candidates": [
+              {
+                "area_mm2": "2160000.00",
+                "geometry": {
+                  "height_mm": 1800,
+                  "type": "RECTANGULO",
+                  "width_mm": 1200
+                },
+                "glass_type_id": 1,
+                "material_id": 1,
+                "physical_unit_index": 1,
+                "source": "PLANCHA",
+                "thickness_mm": "6"
+              }
+            ],
+            "thickness_mm": "6",
+            "units": [
+              {
+                "area_mm2": "240000.00",
+                "geometry": {
+                  "height_mm": 600,
+                  "type": "RECTANGULO",
+                  "width_mm": 400
+                },
+                "glass_type_id": 1,
+                "order_id": 1,
+                "piece_id": 1,
+                "thickness_mm": "6",
+                "unit_index": 1
+              },
+              {
+                "area_mm2": "240000.00",
+                "geometry": {
+                  "height_mm": 600,
+                  "type": "RECTANGULO",
+                  "width_mm": 400
+                },
+                "glass_type_id": 1,
+                "order_id": 1,
+                "piece_id": 1,
+                "thickness_mm": "6",
+                "unit_index": 2
+              },
+              {
+                "area_mm2": "240000.00",
+                "geometry": {
+                  "height_mm": 600,
+                  "type": "RECTANGULO",
+                  "width_mm": 400
+                },
+                "glass_type_id": 1,
+                "order_id": 1,
+                "piece_id": 1,
+                "thickness_mm": "6",
+                "unit_index": 3
+              }
+            ]
+          }
+        ],
+        "order_ids": [
+          1
+        ]
+      }
+    },
+    "snapshot_version": 3
+  },
+  "residuals": [
+    {
+      "material_source": "PLANCHA",
+      "material_id": 1,
+      "stock_unit_index": 1,
+      "x_mm": "606",
+      "y_mm": "3",
+      "width_mm": "591",
+      "height_mm": "1794",
+      "area_mm2": "1060254"
+    }
+  ],
+  "diagnostic": {
+    "origin": "ENGINE",
+    "termination_reason": "COMPLETED",
+    "statistics": {
+      "expansions": 60,
+      "geometry_probes": 65,
+      "parents": 5,
+      "alternatives_pruned": 0,
+      "max_frontier": 2,
+      "completed_levels": 3,
+      "state_bytes_bound": 11627405,
+      "state_bytes_peak": 11627405,
+      "bounded_candidates": 1,
+      "candidate_limit": 12,
+      "positions_per_orientation": 1
+    }
+  }
+}
