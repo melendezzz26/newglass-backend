@@ -64,6 +64,7 @@ async def ready():
                     return {"status": "ready"}
             except (TimeoutError, asyncio.TimeoutError):
                 logger.debug("Readiness check timed out after %s s", READINESS_TIMEOUT_SECONDS)
-            except Exception as exc:
-                logger.warning("Readiness check failed: %s", exc)
+            except Exception:
+                # Sanitización estricta: omitir mensaje de excepción para no filtrar credenciales ni URLs en logs
+                logger.warning("Readiness check failed")
     return JSONResponse(status_code=503, content={"status": "not_ready"})
