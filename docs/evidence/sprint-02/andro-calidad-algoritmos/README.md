@@ -56,10 +56,15 @@ solo acepta el servidor temporal propio; no utiliza DATABASE_URL del entorno.
 
 ## Entrega local
 
-Word y paquete Notion quedan fuera de Git. Desde un entorno de informes:
+La revisión de decisión se genera desde los CSV existentes, sin ejecutar de nuevo
+la batería. Requiere `python-docx` y `matplotlib`. El generador comprueba los
+resúmenes contra las mediciones, la validez, las tablas del Word y los hashes:
 
 ```bash
-python experiments/sprint2_quality/export.py --evidence docs/evidence/sprint-02/andro-calidad-algoritmos --destination /ruta/fuera/del/repositorio
+python experiments/sprint2_quality/decision_report.py
 ```
 
-Las capturas y graficos seleccionados estan versionados; el Word no lo esta.
+El Word se genera temporalmente en la raíz del repositorio para su revisión y
+entrega externa; no se incluye en Git. Los gráficos anteriores se conservan como
+evidencia secundaria. `export.py` corresponde a la entrega histórica y no debe
+usarse para sustituir la versión revisada.

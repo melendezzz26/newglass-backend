@@ -7,7 +7,7 @@
   "equivalent_inputs": true,
   "hashes_valid": true,
   "all_results_valid": true,
-  "figures": 6,
+  "figures": 13,
   "captures": 9,
   "tests": [
     {
@@ -35,7 +35,7 @@
   ],
   "files": {
     ".gitattributes": "3290774078e06137da437e613d8b0bb33ae9489fe38d1691a7dbb799e58fa70c",
-    "Informe_Calidad_Algoritmos_ISO25023_Andro_Quispe.md": "7b29316f22a1b4e2c63e0b6bb3b4c4eb700e5a89905e114f4ad146b976f4ca70",
+    "Informe_Calidad_Algoritmos_ISO25023_Andro_Quispe.md": "c17289170c424ec8c82d8eee0bc1b341b8fb4941fbc27b283a5de18aef5c42dd",
     "README.md": "fe3f30d6f36abd994c4d404bd23c5ff5512c4d4d0db07f0fbeb74ef547cc20a3",
     "figures/G1_aprovechamiento.png": "6a989b17b75c5ca496cd4fc722c83ec2162adb4b8440f221298875519dcdfbf5",
     "figures/G2_merma.png": "870e0cd18d5a5aef9f80398dfa824b91e293a5661058ed2328e9320365c949a7",
@@ -387,6 +387,13 @@
     "ui/CP-01.json": "e27cc3f71aa78482dcf9b77b12985ae5ea8db23d508475a0b0b508d96ac924f7",
     "ui/CP-05.json": "f2f36b27b2c292060987822ef842800452716cbccb32c73459f5c842f0fad03d",
     "ui/CP-06.json": "8b438fbe38a4c56b9771a139ec6b422a71021f701c84dcba746a6d4af4600cb4",
-    "ui/manifest.json": "bcaf79f588f78a7bd596ea2d4c984044dfc4ee02c1270749de1df9c0e0b17d9c"
+    "ui/manifest.json": "bcaf79f588f78a7bd596ea2d4c984044dfc4ee02c1270749de1df9c0e0b17d9c",
+    "figures/G1_resumen_decision.png": "a4289bd513ec6b78575d927b495ad9f4428d7d96efc615203fb105d2faf75886",
+    "figures/G2_delta_merma_m6_vs_ff.png": "b8d45a1a80871be2625a1e8281503b64d54cd8439c42a389bc7f0a45ebe8024a",
+    "figures/G3_delta_merma_porcentaje.png": "fe7612031836be551b06375823c69a2a8ea335bda72004a6d68d2ad6094807f5",
+    "figures/G4_merma_vs_tiempo.png": "9144d15a929248e5edad7262099af2048dc32988a1623a72028dc084cf9a92c6",
+    "figures/G5_material_preservado_vs_tiempo_extra.png": "3f7ec60d76482a571f95dbb49551eea166434f19728d14345081f7ce684e28ff",
+    "figures/G6_recomendacion_por_caso.png": "9bc3700990fbd52850035e5c0b7eac7985ed7f2b0d4d459467e622d39a24c306",
+    "figures/G7_balance_casos.png": "193407de004a826dcf96763ced5b5e54e238f5484f774b6086b3408ebd23e0ee"
   }
 }

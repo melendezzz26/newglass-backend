@@ -1,285 +1,200 @@
-# Calidad y algoritmos - Sprint 2
+# Calidad y algoritmos — NewGlass
+Andro Joseph Quispe Cesias · Sprint 2
 
-Andro Joseph Quispe Cesias
+## 1. Resumen ejecutivo
+Se analizaron 270 mediciones de seis motores en nueve casos: seis comerciales y tres de regresión. Se excluyeron 54 calentamientos. Las 54 combinaciones caso-motor superaron la validación geométrica; en los seis casos comerciales todos colocaron el 100 % de las piezas.
 
-## Resumen ejecutivo
+**Hallazgo clave.** Dentro de cada caso comercial los seis motores tuvieron el mismo aprovechamiento y utilizaron la misma cantidad de fuentes. La diferencia principal estuvo en la organización del material residual, su área recuperable, la merma y el tiempo. El aprovechamiento por sí solo no basta para seleccionar un motor.
 
-Se midieron 270 ejecuciones de seis motores productivos en 9 casos, con 54 calentamientos excluidos. La bateria utiliza cinco repeticiones por caso/motor.
+M6 redujo la merma frente a FF en cuatro casos y la aumentó en dos, con mayor tiempo mediano en los seis. No hay un ganador universal: la elección depende del escenario y de la prioridad entre material y velocidad.
 
-## Objetivo y alcance
+| Caso | Prioridad material | Prioridad velocidad |
+|---|---|---|
+| CP-01 | M6-BS | FF |
+| CP-02 | FF/BF/WF/HF/M5 | FF |
+| CP-03 | M6-BS | FF |
+| CP-04 | FF/BF/WF/HF/M5 | FF |
+| CP-05 | M6-BS | HF |
+| CP-06 | M6-BS | FF |
 
-Comparar calidad de soluciones y tiempo computacional con entradas equivalentes. No se evaluan escalamiento horizontal, concurrencia de usuarios, seguridad ni latencia HTTP. Los casos comerciales son sinteticos; no representan pedidos de clientes.
+## 2. Cómo leer este informe
+**A** es el área completa de las fuentes utilizadas; **P**, el área de las piezas colocadas; **R**, el área recuperable propuesta. Aprovechamiento = 100 × P / A; merma = A − P − R. Áreas grandes se expresan en m² (1 m² = 1 000 000 mm²).
 
-## ISO 25010 / ISO 25023
+**Merma no es 100 − aprovechamiento.** Esa diferencia incluye tanto recuperable como merma. Con la misma plancha y las mismas piezas, P y A son iguales: el aprovechamiento empata. Si una distribución deja un rectángulo recuperable mayor y otra fragmenta el sobrante, R cambia y también la merma. Es una explicación conceptual, no un patrón medido adicional.
 
-Medicion alineada metodologicamente con ISO/IEC 25023:2016: tiempo como evidencia de comportamiento temporal; cobertura y validez como evidencia de adecuacion funcional en estos casos. Aprovechamiento y merma son metricas de dominio NewGlass, no formulas prescritas por ISO. No se declara certificacion ni identificadores normativos no comprobados.
+## 3. Marco de medición ISO 25010 / ISO 25023
+ISO/IEC 25010 orienta qué características de calidad evaluar; ISO/IEC 25023 aporta medidas para cuantificar calidad. Este informe presenta una evaluación cuantitativa alineada metodológicamente con ISO/IEC 25023. Cobertura y validez aportan evidencia de adecuación funcional, y el tiempo de comportamiento temporal. Aprovechamiento, merma y recuperable son métricas de dominio NewGlass que complementan esa evaluación. ISO no prescribe aquí la fórmula de merma y no se afirma certificación.
 
-ISO/IEC 25010:2023 define el modelo de calidad del producto; ISO/IEC 25023:2016 aporta medidas cuantitativas. Se usa esta distincion como marco metodologico, sin equiparar las metricas de vidrio a medidas normativas.
+| Qué evaluar | Qué medimos | Fórmula / unidad | Para qué sirve |
+|---|---|---|---|
+| Adecuación funcional | Cobertura | 100 × colocadas / solicitadas (%) | Comprueba si se completa el pedido |
+| Validez geométrica | Patrón válido | PASS / FAIL | Comprueba contención, no solapamiento, margen y separación |
+| Comportamiento temporal | Tiempo mediano | ms o s | Mide el costo computacional observado |
+| Calidad del corte | Merma | A − P − R (mm² o m²) | Material no colocado ni recuperable según el criterio aplicado |
+| Reutilización | Recuperable | mm² o m² | Material potencialmente útil para futuros cortes |
+| Eficiencia material | Aprovechamiento | 100 × P / A (%) | Proporción del área convertida en piezas |
 
-Referencias: [ISO/IEC 25023:2016](https://www.iso.org/standard/35747.html), [ISO/IEC 25010:2023](https://www.iso.org/standard/78176.html).
+## 4. Métricas
+El recuperable es una propuesta conservadora: un rectángulo principal por fuente sujeto a dimensiones mínimas. No equivale a todo el residuo físicamente reutilizable. El tiempo incluye motor y cálculo de métricas en el adaptador, excluye callbacks, validación posterior y latencia HTTP; se informa la mediana de cinco mediciones, no tiempo de CPU.
 
-## Metricas y formulas
+## 5. Motores evaluados
+| Motor | Idea principal | Cuándo podría aportar |
+|---|---|---|
+| FF | Primera colocación válida según su orden | Referencia rápida y simple |
+| BF | Busca un ajuste más cerrado | Espacios con capacidades distintas |
+| WF | Aplica su política de selección de espacios disponibles | Distribuciones con espacios grandes |
+| HF | Intenta usar huecos existentes bajo límites | Piezas con huecos aprovechables |
+| M5 | Considera el mejor residual libre | Alternativas con residuales distintos |
+| M6-BS | Explora varias alternativas mediante Beam Search acotado | Cuando preservar material justifica mayor cómputo |
 
-A = area completa de las fuentes utilizadas; P = area geometrica colocada; R = recuperable propuesto.
+## 6. Diseño experimental
+Cada caso/motor tuvo un calentamiento excluido y cinco repeticiones medidas en procesos nuevos, con orden rotado. Se verificaron hashes de entrada y resultados, y la geometría mediante un oráculo independiente de bits y enumeración residual. El ambiente y límites exactos están en results/manifest.json; se evaluó el backend identificado por su hash, sobre WSL2 compartido. La batería comercial usa raster de 1 mm, margen y separación de 3 mm y mínimo recuperable de 10 × 10 mm. No se repitió la batería en esta revisión.
 
-- Aprovechamiento = 100 * P / A (%).
-- Merma = A - P - R (mm2); merma_pct_derivada = 100 * merma / A.
-- Recuperable: un rectangulo principal por fuente, sujeto a minimos; no todo residuo reutilizable.
-- Cobertura = 100 * placed_units / total_units.
-- Tiempo: computation_time_ms del adaptador, motor + metricas, excluidos callbacks; no CPU ni HTTP.
-- Fuentes: planchas, retazos y total de unidades fisicas.
+## 7. Casos de prueba
+CP-01 pequeño; CP-02 mediano; CP-03 grande acotado; CP-04 formas mixtas; CP-05 multi-plancha; CP-06 plancha y retazo. Los tres casos EXP son regresiones históricas y se presentan por separado. Los pedidos comerciales son sintéticos, no una muestra de clientes.
 
-## Diseno experimental y ambiente
+## 8. Resultados para tomar decisiones
+| Caso | Mejor merma (m²) | Motor(es) | Más rápido | Tiempo (s) | Recomendación |
+|---|---:|---|---|---:|---|
+| CP-01 | 0.380 | M6-BS | FF | 0.070 | Material: M6; velocidad: FF |
+| CP-02 | 0.279 | FF/BF/WF/HF/M5 | FF | 0.206 | Elegir FF en estas métricas |
+| CP-03 | 0.518 | M6-BS | FF | 0.536 | Material: M6; velocidad: FF |
+| CP-04 | 0.167 | FF/BF/WF/HF/M5 | FF | 0.106 | Elegir FF en estas métricas |
+| CP-05 | 1.512 | M6-BS | HF | 1.788 | Material: M6; velocidad: HF |
+| CP-06 | 0.358 | M6-BS | FF | 0.397 | Material: M6; velocidad: FF |
 
-Backend evaluado: `2afa9d72cecee74d4c61187ff15c74564e7dde3f`. Python: `3.11.17 (main, Oct 21 2026, 17:46:53) [Clang 23.1.3 ]`. SO: `Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39`. CPU: AMD Ryzen 5 4500U with Radeon Graphics; 6 CPUs visibles.
+![Figura 1. Merma evitada por M6 frente a FF. Valores positivos preservan material; CP-02 y CP-04 muestran que M6 también puede empeorar.](figures/G2_delta_merma_m6_vs_ff.png)
+Figura 1. Merma evitada por M6 frente a FF. Valores positivos preservan material; CP-02 y CP-04 muestran que M6 también puede empeorar.
 
-Cada corrida usa un proceso nuevo, un problema reconstruido e identico hash de entrada para los seis motores. El hash incluye minimos residuales y politica externa. Un calentamiento separado por caso/motor; orden de motores rotado entre repeticiones. Limite externo 120 s y 256 MiB. BS-2 y limites nativos productivos sin cambios. Validacion posterior fuera del cronometro.
+![Figura 2. Cambio porcentual de merma: (M6 − FF) / FF × 100. Valores negativos representan reducciones; positivos, aumentos.](figures/G3_delta_merma_porcentaje.png)
+Figura 2. Cambio porcentual de merma: (M6 − FF) / FF × 100. Valores negativos representan reducciones; positivos, aumentos.
 
-Se acelero el recorrido de bits del verificador tras detectar su coste en el calentamiento multi-plancha; se conserva la misma enumeracion exhaustiva y se prueba equivalencia con el original. Esto ocurre fuera del tiempo medido y no cambia los algoritmos. Los JSON identifican la variante acelerada; los anteriores usaron el oraculo original.
+| Caso | Cambio M6 vs FF | Tiempo extra vs FF | Decisión |
+|---|---:|---:|---|
+| CP-01 | -23.7 % | +1.027 s / 15.7× | Considerar M6 por material |
+| CP-02 | +30.2 % | +2.899 s / 15.1× | FF domina en merma y tiempo |
+| CP-03 | -31.5 % | +5.958 s / 12.1× | Considerar M6 por material |
+| CP-04 | +43.0 % | +0.736 s / 7.9× | FF domina en merma y tiempo |
+| CP-05 | -24.8 % | +0.837 s / 1.4× | Considerar M6 por material |
+| CP-06 | -35.3 % | +1.152 s / 3.9× | Considerar M6 por material |
 
-Comerciales: raster 1 mm, margen/separacion 3 mm, paso 5 grados, recuperacion minima 10 x 10 mm. Regresiones: JSON historico intacto y minimos 1 x 1 mm. No se mezclan ambos bloques en la tabla global.
+## 9. Merma y recuperabilidad
+En cada caso comercial A y P son iguales entre motores; por tanto, una diferencia de R corresponde a una diferencia opuesta de merma. La igualdad en número de fuentes no significa igualdad de disposición ni de recuperabilidad. **En palabras simples:** colocar las mismas piezas puede dejar sobrantes de utilidad distinta.
 
-## Casos de prueba
+## 10. Costo temporal
+Las medianas se comparan en segundos y también como multiplicadores, calculados sobre los tiempos de cada caso. No son predicciones de latencia en producción. Cinco repeticiones no permiten estimar percentiles robustos.
 
-CP-01 pequeno; CP-02 mediano; CP-03 grande acotado (24 piezas); CP-04 formas mixtas; CP-05 multi-plancha; CP-06 plancha y retazo. EXP-SMALL/MEDIUM/COMPLEX-001 son regresiones controladas. Las dimensiones, cantidades y configuracion completas estan en los JSON versionados.
+![Figura 3. Merma y tiempo mediano de FF y M6 por caso. Las escalas son independientes entre paneles; CP-02 y CP-04 muestran que esperar más no siempre reduce merma.](figures/G4_merma_vs_tiempo.png)
+Figura 3. Merma y tiempo mediano de FF y M6 por caso. Las escalas son independientes entre paneles; CP-02 y CP-04 muestran que esperar más no siempre reduce merma.
 
-| Caso | Piezas | Fuentes disponibles | Margen / separacion mm | Raster mm | Paso grados | Minimo recuperable mm |
-|---|---:|---:|---|---:|---:|---|
-| CP-01 | 3 | 1 | 3 / 3 | 1 | 5 | 10 x 10 |
-| CP-02 | 11 | 2 | 3 / 3 | 1 | 5 | 10 x 10 |
-| CP-03 | 24 | 3 | 3 / 3 | 1 | 5 | 10 x 10 |
-| CP-04 | 6 | 2 | 3 / 3 | 1 | 5 | 10 x 10 |
-| CP-05 | 8 | 8 | 3 / 3 | 1 | 5 | 10 x 10 |
-| CP-06 | 7 | 3 | 3 / 3 | 1 | 5 | 10 x 10 |
-| EXP-COMPLEX-001 | 24 | 7 | 1 / 1 | 1 | 5 | 1 x 1 |
-| EXP-MEDIUM-001 | 9 | 4 | 1 / 1 | 1 | 5 | 1 x 1 |
-| EXP-SMALL-001 | 3 | 2 | 0 / 0 | 1 | 5 | 1 x 1 |
+## 11. Trade-off material vs tiempo
 
-## Resultados por caso
+![Figura 4. Merma evitada por M6 frente al tiempo adicional respecto de FF. Por encima de cero se preserva material; por debajo aumenta la merma. La conveniencia depende del valor del material y del tiempo disponible.](figures/G5_material_preservado_vs_tiempo_extra.png)
+Figura 4. Merma evitada por M6 frente al tiempo adicional respecto de FF. Por encima de cero se preserva material; por debajo aumenta la merma. La conveniencia depende del valor del material y del tiempo disponible.
 
-| Caso | Motor | Piezas | Aprovechamiento % | Merma mm2 | Recuperable mm2 | Fuentes | Tiempo mediano ms |
+## 12. ¿Qué motor elegir?
+**Regla práctica propuesta, limitada a los casos evaluados:** exigir primero validez y cobertura; si varios cumplen, comparar merma, recuperable, fuentes y tiempo. Si la diferencia de merma es relevante y el vidrio es costoso, considerar el motor que preserve más material; si es pequeña o inexistente, considerar el más rápido. No es una regla universal.
+
+![Figura 5. Matriz de decisión por caso: distingue menor merma de menor tiempo; los empates se muestran completos.](figures/G6_recomendacion_por_caso.png)
+Figura 5. Matriz de decisión por caso: distingue menor merma de menor tiempo; los empates se muestran completos.
+
+FF fue el más rápido en CP-01, CP-02, CP-03, CP-04 y CP-06; HF en CP-05. M6 ofrece la menor merma en CP-01, CP-03, CP-05 y CP-06. En CP-02 y CP-04 no existe ventaja experimental para seleccionar M6 bajo las métricas evaluadas: FF tiene menor merma y tiempo.
+
+## 13. Casos representativos
+**CP-05, favorable a M6.** HF: 2.011124 m² y 1.788 s; M6: 1.511784 m² y 2.984 s. M6 evita 0.499340 m² de merma a cambio de 1.196 s adicionales. Ambos colocaron las mismas piezas, usaron las mismas fuentes y lograron igual aprovechamiento. En palabras simples: esperar aproximadamente 1,2 s preservó casi medio metro cuadrado adicional bajo el criterio de recuperabilidad.
+
+**CP-04, desfavorable a M6.** FF generó 0,166753 m² de merma en 0,106 s; M6 generó 0,238393 m² en 0,842 s. Una búsqueda más compleja no garantiza mejor solución. Estas cifras son medianas o valores del resumen, redondeados.
+
+![Figura 6. Balance de áreas medidas en CP-04 y CP-05. A igual área colocada y de fuentes, cambia el recuperable y, en sentido contrario, la merma. Son áreas agregadas, no dibujos de patrones de corte.](figures/G7_balance_casos.png)
+Figura 6. Balance de áreas medidas en CP-04 y CP-05. A igual área colocada y de fuentes, cambia el recuperable y, en sentido contrario, la merma. Son áreas agregadas, no dibujos de patrones de corte.
+
+## 14. Evidencia real del sistema
+Las capturas existentes muestran el comparador de seis motores, multi-plancha, plancha con retazo y trazabilidad. Las respuestas UI y su manifiesto están en ui/. Los tiempos de interfaz no se mezclan con las mediciones experimentales.
+
+![Comparador real de seis motores con datos sintéticos.](screenshots/01-comparacion-seis-motores.png)
+Comparador real de seis motores con datos sintéticos.
+
+![Vista real del caso multi-plancha.](screenshots/06-multi-plancha.png)
+Vista real del caso multi-plancha.
+
+![Vista real de plancha y retazo.](screenshots/07-plancha-retazo.png)
+Vista real de plancha y retazo.
+
+![Trazabilidad de material en el sistema.](screenshots/08-trazabilidad-material.png)
+Trazabilidad de material en el sistema.
+
+## 15. Pruebas y validez
+Los registros de tests/ documentan 568 pruebas unitarias y 88 API/persistencia aprobadas. La validación geométrica revisó contención, solapamiento, material, espesor, margen, separación, rotación, áreas y conteos. El oráculo comparte la rasterización canónica, por lo que no prueba geometría continua exacta.
+
+## 16. Limitaciones
+Nueve casos sintéticos y cinco mediciones por combinación no demuestran optimalidad ni rendimiento universal. FF, BF, WF, HF y M5 coincidieron en aprovechamiento y merma en los seis casos comerciales: esto no demuestra equivalencia general, sino que los casos no los discriminaron en esas métricas. El recuperable depende de mínimos y del rectángulo propuesto. Los tiempos dependen del entorno compartido. No existe modelo económico validado ni estimación de ahorro monetario.
+
+## 17. Conclusiones
+Los seis motores produjeron soluciones geométricamente válidas; todos completaron los pedidos comerciales. El aprovechamiento no diferenció motores dentro de cada caso, mientras merma y recuperable sí lo hicieron. M6 redujo merma en cuatro casos y la aumentó en dos, con mayor costo temporal. Una reducción puede justificar la espera según el contexto, pero no existe ganador universal. Se necesitan casos que discriminen las cinco heurísticas restantes y, posteriormente, costo por m² según tipo y espesor para estimar impacto económico.
+
+**En palabras simples.** Los seis motores resolvieron los pedidos evaluados. La diferencia estuvo en cómo quedó el vidrio sobrante y cuánto tardaron. M6 conservó más material en varios escenarios, pero en otros tardó más y dejó más merma. La elección debe depender de si se prioriza material o rapidez.
+
+## Anexo A — Resultados detallados
+| Caso | Motor | Piezas | Aprovechamiento % | Merma mm² | Recuperable mm² | Fuentes | Mediana ms |
 |---|---|---|---:|---:|---:|---:|---:|
-| CP-01 | BF | 3/3 | 33.333 | 497,919 | 942,081 | 1 | 71 |
-| CP-01 | FF | 3/3 | 33.333 | 497,919 | 942,081 | 1 | 70 |
-| CP-01 | HF | 3/3 | 33.333 | 497,919 | 942,081 | 1 | 84 |
-| CP-01 | M5 | 3/3 | 33.333 | 497,919 | 942,081 | 1 | 71 |
-| CP-01 | M6-BS | 3/3 | 33.333 | 379,746 | 1,060,254 | 1 | 1,097 |
-| CP-01 | WF | 3/3 | 33.333 | 497,919 | 942,081 | 1 | 73 |
-| CP-02 | BF | 11/11 | 44.444 | 279,492 | 2,120,508 | 1 | 347 |
-| CP-02 | FF | 11/11 | 44.444 | 279,492 | 2,120,508 | 1 | 206 |
-| CP-02 | HF | 11/11 | 44.444 | 279,492 | 2,120,508 | 1 | 507 |
-| CP-02 | M5 | 11/11 | 44.444 | 279,492 | 2,120,508 | 1 | 289 |
-| CP-02 | M6-BS | 11/11 | 44.444 | 363,810 | 2,036,190 | 1 | 3,105 |
-| CP-02 | WF | 11/11 | 44.444 | 279,492 | 2,120,508 | 1 | 289 |
-| CP-03 | BF | 24/24 | 45.833 | 756,100 | 3,923,900 | 2 | 1,299 |
-| CP-03 | FF | 24/24 | 45.833 | 756,100 | 3,923,900 | 2 | 536 |
-| CP-03 | HF | 24/24 | 45.833 | 756,100 | 3,923,900 | 2 | 1,025 |
-| CP-03 | M5 | 24/24 | 45.833 | 756,100 | 3,923,900 | 2 | 1,075 |
-| CP-03 | M6-BS | 24/24 | 45.833 | 517,920 | 4,162,080 | 2 | 6,494 |
-| CP-03 | WF | 24/24 | 45.833 | 756,100 | 3,923,900 | 2 | 1,108 |
-| CP-04 | BF | 6/6 | 37.666 | 166,752.8 | 1,179,672 | 1 | 136 |
-| CP-04 | FF | 6/6 | 37.666 | 166,752.8 | 1,179,672 | 1 | 106 |
-| CP-04 | HF | 6/6 | 37.666 | 166,752.8 | 1,179,672 | 1 | 272 |
-| CP-04 | M5 | 6/6 | 37.666 | 166,752.8 | 1,179,672 | 1 | 118 |
-| CP-04 | M6-BS | 6/6 | 37.666 | 238,392.8 | 1,108,032 | 1 | 842 |
-| CP-04 | WF | 6/6 | 37.666 | 166,752.8 | 1,179,672 | 1 | 115 |
-| CP-05 | BF | 8/8 | 58.333 | 2,011,124 | 1,588,876 | 4 | 2,704 |
-| CP-05 | FF | 8/8 | 58.333 | 2,011,124 | 1,588,876 | 4 | 2,147 |
-| CP-05 | HF | 8/8 | 58.333 | 2,011,124 | 1,588,876 | 4 | 1,788 |
-| CP-05 | M5 | 8/8 | 58.333 | 2,011,124 | 1,588,876 | 4 | 2,260 |
-| CP-05 | M6-BS | 8/8 | 58.333 | 1,511,784 | 2,088,216 | 4 | 2,984 |
-| CP-05 | WF | 8/8 | 58.333 | 2,011,124 | 1,588,876 | 4 | 2,004 |
-| CP-06 | BF | 7/7 | 42.028 | 553,307 | 1,019,193 | 2 | 428 |
-| CP-06 | FF | 7/7 | 42.028 | 553,307 | 1,019,193 | 2 | 397 |
-| CP-06 | HF | 7/7 | 42.028 | 553,307 | 1,019,193 | 2 | 428 |
-| CP-06 | M5 | 7/7 | 42.028 | 553,307 | 1,019,193 | 2 | 405 |
-| CP-06 | M6-BS | 7/7 | 42.028 | 358,224 | 1,214,276 | 2 | 1,549 |
-| CP-06 | WF | 7/7 | 42.028 | 553,307 | 1,019,193 | 2 | 403 |
-| EXP-COMPLEX-001 | BF | 24/24 | 29.598 | 746.72 | 184 | 6 | 136 |
-| EXP-COMPLEX-001 | FF | 24/24 | 29.598 | 746.72 | 184 | 6 | 129 |
-| EXP-COMPLEX-001 | HF | 24/24 | 29.598 | 746.72 | 184 | 6 | 134 |
-| EXP-COMPLEX-001 | M5 | 24/24 | 29.598 | 731.72 | 199 | 6 | 131 |
-| EXP-COMPLEX-001 | M6-BS | 24/24 | 29.598 | 698.72 | 232 | 6 | 366 |
-| EXP-COMPLEX-001 | WF | 24/24 | 29.598 | 731.72 | 199 | 6 | 137 |
-| EXP-MEDIUM-001 | BF | 9/9 | 28.413 | 193.86 | 66 | 3 | 44 |
-| EXP-MEDIUM-001 | FF | 9/9 | 28.413 | 201.86 | 58 | 3 | 32 |
-| EXP-MEDIUM-001 | HF | 9/9 | 28.413 | 201.86 | 58 | 3 | 33 |
-| EXP-MEDIUM-001 | M5 | 9/9 | 28.413 | 201.86 | 58 | 3 | 33 |
-| EXP-MEDIUM-001 | M6-BS | 9/9 | 28.413 | 196.86 | 63 | 3 | 95 |
-| EXP-MEDIUM-001 | WF | 9/9 | 28.413 | 201.86 | 58 | 3 | 32 |
-| EXP-SMALL-001 | BF | 3/3 | 60 | 0 | 8 | 2 | 19 |
-| EXP-SMALL-001 | FF | 3/3 | 60 | 0 | 8 | 2 | 19 |
-| EXP-SMALL-001 | HF | 3/3 | 60 | 0 | 8 | 2 | 20 |
-| EXP-SMALL-001 | M5 | 3/3 | 60 | 0 | 8 | 2 | 20 |
-| EXP-SMALL-001 | M6-BS | 3/3 | 60 | 0 | 8 | 2 | 26 |
-| EXP-SMALL-001 | WF | 3/3 | 60 | 0 | 8 | 2 | 18 |
+| CP-01 | BF | 3/3 | 33.333 | 497919.0 | 942081.0 | 1 | 71 |
+| CP-01 | FF | 3/3 | 33.333 | 497919.0 | 942081.0 | 1 | 70 |
+| CP-01 | HF | 3/3 | 33.333 | 497919.0 | 942081.0 | 1 | 84 |
+| CP-01 | M5 | 3/3 | 33.333 | 497919.0 | 942081.0 | 1 | 71 |
+| CP-01 | M6-BS | 3/3 | 33.333 | 379746.0 | 1060254.0 | 1 | 1097 |
+| CP-01 | WF | 3/3 | 33.333 | 497919.0 | 942081.0 | 1 | 73 |
+| CP-02 | BF | 11/11 | 44.444 | 279492.0 | 2120508.0 | 1 | 347 |
+| CP-02 | FF | 11/11 | 44.444 | 279492.0 | 2120508.0 | 1 | 206 |
+| CP-02 | HF | 11/11 | 44.444 | 279492.0 | 2120508.0 | 1 | 507 |
+| CP-02 | M5 | 11/11 | 44.444 | 279492.0 | 2120508.0 | 1 | 289 |
+| CP-02 | M6-BS | 11/11 | 44.444 | 363810.0 | 2036190.0 | 1 | 3105 |
+| CP-02 | WF | 11/11 | 44.444 | 279492.0 | 2120508.0 | 1 | 289 |
+| CP-03 | BF | 24/24 | 45.833 | 756100.0 | 3923900.0 | 2 | 1299 |
+| CP-03 | FF | 24/24 | 45.833 | 756100.0 | 3923900.0 | 2 | 536 |
+| CP-03 | HF | 24/24 | 45.833 | 756100.0 | 3923900.0 | 2 | 1025 |
+| CP-03 | M5 | 24/24 | 45.833 | 756100.0 | 3923900.0 | 2 | 1075 |
+| CP-03 | M6-BS | 24/24 | 45.833 | 517920.0 | 4162080.0 | 2 | 6494 |
+| CP-03 | WF | 24/24 | 45.833 | 756100.0 | 3923900.0 | 2 | 1108 |
+| CP-04 | BF | 6/6 | 37.666 | 166752.8 | 1179672.0 | 1 | 136 |
+| CP-04 | FF | 6/6 | 37.666 | 166752.8 | 1179672.0 | 1 | 106 |
+| CP-04 | HF | 6/6 | 37.666 | 166752.8 | 1179672.0 | 1 | 272 |
+| CP-04 | M5 | 6/6 | 37.666 | 166752.8 | 1179672.0 | 1 | 118 |
+| CP-04 | M6-BS | 6/6 | 37.666 | 238392.8 | 1108032.0 | 1 | 842 |
+| CP-04 | WF | 6/6 | 37.666 | 166752.8 | 1179672.0 | 1 | 115 |
+| CP-05 | BF | 8/8 | 58.333 | 2011124.0 | 1588876.0 | 4 | 2704 |
+| CP-05 | FF | 8/8 | 58.333 | 2011124.0 | 1588876.0 | 4 | 2147 |
+| CP-05 | HF | 8/8 | 58.333 | 2011124.0 | 1588876.0 | 4 | 1788 |
+| CP-05 | M5 | 8/8 | 58.333 | 2011124.0 | 1588876.0 | 4 | 2260 |
+| CP-05 | M6-BS | 8/8 | 58.333 | 1511784.0 | 2088216.0 | 4 | 2984 |
+| CP-05 | WF | 8/8 | 58.333 | 2011124.0 | 1588876.0 | 4 | 2004 |
+| CP-06 | BF | 7/7 | 42.028 | 553307.0 | 1019193.0 | 2 | 428 |
+| CP-06 | FF | 7/7 | 42.028 | 553307.0 | 1019193.0 | 2 | 397 |
+| CP-06 | HF | 7/7 | 42.028 | 553307.0 | 1019193.0 | 2 | 428 |
+| CP-06 | M5 | 7/7 | 42.028 | 553307.0 | 1019193.0 | 2 | 405 |
+| CP-06 | M6-BS | 7/7 | 42.028 | 358224.0 | 1214276.0 | 2 | 1549 |
+| CP-06 | WF | 7/7 | 42.028 | 553307.0 | 1019193.0 | 2 | 403 |
+| EXP-COMPLEX-001 | BF | 24/24 | 29.598 | 746.7 | 184.0 | 6 | 136 |
+| EXP-COMPLEX-001 | FF | 24/24 | 29.598 | 746.7 | 184.0 | 6 | 129 |
+| EXP-COMPLEX-001 | HF | 24/24 | 29.598 | 746.7 | 184.0 | 6 | 134 |
+| EXP-COMPLEX-001 | M5 | 24/24 | 29.598 | 731.7 | 199.0 | 6 | 131 |
+| EXP-COMPLEX-001 | M6-BS | 24/24 | 29.598 | 698.7 | 232.0 | 6 | 366 |
+| EXP-COMPLEX-001 | WF | 24/24 | 29.598 | 731.7 | 199.0 | 6 | 137 |
+| EXP-MEDIUM-001 | BF | 9/9 | 28.413 | 193.9 | 66.0 | 3 | 44 |
+| EXP-MEDIUM-001 | FF | 9/9 | 28.413 | 201.9 | 58.0 | 3 | 32 |
+| EXP-MEDIUM-001 | HF | 9/9 | 28.413 | 201.9 | 58.0 | 3 | 33 |
+| EXP-MEDIUM-001 | M5 | 9/9 | 28.413 | 201.9 | 58.0 | 3 | 33 |
+| EXP-MEDIUM-001 | M6-BS | 9/9 | 28.413 | 196.9 | 63.0 | 3 | 95 |
+| EXP-MEDIUM-001 | WF | 9/9 | 28.413 | 201.9 | 58.0 | 3 | 32 |
+| EXP-SMALL-001 | BF | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 19 |
+| EXP-SMALL-001 | FF | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 19 |
+| EXP-SMALL-001 | HF | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 20 |
+| EXP-SMALL-001 | M5 | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 20 |
+| EXP-SMALL-001 | M6-BS | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 26 |
+| EXP-SMALL-001 | WF | 3/3 | 60.000 | 0.0 | 8.0 | 2 | 18 |
 
-## Resumen global comercial
+## Anexo B — Regresiones
+EXP-SMALL-001, EXP-MEDIUM-001 y EXP-COMPLEX-001 usan sus JSON históricos y mínimos recuperables de 1 × 1 mm. Sus 18 combinaciones se incluyen en el anexo A; no se mezclan con las recomendaciones comerciales.
 
-Las areas se ponderan por area utilizada sumada sobre un resultado representativo de cada caso. Tiempo: mediana de las medianas de los seis casos; no latencia de una carga agregada. Cobertura: piezas colocadas totales / solicitadas totales. Solo casos comerciales.
-
-| Motor | Casos completos | Aprovechamiento % | Merma mm2 (suma) | Recuperable mm2 (suma) | Cobertura % | Tiempo mediano ms |
-|---|---:|---:|---:|---:|---:|---:|
-| FF | 6/6 | 47.476 | 4,264,694.8 | 10,774,230 | 100 | 301.5 |
-| BF | 6/6 | 47.476 | 4,264,694.8 | 10,774,230 | 100 | 387.5 |
-| WF | 6/6 | 47.476 | 4,264,694.8 | 10,774,230 | 100 | 346 |
-| HF | 6/6 | 47.476 | 4,264,694.8 | 10,774,230 | 100 | 467.5 |
-| M5 | 6/6 | 47.476 | 4,264,694.8 | 10,774,230 | 100 | 347 |
-| M6-BS | 6/6 | 47.476 | 3,369,876.8 | 11,669,048 | 100 | 2,266.5 |
-
-## Hallazgos y comparacion de motores
-
-Resultados funcionalmente deterministas en 54 de 54 combinaciones caso/motor. Validacion satisfactoria en 54 de 54 combinaciones.
-
-No se anadio CP-07: CP-01..06 ya proporcionan diferencias de disposicion y merma con entradas comerciales. No se seleccionaron solamente ejecuciones favorables.
-
-Los seis motores tienen el mismo aprovechamiento dentro de cada caso comercial. Las diferencias de merma proceden de la disposicion y del recuperable, no de una mejora del aprovechamiento.
-
-En palabras simples: cortar la misma cantidad de vidrio no significa dejar sobrantes igual de utiles.
-
-FF y BF coinciden en las metricas de calidad (sin exigir tiempos iguales) en: CP-01, CP-02, CP-03, CP-04, CP-05, CP-06.
-
-CP-01 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 33.333.
-CP-01 - Mayor recuperable (mm2): M6-BS, 1,060,254.
-CP-01 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 1.
-CP-01 - Menor tiempo mediano (ms): FF, 70.
-### CP-01
-
-Menor merma: M6-BS, 379,746 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, -118,173 mm2 de diferencia de merma y 15.671 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam dejo menos merma, pero hay que considerar su coste temporal.
-
-CP-02 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 44.444.
-CP-02 - Mayor recuperable (mm2): BF, FF, HF, M5, WF, 2,120,508.
-CP-02 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 1.
-CP-02 - Menor tiempo mediano (ms): FF, 206.
-### CP-02
-
-Menor merma: BF, FF, HF, M5, WF, 279,492 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, 84,318 mm2 de diferencia de merma y 15.073 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam no redujo la merma respecto de First Fit en este caso; un algoritmo mas complejo no garantiza una mejora.
-
-CP-03 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 45.833.
-CP-03 - Mayor recuperable (mm2): M6-BS, 4,162,080.
-CP-03 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 2.
-CP-03 - Menor tiempo mediano (ms): FF, 536.
-### CP-03
-
-Menor merma: M6-BS, 517,920 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, -238,180 mm2 de diferencia de merma y 12.116 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam dejo menos merma, pero hay que considerar su coste temporal.
-
-CP-04 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 37.666.
-CP-04 - Mayor recuperable (mm2): BF, FF, HF, M5, WF, 1,179,672.
-CP-04 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 1.
-CP-04 - Menor tiempo mediano (ms): FF, 106.
-### CP-04
-
-Menor merma: BF, FF, HF, M5, WF, 166,752.8 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, 71,640 mm2 de diferencia de merma y 7.943 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam no redujo la merma respecto de First Fit en este caso; un algoritmo mas complejo no garantiza una mejora.
-
-CP-05 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 58.333.
-CP-05 - Mayor recuperable (mm2): M6-BS, 2,088,216.
-CP-05 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 4.
-CP-05 - Menor tiempo mediano (ms): HF, 1,788.
-### CP-05
-
-Menor merma: M6-BS, 1,511,784 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, -499,340 mm2 de diferencia de merma y 1.39 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam dejo menos merma, pero hay que considerar su coste temporal.
-
-CP-06 - Mayor aprovechamiento (%): BF, FF, HF, M5, M6-BS, WF, 42.028.
-CP-06 - Mayor recuperable (mm2): M6-BS, 1,214,276.
-CP-06 - Menos fuentes: BF, FF, HF, M5, M6-BS, WF, 2.
-CP-06 - Menor tiempo mediano (ms): FF, 397.
-### CP-06
-
-Menor merma: M6-BS, 358,224 mm2. M6-BS frente a FF: 0 puntos porcentuales de aprovechamiento, -195,083 mm2 de diferencia de merma y 3.902 veces el tiempo mediano.
-
-En palabras simples: todos completaron las piezas. Beam dejo menos merma, pero hay que considerar su coste temporal.
-
-## Graficos
-
-![Figura 1. Aprovechamiento (%) por caso comercial; cinco repeticiones por motor.](figures/G1_aprovechamiento.png)
-Figura 1. Aprovechamiento (%) por caso comercial; cinco repeticiones por motor.
-
-![Figura 2. Merma (mm²) por caso comercial; cinco repeticiones por motor.](figures/G2_merma.png)
-Figura 2. Merma (mm²) por caso comercial; cinco repeticiones por motor.
-
-![Figura 3. Cobertura (%) por caso comercial; cinco repeticiones por motor.](figures/G3_cobertura.png)
-Figura 3. Cobertura (%) por caso comercial; cinco repeticiones por motor.
-
-![Figura 4. Tiempo mediano (ms) por caso comercial; cinco repeticiones por motor.](figures/G4_tiempo.png)
-Figura 4. Tiempo mediano (ms) por caso comercial; cinco repeticiones por motor.
-
-![Figura 5. Cada punto representa un caso/motor; ejes lineales desde cero.](figures/G5_calidad_tiempo.png)
-Figura 5. Cada punto representa un caso/motor; ejes lineales desde cero.
-
-![Figura 6. Fuentes físicas por caso comercial; cinco repeticiones por motor.](figures/G6_fuentes.png)
-Figura 6. Fuentes físicas por caso comercial; cinco repeticiones por motor.
-
-## Evidencias reales del sistema
-
-Las capturas y respuestas HTTP del comparador V2 se registran en `screenshots/` y `ui/`. Esta validacion usa PostgreSQL temporal propio, sin confirmacion de cortes. Los tiempos UI no se mezclan con la bateria. El manifiesto UI identifica comparaciones y relacion con casos.
-
-![01-comparacion-seis-motores](screenshots/01-comparacion-seis-motores.png)
-Figura 7. 01-comparacion-seis-motores. Interfaz real y datos sinteticos.
-
-![02-tabla-completa](screenshots/02-tabla-completa.png)
-Figura 8. 02-tabla-completa. Interfaz real y datos sinteticos.
-
-![03-datos-tecnicos](screenshots/03-datos-tecnicos.png)
-Figura 9. 03-datos-tecnicos. Interfaz real y datos sinteticos.
-
-![04-configuracion](screenshots/04-configuracion.png)
-Figura 10. 04-configuracion. Interfaz real y datos sinteticos.
-
-![05-patron-diferenciador-M6](screenshots/05-patron-diferenciador-M6.png)
-Figura 11. 05-patron-diferenciador-M6. Interfaz real y datos sinteticos.
-
-![06-multi-plancha](screenshots/06-multi-plancha.png)
-Figura 12. 06-multi-plancha. Interfaz real y datos sinteticos.
-
-![07-plancha-retazo](screenshots/07-plancha-retazo.png)
-Figura 13. 07-plancha-retazo. Interfaz real y datos sinteticos.
-
-![08-trazabilidad-material](screenshots/08-trazabilidad-material.png)
-Figura 14. 08-trazabilidad-material. Interfaz real y datos sinteticos.
-
-![09-fuentes-multi-plancha](screenshots/09-fuentes-multi-plancha.png)
-Figura 15. 09-fuentes-multi-plancha. Interfaz real y datos sinteticos.
-
-## Pruebas y validez
-
-Cada resultado medido se valida con un oraculo independiente de bits y enumeracion residual. Revisa contencion, solapamiento, material, espesor, margen, separacion, rotacion, areas y conteos. Los logs de regresion y JUnit estan en `tests/`. No confundir una prueba existente con una prueba ejecutada: consultar esos resultados.
-
-## Limitaciones
-
-- Nueve casos sinteticos; no estima calidad universal ni optimalidad global.
-- Cinco muestras por combinacion: se informa mediana/minimo/maximo, sin p95.
-- Un entorno WSL2 compartido con el host; no es hardware dedicado ni tiempo CPU.
-- El oraculo reutiliza rasterizacion canonica; no prueba geometria continua exacta.
-- Area recuperable conservadora y dependiente de minimos; regresiones separadas.
-- Los tiempos enteros en ms pueden ser cero en casos muy pequenos.
-- El README general y algunos comentarios historicos describen V1/deadlines antiguos; prevalece el codigo auditado.
-
-## Conclusiones
-
-La seleccion debe considerar validez y cobertura antes de aprovechamiento, merma y tiempo. Las diferencias observadas son por caso: no justifican un mejor motor absoluto. Los resultados no se completaron con datos historicos ni con ejecuciones de otro sistema operativo.
-
-## En palabras simples
-
-Se entrego el mismo trabajo a los seis motores. Se conto cuanto vidrio usaron, que parte quedo recuperable y cuanto tardaron. Las tablas permiten elegir segun el caso; mas tiempo de busqueda no asegura menos desperdicio.
-
-## Anexos y reproduccion
-
-Protocolo y comandos: `../../../../experiments/sprint2_quality/README.md`. Datos por corrida, hashes, parametros y dependencias: `results/manifest.json`, `results/raw_results.csv` y JSON individuales. Resumen: `summary_results.csv`.
-
-## Resultado de suites ejecutadas
-
-- api.xml: 88 pruebas; 0 fallos; 0 errores; 0 omitidas.
-- unit.xml: 568 pruebas; 0 fallos; 0 errores; 0 omitidas.
-
-Las selecciones unitarias y API/persistencia son disjuntas. Los reintentos no se suman. Incidencias de preparacion y correcciones de pruebas: `tests/README.md`.
+## Anexo C — Reproducción y archivos
+Protocolo y casos: experiments/sprint2_quality/README.md. Entradas, hashes, tiempos y resultados por corrida: results/manifest.json, results/raw_results.csv y JSON individuales. Resumen: summary_results.csv. Referencias: https://www.iso.org/standard/78176.html y https://www.iso.org/standard/35747.html.
 
