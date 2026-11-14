@@ -1,0 +1,250 @@
+{
+  "timestamp": "2026-11-14T05:07:12.322277+00:00",
+  "backend_url": "http://127.0.0.1:8000",
+  "zap_version": "2.17.0",
+  "resumen_pruebas_controladas": {
+    "total": 19,
+    "aprobadas": 19,
+    "fallidas_o_hallazgos": 0
+  },
+  "alertas_zap_por_severidad": {
+    "High": 0,
+    "Medium": 0,
+    "Low": 0,
+    "Informational": 3
+  },
+  "detalle_pruebas": [
+    {
+      "categoria": "Autenticación",
+      "prueba": "A1. Acceso a /api/auth/me sin token",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A2. Acceso con token JWT expirado",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A3. Acceso con token JWT alterado/falsificado",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A4. Rechazo de token con alg: none",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A5. Login con contraseña errónea (401 genérico)",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": "Mensaje: Usuario o contraseña incorrectos."
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A6. Login con usuario inexistente (no revela existencia)",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Autenticación",
+      "prueba": "A7. Rechazo de token con ID no existente en base de datos",
+      "esperado": 401,
+      "obtenido": 401,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B1. Operario intenta GET /api/users",
+      "esperado": 403,
+      "obtenido": 403,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B2. Almacenero intenta GET /api/users",
+      "esperado": 403,
+      "obtenido": 403,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B3. Administrador ejecuta GET /api/users",
+      "esperado": 200,
+      "obtenido": 200,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B4. Operario intenta POST /api/users (escalación)",
+      "esperado": 403,
+      "obtenido": 403,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B5. Operario intenta GET /api/roles",
+      "esperado": 403,
+      "obtenido": 403,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B6. Almacenero intenta POST /api/orders",
+      "esperado": 403,
+      "obtenido": 403,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B7. Operario consulta GET /api/inventory/planchas",
+      "esperado": 200,
+      "obtenido": 200,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Control de Acceso",
+      "prueba": "B8. Almacenero consulta GET /api/inventory/planchas",
+      "esperado": 200,
+      "obtenido": 200,
+      "aprobado": true,
+      "detalles": ""
+    },
+    {
+      "categoria": "Exposición de Datos",
+      "prueba": "C1. Verificación de no exposición de password_hash en /api/users",
+      "esperado": false,
+      "obtenido": false,
+      "aprobado": true,
+      "detalles": "No se encontraron hashes en las respuestas"
+    },
+    {
+      "categoria": "Cabeceras HTTP",
+      "prueba": "C2. Cabecera X-Content-Type-Options: nosniff",
+      "esperado": true,
+      "obtenido": true,
+      "aprobado": true,
+      "detalles": "Cabecera presente: True"
+    },
+    {
+      "categoria": "Cabeceras HTTP",
+      "prueba": "C3. Cabecera X-Frame-Options (Clickjacking)",
+      "esperado": true,
+      "obtenido": true,
+      "aprobado": true,
+      "detalles": "Cabecera presente: True"
+    },
+    {
+      "categoria": "Cabeceras HTTP",
+      "prueba": "C4. Cabecera Content-Security-Policy",
+      "esperado": true,
+      "obtenido": true,
+      "aprobado": true,
+      "detalles": "Cabecera presente: True"
+    }
+  ],
+  "alertas_zap": [
+    {
+      "nodeName": "http://127.0.0.1:8000/api/auth/login ()({username,password})",
+      "sourceid": "3",
+      "other": "userParam=username\nuserValue=John Doe\npasswordParam=password",
+      "method": "POST",
+      "evidence": "password",
+      "pluginId": "10111",
+      "cweid": "-1",
+      "confidence": "High",
+      "sourceMessageId": 3,
+      "wascid": "-1",
+      "description": "The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.",
+      "messageId": "3",
+      "inputVector": "",
+      "url": "http://127.0.0.1:8000/api/auth/login",
+      "tags": {},
+      "reference": "https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/",
+      "solution": "This is an informational alert rather than a vulnerability and so there is nothing to fix.",
+      "alert": "Authentication Request Identified",
+      "param": "username",
+      "attack": "",
+      "name": "Authentication Request Identified",
+      "risk": "Informational",
+      "id": "0",
+      "alertRef": "10111"
+    },
+    {
+      "nodeName": "http://127.0.0.1:8000/api/auth/login ()({username,password})",
+      "sourceid": "3",
+      "other": "userParam=username\nuserValue=A74000010\npasswordParam=password",
+      "method": "POST",
+      "evidence": "password",
+      "pluginId": "10111",
+      "cweid": "-1",
+      "confidence": "High",
+      "sourceMessageId": 104,
+      "wascid": "-1",
+      "description": "The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.",
+      "messageId": "104",
+      "inputVector": "",
+      "url": "http://127.0.0.1:8000/api/auth/login",
+      "tags": {},
+      "reference": "https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/",
+      "solution": "This is an informational alert rather than a vulnerability and so there is nothing to fix.",
+      "alert": "Authentication Request Identified",
+      "param": "username",
+      "attack": "",
+      "name": "Authentication Request Identified",
+      "risk": "Informational",
+      "id": "1",
+      "alertRef": "10111"
+    },
+    {
+      "nodeName": "http://127.0.0.1:8000/api/auth/login ()({username,password})",
+      "sourceid": "3",
+      "other": "userParam=username\nuserValue=A99999999\npasswordParam=password",
+      "method": "POST",
+      "evidence": "password",
+      "pluginId": "10111",
+      "cweid": "-1",
+      "confidence": "High",
+      "sourceMessageId": 105,
+      "wascid": "-1",
+      "description": "The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.",
+      "messageId": "105",
+      "inputVector": "",
+      "url": "http://127.0.0.1:8000/api/auth/login",
+      "tags": {},
+      "reference": "https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/",
+      "solution": "This is an informational alert rather than a vulnerability and so there is nothing to fix.",
+      "alert": "Authentication Request Identified",
+      "param": "username",
+      "attack": "",
+      "name": "Authentication Request Identified",
+      "risk": "Informational",
+      "id": "2",
+      "alertRef": "10111"
+    }
+  ]
+}
