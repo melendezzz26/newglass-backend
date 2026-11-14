@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from app.shared.config import cors_origins
 from app.shared.observability.health import router as health_router
+from app.shared.security import SecurityHeadersMiddleware
 from app.shared.security.validation_errors import sanitized_validation_handler
 
 from app.modules.authentication.presentation.router import router as authentication_router
@@ -44,6 +45,9 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
     expose_headers=["Location", "X-Comparison-Recovery"],
 )
+
+# Hardening defensivo: cabeceras HTTP de seguridad recomendadas por OWASP
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Rutas de autenticaciÃ³n (HU-001)
 app.include_router(authentication_router)
