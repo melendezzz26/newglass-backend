@@ -165,7 +165,7 @@ word_tables=[[cell.text for cell in row.cells] for table in Document(dest).table
 assert markdown_tables == word_tables, 'Las tablas del Word no coinciden con Markdown'
 manifest_path=E/'evidence-manifest.json'
 manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
-for path in [E/(TITLE+'.md'), *[figdir/name for name in ('G1_resumen_decision.png','G2_delta_merma_m6_vs_ff.png','G3_delta_merma_porcentaje.png','G4_merma_vs_tiempo.png','G5_material_preservado_vs_tiempo_extra.png','G6_recomendacion_por_caso.png','G7_balance_casos.png')]]:
+for path in [E/(TITLE+'.md'), E/'README.md', *[figdir/name for name in ('G1_resumen_decision.png','G2_delta_merma_m6_vs_ff.png','G3_delta_merma_porcentaje.png','G4_merma_vs_tiempo.png','G5_material_preservado_vs_tiempo_extra.png','G6_recomendacion_por_caso.png','G7_balance_casos.png')]]:
     manifest['files'][path.relative_to(E).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
 manifest['figures']=len(list(figdir.glob('*.png')))
 manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
