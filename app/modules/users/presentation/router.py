@@ -2,7 +2,9 @@
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.modules.authentication.domain.user import AuthenticatedUser
 from app.modules.users.application import use_cases
@@ -22,6 +24,10 @@ from .schemas import RoleResponse, UserCreateRequest, UserResponse, UserUpdateRe
 # Cada ruta exige un permiso del catálogo: users.view para consultar y
 # users.manage para crear o editar (S1-RBAC, SPEC §4.4).
 router = APIRouter(prefix="/api/users", tags=["Usuarios"])
+
+# id_usuario es INTEGER en PostgreSQL: un valor fuera de rango llegaría a la base y
+# provocaría un error 500. Se rechaza antes con 422, igual que roles_router.py.
+UserId = Annotated[int, Path(gt=0, le=2147483647)]
 
 
 def _utc_now() -> datetime:
@@ -85,7 +91,7 @@ def list_users(
 
 @router.get("/{id_usuario}", response_model=UserResponse)
 def get_user(
-    id_usuario: int,
+    id_usuario: UserId,
     repository: UserRepository = Depends(get_user_repository),
     _=Depends(require_users_view),
 ):
@@ -95,7 +101,7 @@ def get_user(
 
 @router.patch("/{id_usuario}", response_model=UserResponse)
 def update_user(
-    id_usuario: int,
+    id_usuario: UserId,
     data: UserUpdateRequest,
     repository: UserRepository = Depends(get_user_repository),
     acting_user: AuthenticatedUser = Depends(require_user_management),
