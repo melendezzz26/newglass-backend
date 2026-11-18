@@ -569,3 +569,27 @@ class MetricaEjecucion(Base):
         BigInteger,
         nullable=True,
     )
+
+
+class IntentoLogin(Base):
+    """Intentos fallidos de inicio de sesión por cuenta o por IP (EN-SEC-001).
+
+    Una fila por clave. Se guarda en PostgreSQL y no en memoria para que el
+    límite sea el mismo en todos los procesos web y workers.
+    """
+
+    __tablename__ = "intentos_login"
+    __table_args__ = (
+        PrimaryKeyConstraint("alcance", "clave", name="pk_intentos_login"),
+        CheckConstraint("alcance IN ('account', 'ip')", name="ck_intentos_login_alcance"),
+        CheckConstraint("fallos >= 0", name="ck_intentos_login_fallos"),
+        Index("ix_intentos_login_actualizado_en", "actualizado_en"),
+    )
+
+    # account = usuario normalizado; ip = IP del cliente que entrega Uvicorn.
+    alcance: Mapped[str] = mapped_column(String(10), nullable=False)
+    clave: Mapped[str] = mapped_column(String(64), nullable=False)
+    fallos: Mapped[int] = mapped_column(Integer, nullable=False)
+    inicio_ventana: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    bloqueado_hasta: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    actualizado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

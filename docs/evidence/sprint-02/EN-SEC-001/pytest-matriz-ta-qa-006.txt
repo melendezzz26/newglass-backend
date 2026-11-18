@@ -1,0 +1,4 @@
+# python -m pytest tests/api/authorization/test_security_role_matrix.py -q
+# Matriz vigente en main: 61 rutas protegidas
+
+308 passed, 1 warning in 2.22s

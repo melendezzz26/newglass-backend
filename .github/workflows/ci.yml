@@ -84,6 +84,14 @@ jobs:
           python -m pytest tests/integration/optimization/test_comparison_supervision_v2.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/comparison-supervision.xml"
           python -m pytest tests/unit/optimization/test_sequential_runner.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/sequential-runner.xml"
           python -m pytest tests/unit/optimization/test_comparison_runner.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/comparison-runner.xml"
+      - name: Audit dependencies (EN-SEC-001, V-20)
+        # Runs even if tests failed, so both results are visible in the same run.
+        # pip-audit resolves requirements.txt in its own isolated environment and
+        # exits non-zero when any pinned dependency has a known vulnerability.
+        if: ${{ !cancelled() }}
+        run: |
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit --requirement requirements.txt --progress-spinner off --desc on
       - name: Summarize backend failures safely
         if: always()
         run: |

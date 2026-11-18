@@ -30,7 +30,9 @@ def test_empty_upgrade_changes_only_method_check_and_matches_current_orm(isolate
         before = schema_snapshot(engine, tables)
         with engine.connect() as c:
             assert compare_metadata(MigrationContext.configure(c), historical_metadata(PREVIOUS)) == []
-        assert upgrade(engine, "head").returncode == 0
+        # Se fija REVISION (no "head"): la comparación de esquemas es solo de esta
+        # migración; EN-SEC-001 agrega después la tabla intentos_login.
+        assert upgrade(engine, REVISION).returncode == 0
         assert revision(engine) == REVISION
         after = schema_snapshot(engine, tables)
         assert sorted(sa.inspect(engine).get_table_names()) == tables
@@ -42,6 +44,8 @@ def test_empty_upgrade_changes_only_method_check_and_matches_current_orm(isolate
                 assert all(code in check for code in ("FF", "BF", "WF", "HF", "M5", "M6-BS"))
             else:
                 assert after[table] == before[table]
+        # El ORM vigente incluye las migraciones posteriores: se compara en head.
+        assert upgrade(engine, "head").returncode == 0
         with engine.connect() as c:
             assert compare_metadata(MigrationContext.configure(c, opts={"compare_type": True,
                 "compare_server_default": True}), current_metadata()) == []
