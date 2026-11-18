@@ -64,6 +64,7 @@ def test_importing_models_registers_all_current_tables(database_structure):
         "clientes",
         "configuraciones",
         "ejecuciones_optimizacion",
+        "intentos_login",  # EN-SEC-001
         "metricas_ejecucion",
         "optimizaciones",
         "optimizacion_pedidos",

@@ -1,13 +1,22 @@
 """Casos de uso de autenticación. No conocen FastAPI ni SQLAlchemy."""
+from datetime import datetime
+
 from app.modules.authentication.domain.errors import (
     InactiveAccountError,
     InvalidCredentialsError,
     SessionNotValidError,
+    TooManyLoginAttemptsError,
+)
+from app.modules.authentication.domain.login_attempts import (
+    AttemptKey,
+    AttemptPolicy,
+    register_failure,
+    seconds_locked,
 )
 from app.modules.authentication.domain.user import AuthenticatedUser
 from app.modules.authentication.domain.username import Username
 
-from .ports import PasswordVerifier, UserReader
+from .ports import LoginAttemptStore, PasswordVerifier, UserReader
 
 
 def authenticate(
@@ -30,6 +39,56 @@ def authenticate(
         raise InactiveAccountError()
 
     return account.to_authenticated_user()
+
+
+def authenticate_with_attempt_limit(
+    username: Username,
+    password: str,
+    client_ip: str | None,
+    *,
+    user_reader: UserReader,
+    verify_password: PasswordVerifier,
+    attempts: LoginAttemptStore,
+    policy: AttemptPolicy,
+    now: datetime,
+) -> AuthenticatedUser:
+    """Autentica aplicando el límite de intentos por cuenta y por IP (EN-SEC-001).
+
+    - Si alguna de las dos claves está bloqueada, rechaza sin verificar la
+      contraseña (RN-05): durante el bloqueo no se puede seguir probando.
+    - Un fallo de credenciales suma en ambas claves; el que alcanza el
+      umbral ya responde como bloqueado (D-04).
+    - Una cuenta desactivada con la contraseña correcta no suma: no es un
+      intento de adivinar la contraseña (D-05).
+    - Un éxito limpia solo la clave de la cuenta, no la de la IP (RN-06, D-06).
+    """
+    account_key = AttemptKey.account(username.value)
+    keys = [account_key]
+    if client_ip:
+        keys.append(AttemptKey.ip(client_ip))
+
+    remaining = max(seconds_locked(attempts.get(key), now) for key in keys)
+    if remaining:
+        raise TooManyLoginAttemptsError(remaining)
+
+    try:
+        user = authenticate(
+            username, password, user_reader=user_reader, verify_password=verify_password
+        )
+    except InvalidCredentialsError:
+        states = [
+            attempts.update(key, lambda state: register_failure(state, now, policy), now)
+            for key in keys
+        ]
+        # Limpieza oportunista: los registros vencidos no influyen en la regla.
+        attempts.purge(now - policy.retention, now)
+        remaining = max(seconds_locked(state, now) for state in states)
+        if remaining:
+            raise TooManyLoginAttemptsError(remaining) from None
+        raise
+
+    attempts.clear(account_key)
+    return user
 
 
 def get_active_user(user_id: int, *, user_reader: UserReader) -> AuthenticatedUser:

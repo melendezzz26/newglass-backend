@@ -13,9 +13,10 @@ from .postgres_support import BACKEND, _run, new_database, upgrade
 def test_single_integrated_head_and_complete_history():
     config = Config(str(BACKEND / "alembic.ini"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["s2cmp02d4e6f8"]
+    # EN-SEC-001 agrega s2sec01a1b2c (tabla intentos_login) sobre s2cmp02d4e6f8.
+    assert scripts.get_heads() == ["s2sec01a1b2c"]
     chain = list(scripts.walk_revisions())
-    assert len(chain) == 15
+    assert len(chain) == 16
     assert chain[-1].down_revision is None
     assert all(not revision.is_merge_point for revision in chain)
 
@@ -32,7 +33,7 @@ def test_full_upgrade_current_and_idempotent_roles(isolated_postgres, monkeypatc
         assert current() == ""
         result = upgrade(engine, "head")
         assert result.returncode == 0, result.stderr
-        assert current() == "s2cmp02d4e6f8 (head)"
+        assert current() == "s2sec01a1b2c (head)"
         with engine.connect() as connection:
             assert connection.exec_driver_sql("SELECT count(*) FROM tipos_vidrio").scalar_one() == 6
             assert connection.exec_driver_sql("SELECT count(*) FROM tipos_vidrio_espesores").scalar_one() == 28
@@ -47,4 +48,4 @@ def test_full_upgrade_current_and_idempotent_roles(isolated_postgres, monkeypatc
         assert result.returncode == 0, result.stderr
         with engine.connect() as connection:
             assert connection.execute(sa.text("SELECT id_rol,nombre,descripcion FROM roles ORDER BY id_rol")).all() == before
-        assert current() == "s2cmp02d4e6f8 (head)"
+        assert current() == "s2sec01a1b2c (head)"
