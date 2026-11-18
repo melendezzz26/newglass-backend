@@ -25,7 +25,7 @@ from ..domain.metrics import ResidualRectangle
 from .comparison_runner import check_environment, resident_bytes, _reader
 from .comparison_snapshot import canonical_json, encode_problem, problem_fingerprint
 from .comparison_transport import VisualDecoder
-from .comparison_v2_snapshot import decode_result_v3
+from .comparison_v2_snapshot import decode_result_v4
 from .process_lifecycle import process_identity
 from .sequential_worker import calculation_worker_v2
 
@@ -289,7 +289,7 @@ class SequentialProcessRunner:
                                 yield dict(scope=scope,kind=kind,data=data)
                             elif kind == "result":
                                 finished = time.monotonic()
-                                value = decode_result_v3(data["snapshot"],expected_method=scope.method)
+                                value = decode_result_v4(data["snapshot"],expected_method=scope.method)
                                 if not started_clock.value or value.result is not None and value.result.problem != problem:
                                     raise ValueError("Result belongs to another input")
                                 residuals = tuple(ResidualRectangle(**{k:Decimal(v) if k in (

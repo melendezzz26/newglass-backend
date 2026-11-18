@@ -33,7 +33,7 @@ from app.modules.optimization.infrastructure.comparison_v2_uow import SqlCompari
 from app.modules.optimization.infrastructure.in_process_admission import InProcessRunAdmission
 from app.modules.optimization.presentation.comparison_supervision_v2 import ComparisonV2Coordinator
 from app.modules.optimization.presentation.comparison_v2_serialization import comparison_response_v2, execution_response_v2
-from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v3
+from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v4
 from app.modules.optimization.infrastructure.run_snapshot import json_value
 from tests.integration.postgres_support import temporary_postgres, new_database, upgrade
 from tests.orders_support import session_factory as seed_factory
@@ -156,7 +156,8 @@ def measure(engine, count):
     serialize_start = time.monotonic()
     # Durable snapshots compare all placements, contours, metrics and diagnostics.
     for e in current.executions:
-        encoded[e.method] = encode_result_v3(ExecutionPayloadV2(method=e.method, result=e.result, diagnostic=e.diagnostic))
+        encoded[e.method] = encode_result_v4(ExecutionPayloadV2(method=e.method, result=e.result,
+            diagnostic=e.diagnostic, residual_policy=e.residual_policy))
     serialize_s = time.monotonic()-serialize_start
     projection_start = time.monotonic()
     responses = [comparison_response_v2(current), *(execution_response_v2(current, e) for e in current.executions)]

@@ -50,17 +50,19 @@ class BestResidualFitSelector:
                                              self.min_width_cells, self.min_height_cells))
         return (*score, *_tie_key(candidate))
 
-    @staticmethod
-    def _scan(layout):
+    def _scan(self, layout):
         free_rows = tuple(
             usable & ~blocked
             for usable, blocked in zip(layout.usable, layout.blocked)
         )
-        return largest_rectangle(free_rows, layout.material.columns)
+        return largest_rectangle(free_rows, layout.material.columns,
+                                 min_width_cells=self.min_width_cells,
+                                 min_height_cells=self.min_height_cells)
 
     def _largest_after(self, candidate):
         before, after = candidate.layout, candidate.layout_after
-        rectangle = self._scores.get(before, before, lambda: self._scan(before))
+        rectangle = self._scores.get(before, before, lambda: self._scan(before),
+                                     parameters=(self.min_width_cells, self.min_height_cells))
         if rectangle is None:
             return None
         row, column, width, height = rectangle
@@ -73,15 +75,9 @@ class BestResidualFitSelector:
 
     def _residual_score(self, candidate):
         layout = candidate.layout_after
-        rectangle = self._scores.get(layout, layout, lambda: self._largest_after(candidate))
-        if (
-            rectangle is not None
-            and rectangle[2] >= self.min_width_cells
-            and rectangle[3] >= self.min_height_cells
-        ):
-            remnant_cells = rectangle[2] * rectangle[3]
-        else:
-            remnant_cells = 0
+        rectangle = self._scores.get(layout, layout, lambda: self._largest_after(candidate),
+                                     parameters=(self.min_width_cells, self.min_height_cells))
+        remnant_cells = rectangle[2] * rectangle[3] if rectangle is not None else 0
         fragmented_cells = candidate.remaining_free_cells_after_placement - remnant_cells
         return -remnant_cells, fragmented_cells
 

@@ -13,7 +13,7 @@ from app.modules.optimization.application.comparison_catalog import CATALOG_V2, 
 from app.modules.optimization.application.comparison_v2_contracts import ComparisonInputV2, ExecutionDiagnostic, ExecutionPayloadV2
 from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_comparison_input_v2
 from app.modules.optimization.domain.beam_search import BeamSearchLimits, BeamSearchOptimizer
-from app.modules.optimization.domain.metrics import calculate_metrics
+from app.modules.optimization.domain.metrics import ResidualPolicy, ResidualPolicyVersion, calculate_metrics
 from app.modules.optimization.infrastructure.comparison_snapshot import problem_fingerprint
 from app.modules.optimization.infrastructure.run_snapshot import json_value
 from app.modules.optimization.presentation.comparison_serialization import metrics_response
@@ -27,7 +27,7 @@ from tests.unit.optimization.test_comparison_snapshot import example
 FIXTURE = Path(__file__).resolve().parents[3] / "docs/contracts/optimization/comparison-v2.json"
 
 
-def calculated(definition, problem, *, partial=False):
+def calculated(definition, problem, *, partial=False, frozen_minimums=None):
     started = perf_counter_ns()
     optimizer = (BeamSearchOptimizer(BeamSearchLimits(max_expansions=1))
                  if partial else definition.optimizer_type())
@@ -36,10 +36,12 @@ def calculated(definition, problem, *, partial=False):
         result, reason, stats = outcome.result, outcome.stop_reason, outcome.statistics
     else:
         result, reason, stats = optimizer.optimize(problem), None, {}
-    result, residuals = calculate_metrics(result, 1, 1)
+    result, residuals = calculate_metrics(result, *(frozen_minimums or (1, 1)))
     result = replace(result, computation_time_ms=max(0, (perf_counter_ns() - started) // 1_000_000))
     reason = reason or ("COMPLETED" if result.complete else "NO_FIT")
-    return ExecutionPayloadV2(method=definition.code, result=result,
+    policy = None if frozen_minimums is None else ResidualPolicy(version=ResidualPolicyVersion.CORRECTED,
+        minimum_width_mm=frozen_minimums[0], minimum_height_mm=frozen_minimums[1])
+    return ExecutionPayloadV2(method=definition.code, result=result, residual_policy=policy,
         diagnostic=ExecutionDiagnostic(origin="ENGINE", termination_reason=reason, statistics=stats)), residuals
 
 

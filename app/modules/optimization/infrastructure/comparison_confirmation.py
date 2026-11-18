@@ -2,19 +2,17 @@
 
 Autor: Fabricio Melendez Quezada. Revisor asignado: Andro Quispe.
 """
-from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
-from app.models import EjecucionOptimizacion, MetricaEjecucion, MovimientoInventario, OptimizacionPedido
+from app.models import EjecucionOptimizacion, MovimientoInventario, OptimizacionPedido
 from ..application.confirmation import ConfirmationContext, ConfirmationResult, CreatedRemnant
 from ..application.dto import OptimizationRun, RunStatus
 from ..application.errors import RunError
 from ..domain.problem import StockCandidate, MaterialSource
-from .confirmation_adapter import SqlConfirmationRepository
-from .comparison_snapshot import encode_result
-from .run_snapshot import json_value
+from .confirmation_adapter import SqlConfirmationRepository, result_after_confirmation
+from .run_snapshot import decode_residual_policy, json_value
 
 
 def decode_receipt(value):
@@ -31,16 +29,25 @@ def decode_receipt(value):
 class SqlComparisonConfirmationRepository(SqlConfirmationRepository):
     method_names = {"FF": "First Fit", "BF": "Best Fit", "WF": "Worst Fit"}
 
-    def confirmed_snapshot(self, result, execution):
-        return encode_result(result)
-
     def __init__(self, session, comparisons):
         super().__init__(session, None)
         self.comparisons = comparisons
 
-    def lock_comparison(self, comparison_id, execution_id, expected_version, key):
+    def confirmation_view(self, row, actor_id):
+        return self.comparisons.get(row.id_optimizacion)
+
+    def residual_policy(self, execution, stored):
+        value = stored.get("residual_policy")
+        return decode_residual_policy(value) if value is not None else None
+
+    def lock_comparison(self, comparison_id, execution_id, expected_version, key, actor_id):
         row = self.comparisons._lock(comparison_id)
-        current = self.comparisons.get(comparison_id)
+        try:
+            current = self.confirmation_view(row, actor_id)
+        except RunError as error:
+            if error.code != "INTERNAL_ERROR":
+                raise
+            raise RunError("NOT_CONFIRMABLE", "El patrón persistido requiere revisión. Ejecuta una nueva comparación.") from error
         confirmation = current.confirmation
         if confirmation is not None:
             if (confirmation.get("key") == key and confirmation.get("execution_id") == execution_id
@@ -61,7 +68,7 @@ class SqlComparisonConfirmationRepository(SqlConfirmationRepository):
         if (not current.terminal or current.released or current.selected_execution_id != execution_id
                 or execution is None or not execution.eligible):
             raise RunError("NOT_CONFIRMABLE", "Selecciona un resultado completo y guardado antes de confirmar.")
-        self.comparisons._execution(comparison_id, execution_id)
+        locked = self.comparisons._execution(comparison_id, execution_id)
         self.session.scalars(select(OptimizacionPedido).where(OptimizacionPedido.id_optimizacion == comparison_id)
             .order_by(OptimizacionPedido.id_pedido).with_for_update()).all()
         if self.session.scalar(select(MovimientoInventario.id_movimiento).where(
@@ -72,22 +79,18 @@ class SqlComparisonConfirmationRepository(SqlConfirmationRepository):
         self.method_name = self.method_names[execution.method]
         run = OptimizationRun(optimization_id=comparison_id, status=RunStatus.COMPLETED,
                               result=execution.result, residuals=execution.residuals)
+        try:
+            policy = self.residual_policy(execution, locked.patron_resultado)
+        except (ValueError, KeyError, TypeError, ArithmeticError) as error:
+            raise RunError("NOT_CONFIRMABLE", "La política del resultado requiere revisión. Ejecuta una nueva comparación.") from error
         return ConfirmationContext(run=run, execution_id=execution_id, minimum_width_mm=current.minimum_width_mm,
-                                   minimum_height_mm=current.minimum_height_mm, residuals=execution.residuals)
+            minimum_height_mm=current.minimum_height_mm, residuals=execution.residuals, residual_policy=policy)
 
     def mark_confirmed(self, context, receipt, actor_id):
         execution = self.session.get(EjecucionOptimizacion, context.execution_id)
-        result = context.run.result
-        if result.metrics is not None:
-            recovered = sum((r.exact_area_mm2 for r in receipt.remnants_created), Decimal(0))
-            m = result.metrics
-            result = replace(result, metrics=replace(m, recoverable_remnant_mm2=recovered,
-                waste_mm2=m.material_area_mm2 - m.placed_piece_area_mm2 - recovered))
-            metric = self.session.scalar(select(MetricaEjecucion).where(MetricaEjecucion.id_ejecucion == context.execution_id))
-            if metric is None:
-                raise RunError("NOT_CONFIRMABLE", "No se encontraron las métricas de la solución elegida.")
-            metric.retazo_recuperable_mm2 = result.metrics.recoverable_remnant_mm2
-            metric.merma_mm2 = result.metrics.waste_mm2
+        result = result_after_confirmation(context.run.result, (r.exact_area_mm2 for r in receipt.remnants_created))
+        self.metric.retazo_recuperable_mm2 = result.metrics.recoverable_remnant_mm2
+        self.metric.merma_mm2 = result.metrics.waste_mm2
         row = self.comparisons._lock(context.run.optimization_id)
         confirmation = {
             "receipt_version": 1, "key": self.key, "expected_version": self.expected_version,
@@ -95,7 +98,7 @@ class SqlComparisonConfirmationRepository(SqlConfirmationRepository):
             "confirmed_at": datetime.now(timezone.utc).isoformat(), "receipt": json_value(receipt),
             "skipped_residuals": self.skipped}
         # Inventory consulta el origen por ejecución; conservar ese contrato de lectura.
-        execution.patron_resultado = {**execution.patron_resultado, "snapshot": self.confirmed_snapshot(result, execution), "confirmation": confirmation}
+        execution.patron_resultado = {**execution.patron_resultado, "confirmation": confirmation}
         row.comparison_snapshot = {**row.comparison_snapshot, "confirmation": confirmation}
         row.comparison_version += 1
 
@@ -104,8 +107,17 @@ class SqlComparisonV2ConfirmationRepository(SqlComparisonConfirmationRepository)
     from ..application.comparison_catalog import CATALOG_V2
     method_names = {definition.code: definition.name for definition in CATALOG_V2}
 
-    def confirmed_snapshot(self, result, execution):
-        from ..application.comparison_v2_contracts import ExecutionPayloadV2
-        from .comparison_v2_snapshot import decode_result_v3, encode_result_v3
-        original = decode_result_v3(execution.patron_resultado["snapshot"], expected_method=result.method)
-        return encode_result_v3(ExecutionPayloadV2(method=result.method, result=result, diagnostic=original.diagnostic))
+    def confirmation_view(self, row, actor_id):
+        if row.id_usuario_ejecutor != actor_id:
+            raise RunError("NOT_FOUND", "No se encontró la comparación.")
+        if row.comparison_snapshot.get("profile") != "comparison-v2":
+            raise RunError("COMPARISON_PROFILE_MISMATCH", "El recurso pertenece a otro perfil de optimización.")
+        current = self.comparisons.get(row.id_optimizacion)
+        if current.cancellation is not None and current.cancellation["status"] == "CANCELLED":
+            raise RunError("NOT_CONFIRMABLE", "El trabajo fue cancelado; no se pueden confirmar cortes.")
+        if not current.terminal or not current.supervisor_stopped:
+            raise RunError("NOT_CONFIRMABLE", "La comparación todavía no acredita cierre seguro.")
+        return current
+
+    def residual_policy(self, execution, stored):
+        return execution.residual_policy

@@ -183,8 +183,9 @@ class ComparisonSummaryV2(v1.ComparisonSummary):
             or not selected.complete or not selected.result_available
         ):
             raise ValueError("Invalid manual selection")
+        # A stored selection can be ineligible for confirmation due to unaccredited metrics.
         if (self.selection_allowed != (editable and any(e.eligible for e in self.executions))
-                or self.confirmable != (editable and selected is not None)
+                or self.confirmable and not (editable and selected is not None)
                 or self.incomplete != any(e.outcome in ("PARTIAL", "FAILED") for e in self.executions)):
             raise ValueError("Aggregate actions/incomplete flag are inconsistent")
         if self.confirmed != (self.confirmation is not None):

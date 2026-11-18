@@ -141,10 +141,32 @@ def test_tie_break_minimizes_fragmentation_when_remnant_areas_are_equal():
     assert BestResidualFitSelector().select(iter([fragmented, clean])) is clean
 
 
+def test_explicit_minimum_scores_best_valid_rectangle_and_keeps_cache_scoped():
+    wide = candidate(stock(1, width=120, height=10), row=0, column=119)
+    seed = problem([piece(width=110, height=9)], [wide.stock]).units[0]
+    mask = RasterCache().orientations(seed, D(1), D(90))[0].orientation.mask
+    wide = replace(wide, layout=wide.layout.place(mask, 1, 10), stock_rank=1)
+    compact = candidate(stock(2, width=10, height=10), used_at=(0, 1))
+    unused = candidate(stock(3, width=120, height=120))
+
+    assert BestResidualFitSelector()._score(wide)[:2] == (-119, 90)
+    selector = BestResidualFitSelector(10, 10)
+    assert selector._score(wide)[:2] == (-100, 109)
+    assert selector._score(compact)[:2] == (0, 98)
+    assert selector.select(iter([unused, compact, wide])) is wide
+
+    selector.min_height_cells = 11
+    assert selector._score(wide)[:2] == (0, 209)
+    assert selector.select(iter([unused, wide, compact])) is compact
+    selector.min_height_cells = 10
+    assert selector._score(wide)[:2] == (-100, 109)
+
+
+@pytest.mark.parametrize('min_width,min_height', [(1, 1), (2, 3), (3, 2), (4, 4)])
 @pytest.mark.parametrize("row,column", [(0, 2), (3, 1)])
-def test_reused_residual_matches_exact_scan_after_a_new_placement(row, column):
+def test_reused_residual_matches_exact_scan_after_a_new_placement(row, column, min_width, min_height):
     item = candidate(stock(width=4, height=4), used_at=(3, 0), row=row, column=column)
-    selector = BestResidualFitSelector()
+    selector = BestResidualFitSelector(min_width, min_height)
     assert selector._largest_after(item) == selector._scan(item.layout_after)
 
 

@@ -5,6 +5,7 @@ import re
 from .comparison_catalog import METHODS_V2, validate_methods
 from .comparison_contracts import Comparison, ComparisonExecution, immutable_json
 from .comparison_v2_contracts import ExecutionDiagnostic
+from ..domain.metrics import ResidualPolicy
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -41,6 +42,7 @@ class PersistedExecutionV2(ComparisonExecution):
     dispatch_state: str
     diagnostic: ExecutionDiagnostic | None
     visual_references: tuple[VisualReferenceV2, ...] = ()
+    residual_policy: ResidualPolicy | None = None
 
     @property
     def outcome(self):

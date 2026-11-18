@@ -10,7 +10,7 @@ from .comparison_v2_contracts import ExecutionDiagnostic, ExecutionPayloadV2
 from .errors import ExecutionInterrupted, TimeBudgetExceeded
 from ..domain.beam_search import BeamSearchLimits, BeamSearchOutcome, BeamSearchProgress
 from ..domain.hole_filling import HoleFillingLimits
-from ..domain.metrics import ResidualRectangle, calculate_metrics
+from ..domain.metrics import ResidualPolicy, ResidualPolicyVersion, ResidualRectangle, calculate_metrics
 from ..domain.packing import FirstFitEvent
 from ..domain.problem import OptimizationProblem, OptimizationResult, decimal_value
 from ..domain.visual_events import VisualEvent
@@ -122,11 +122,14 @@ class EngineExecutionAdapter:
                 "COMPLETED" if result.complete else "NO_FIT"), statistics=statistics)
             ExecutionPayloadV2(method=self.method, result=result, diagnostic=diagnostic)
             check()
-            result, residuals = calculate_metrics(result, *minimums)
+            policy = ResidualPolicy(version=ResidualPolicyVersion.CORRECTED,
+                                    minimum_width_mm=minimums[0], minimum_height_mm=minimums[1])
+            result, residuals = calculate_metrics(result, *minimums, policy=policy.version)
             check()
             elapsed = max(0, (perf_counter_ns() - started - observation_ns) // 1_000_000)
             result = replace(result, computation_time_ms=elapsed)
-            payload = ExecutionPayloadV2(method=self.method, result=result, diagnostic=diagnostic)
+            payload = ExecutionPayloadV2(method=self.method, result=result, diagnostic=diagnostic,
+                                         residual_policy=policy)
             observe("final_layout", result, "FINAL_REPLAY")
             return AdaptedExecution(scope=scope, payload=payload, residuals=tuple(residuals),
                                     beam_outcome=outcome, observer_error_type=observer_error)

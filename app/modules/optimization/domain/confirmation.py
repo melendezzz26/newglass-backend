@@ -3,7 +3,7 @@ from dataclasses import dataclass, replace
 
 from .problem import MaterialSource, StockCandidate
 from .rotation import discrete_angles, oriented_geometry
-from .metrics import calculate_metrics
+from .metrics import ResidualPolicyVersion, calculate_metrics
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -39,15 +39,16 @@ def consumption_groups(result):
     return tuple(output)
 
 
-def validate_stored_geometry(result, minimum_width, minimum_height, stored_residuals):
+def validate_stored_geometry(result, minimum_width, minimum_height, stored_residuals, *,
+                             policy=ResidualPolicyVersion.CORRECTED):
     """Revalidate raster/layout and residual proof, without moving ANY placement."""
     angles = set(discrete_angles(result.problem.config.angular_step_deg))
     for p in result.placements:
         if p.rotation_deg not in angles or oriented_geometry(p.piece.geometry, p.rotation_deg) != p.geometry:
             raise ValueError("Stored contour does not match the original piece and configured rotation.")
-    checked, residuals = calculate_metrics(result, minimum_width, minimum_height)
+    checked, residuals = calculate_metrics(result, minimum_width, minimum_height, policy=policy)
     if residuals != tuple(stored_residuals):
         raise ValueError("Stored residual proposals cannot be reproduced from the actual free raster.")
-    if result.metrics is not None and result.metrics != checked.metrics:
+    if result.metrics != checked.metrics:
         raise ValueError("Stored metrics do not match placements and residual proposals.")
     return residuals

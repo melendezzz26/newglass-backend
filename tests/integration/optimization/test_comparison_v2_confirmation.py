@@ -68,7 +68,7 @@ def test_each_selected_engine_consumes_once_and_preserves_other_snapshots(setup_
         assert [e.diagnostic for e in loaded.executions] == [e.diagnostic for e in selected.executions]
         for execution in loaded.executions:
             row = tx.session.get(EjecucionOptimizacion, execution.execution_id)
-            assert row.patron_resultado["snapshot"]["snapshot_version"] == 3
+            assert row.patron_resultado["snapshot"]["snapshot_version"] == 4
             if execution.execution_id != selected.selected_execution_id:
                 assert row.patron_resultado == snapshots[execution.execution_id]
     with pytest.raises(RunError, match="confirmada"):

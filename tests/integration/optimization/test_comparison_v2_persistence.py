@@ -66,7 +66,7 @@ def save(setup, current, method, *, failed=False, partial_result=False, reason=N
                 current = tx.comparisons_v2.set_dispatch_state(current.comparison_id,
                     execution.execution_id, state, current.version)
         payload, residuals = calculated(next(d for d in CATALOG_V2 if d.code == method),
-                                       current.problem, partial=partial_result)
+            current.problem, partial=partial_result, frozen_minimums=(current.minimum_width_mm, current.minimum_height_mm))
         if reason is not None:
             payload = replace(payload, diagnostic=replace(payload.diagnostic, termination_reason=reason))
     with factory() as tx:
@@ -116,7 +116,7 @@ def test_six_results_metrics_and_source_identities_survive_round_trip_without_co
         assert s.scalar(select(func.count()).select_from(MovimientoInventario)) == 0
         assert s.get(Plancha, 5).cantidad == 2
         for execution in s.scalars(select(EjecucionOptimizacion)):
-            assert execution.patron_resultado["snapshot"]["snapshot_version"] == 3
+            assert execution.patron_resultado["snapshot"]["snapshot_version"] == 4
 
 
 @pytest.mark.parametrize("reason", ["EXPANSION_LIMIT", "GEOMETRY_PROBE_LIMIT", "STATE_MEMORY_LIMIT", "TIME_LIMIT"])

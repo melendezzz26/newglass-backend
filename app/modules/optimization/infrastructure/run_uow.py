@@ -5,11 +5,14 @@ not used. Geometry rules remain in Orders' public persisted-piece validator.
 """
 from dataclasses import replace
 from datetime import datetime, timezone
+from decimal import Decimal
 from sqlalchemy import select
 from app.models import Pedido, Pieza, Configuracion, Optimizacion, OptimizacionPedido, EjecucionOptimizacion, MaterialUtilizado, MetricaEjecucion, MovimientoInventario
 from ..application.dto import OptimizationRun, RunStatus
 from ..application.errors import RunError
+from ..domain.metrics import ResidualPolicy, ResidualPolicyVersion
 from ..domain.problem import OptimizationConfig, OptimizationResult, MaterialSource
+from .confirmation_adapter import confirmed_residual_view
 from .run_snapshot import encode, decode, json_value
 
 
@@ -96,21 +99,18 @@ class SqlRunRepository:
         if confirmation is not None and (confirmation.get("receipt_version") != 1
                 or confirmation.get("receipt", {}).get("optimization_id") != optimization_id):
             raise RunError("INTERNAL_ERROR", "La confirmación persistida requiere revisión.")
-        from decimal import Decimal
         from ..domain.metrics import ResidualRectangle
         regions = execution.patron_resultado.get('residual_rectangles', [])
-        if confirmation is not None:
-            sources = {(r['source']['source'], r['source']['material_id'], r['source']['physical_unit_index'])
-                       for r in confirmation['receipt']['remnants_created']}
-            regions = [r for r in regions if (r['material_source'], r['material_id'], r['stock_unit_index']) in sources]
         residuals = tuple(ResidualRectangle(**{k: Decimal(v) if k in (
             'x_mm', 'y_mm', 'width_mm', 'height_mm', 'area_mm2') else v for k, v in r.items()}) for r in regions)
+        if confirmation is not None:
+            result, residuals = confirmed_residual_view(result, residuals, confirmation,
+                versioned=execution.patron_resultado.get("residual_policy") is not None)
         return OptimizationRun(optimization_id=optimization_id, status=RunStatus(row.estado), result=result,
                                confirmed=confirmation is not None, residuals=residuals)
 
 
     def residual_limits(self, optimization_id):
-        from decimal import Decimal
         execution = self._execution(optimization_id)
         snapshot = execution.patron_resultado
         return Decimal(snapshot["residual_minimum_width_mm"]), Decimal(snapshot["residual_minimum_height_mm"])
@@ -137,7 +137,12 @@ class SqlRunRepository:
         row.estado = "COMPLETADA" if result.complete else "SIN_SOLUCION"
         row.fecha_fin = execution.fecha_fin = now
         execution.estado, execution.completo = "COMPLETADA", result.complete
-        execution.patron_resultado = {**execution.patron_resultado, **encode(result), "residual_rectangles": json_value(residuals)}
+        snapshot = execution.patron_resultado
+        policy = ResidualPolicy(version=ResidualPolicyVersion.CORRECTED,
+                                minimum_width_mm=Decimal(snapshot["residual_minimum_width_mm"]),
+                                minimum_height_mm=Decimal(snapshot["residual_minimum_height_mm"]))
+        execution.patron_resultado = {**snapshot, **encode(result), "residual_rectangles": json_value(residuals),
+                                      "residual_policy": json_value(policy)}
         row.id_ejecucion_seleccionada = execution.id_ejecucion if result.complete else None
         aggregated = {}
         for material in result.materials_used:

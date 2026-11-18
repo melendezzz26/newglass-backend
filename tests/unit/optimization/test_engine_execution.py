@@ -12,7 +12,7 @@ from app.modules.optimization.domain.hole_filling import HoleFillingLimits, Hole
 from app.modules.optimization.domain.metrics import calculate_metrics
 from app.modules.optimization.domain.preparation import prepare_group_units
 from app.modules.optimization.domain.problem import MaterialSource
-from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v3, decode_result_v3
+from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v4, decode_result_v4
 from app.modules.optimization.presentation.comparison_v2_schemas import SearchProgressV2
 from tests.unit.optimization.test_comparison import representative_cases
 from tests.unit.optimization.test_comparison_snapshot import example
@@ -80,7 +80,7 @@ def test_direct_and_adapted_parity_including_native_observation(definition, prob
     else:
         assert adapted.beam_outcome is None
         assert all(f.presentation == ("FINAL_REPLAY" if definition.code == "HF" else "OBSERVED") for f in observed[:-1])
-    assert decode_result_v3(encode_result_v3(adapted.payload), expected_method=definition.code) == adapted.payload
+    assert decode_result_v4(encode_result_v4(adapted.payload), expected_method=definition.code) == adapted.payload
 
 
 @pytest.mark.parametrize("method", METHODS_V2)
@@ -181,7 +181,7 @@ def test_original_m6_resource_outcome_and_empty_partial_survive(limits, reason, 
     assert dict(result.payload.diagnostic.statistics) == original.statistics
     assert result.payload.result.method == "M6-BS"
     assert all(f.kind in ("search_progress", "final_layout") for f in facts)
-    assert decode_result_v3(encode_result_v3(result.payload), expected_method="M6-BS") == result.payload
+    assert decode_result_v4(encode_result_v4(result.payload), expected_method="M6-BS") == result.payload
 
 
 def test_m6_partial_nonempty_is_last_completed_frontier_and_no_search_replay(monkeypatch):

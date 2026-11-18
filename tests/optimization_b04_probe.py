@@ -30,7 +30,7 @@ def child(method, payload, observed, budget, connection, parent):
     from app.modules.optimization.application import engine_execution as execution
     from app.modules.optimization.domain import packing, beam_search
     from app.modules.optimization.infrastructure.comparison_snapshot import decode_problem, canonical_json, problem_fingerprint
-    from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v3
+    from app.modules.optimization.infrastructure.comparison_v2_snapshot import encode_result_v4
     from app.modules.optimization.infrastructure.comparison_transport import pack_visual
     from app.modules.optimization.infrastructure.run_snapshot import json_value
     try:
@@ -103,7 +103,7 @@ def child(method, payload, observed, budget, connection, parent):
             on_observation=observe if observed else None)
         execution_ms = (time.perf_counter_ns() - start) / 1e6
         serializing = time.perf_counter_ns()
-        snapshot = encode_result_v3(adapted.payload)
+        snapshot = encode_result_v4(adapted.payload)
         encoded = canonical_json(snapshot).encode()
         times["result_serialization_ns"] = time.perf_counter_ns() - serializing
         # Preparation includes its own callbacks; expose exclusive preparation and
