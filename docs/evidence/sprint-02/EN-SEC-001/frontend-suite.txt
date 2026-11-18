@@ -1,0 +1,29 @@
+# newglass-frontend feature/EN-SEC-001-auditoria-dependencias (main 428652b + paso de CI)
+# npm ci; npm run lint; npm run build; npm run test:unit; npm run test:component
+
+## Códigos de salida (primera corrida)
+lint EXIT=0
+build EXIT=0
+test:unit EXIT=0
+test:component EXIT=1
+audit EXIT=0
+
+## test:unit (resumen)
+1..217
+# tests 217
+# suites 0
+# pass 217
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 530.5109
+
+## test:component primera corrida (en paralelo con pytest)
+   × manual v2 confirmation keeps history after reload, lost response=false 5311ms
+ Test Files  1 failed | 62 passed (63)
+      Tests  1 failed | 647 passed (648)
+
+## test:component segunda corrida (sola)
+ Test Files  63 passed (63)
+      Tests  648 passed (648)

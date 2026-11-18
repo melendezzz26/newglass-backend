@@ -1,0 +1,7 @@
+# Verificación de EN-SEC-001 sobre PostgreSQL 16 local (contenedor efímero en 127.0.0.1)
+upgrade head -> s2sec01a1b2c
+compare_metadata(head, ORM) diffs: []
+downgrade -> s2cmp02d4e6f8 | tabla existe: False
+upgrade head otra vez -> s2sec01a1b2c
+concurrencia 8x10 -> fallos registrados: 80 errores: []
+

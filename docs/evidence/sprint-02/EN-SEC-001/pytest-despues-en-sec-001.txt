@@ -1,0 +1,4 @@
+# Backend feature/EN-SEC-001-limite-intentos-login (después), Windows, Python 3.11.9
+# python -m pytest tests -q --ignore=tests/unit/optimization/test_comparison_runner.py --ignore=tests/unit/optimization/test_sequential_runner.py --ignore=tests/unit/optimization/test_resource_profile.py
+
+2818 passed, 959 skipped, 1 warning in 63.61s (0:01:03)

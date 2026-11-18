@@ -1,0 +1,23 @@
+# pip-audit 2.10.1: python -m pip_audit --requirement requirements.txt --progress-spinner off
+
+## main 2afa9d7 y feature/EN-SEC-001-limite-intentos-login (mismo requirements.txt)
+Found 12 known vulnerabilities in 1 package
+Name             Version ID              Fix Versions
+---------------- ------- --------------- ------------
+python-multipart 0.0.20  PYSEC-2026-1852 0.0.22
+python-multipart 0.0.20  PYSEC-2026-3038 0.0.26
+python-multipart 0.0.20  PYSEC-2026-3039 0.0.27
+python-multipart 0.0.20  PYSEC-2026-3040 0.0.31
+python-multipart 0.0.20  PYSEC-2026-3036 0.0.30
+python-multipart 0.0.20  PYSEC-2026-3037 0.0.30
+python-multipart 0.0.20  PYSEC-2026-1852 0.0.22
+python-multipart 0.0.20  PYSEC-2026-3038 0.0.26
+python-multipart 0.0.20  PYSEC-2026-3037 0.0.30
+python-multipart 0.0.20  PYSEC-2026-3036 0.0.30
+python-multipart 0.0.20  PYSEC-2026-3040 0.0.31
+python-multipart 0.0.20  PYSEC-2026-3039 0.0.27
+EXIT=1
+
+## seguridad-owasp-zap 3a7a335 (python-multipart 0.0.31)
+No known vulnerabilities found
+EXIT=0

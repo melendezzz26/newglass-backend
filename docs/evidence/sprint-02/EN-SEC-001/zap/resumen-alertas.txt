@@ -1,0 +1,27 @@
+﻿# Resumen de alertas OWASP ZAP 2.17.0 por riesgo (generado desde los JSON de esta carpeta)
+## zap-baseline-frontend.json
+  [Medium (High)] Content Security Policy (CSP) Header Not Set (plugin 10038, CWE 693) x3
+  [Medium (Medium)] Missing Anti-clickjacking Header (plugin 10020, CWE 1021) x3
+  [Low (Medium)] Cross-Origin-Embedder-Policy Header Missing or Invalid (plugin 90004, CWE 693) x3
+  [Low (Medium)] Cross-Origin-Opener-Policy Header Missing or Invalid (plugin 90004, CWE 693) x3
+  [Low (Medium)] Cross-Origin-Resource-Policy Header Missing or Invalid (plugin 90004, CWE 693) x5
+  [Low (Medium)] Permissions Policy Header Not Set (plugin 10063, CWE 693) x4
+  [Low (Medium)] X-Content-Type-Options Header Missing (plugin 10021, CWE 693) x5
+  [Informational (Medium)] Modern Web Application (plugin 10109, CWE -1) x3
+  [Informational (Medium)] Storable but Non-Cacheable Content (plugin 10049, CWE 524) x5
+  Totales por riesgo: {'High': 0, 'Medium': 2, 'Low': 5, 'Informational': 2}
+## zap-baseline-api.json
+  [Low (Medium)] Cross-Origin-Resource-Policy Header Missing or Invalid (plugin 90004, CWE 693) x4
+  [Informational (High)] A Client Error response code was returned by the server (plugin 100000, CWE 388) x62
+  [Informational (High)] Authentication Request Identified (plugin 10111, CWE -1) x1
+  [Informational (Medium)] Non-Storable Content (plugin 10049, CWE 524) x5
+  [Informational (Medium)] Storable and Cacheable Content (plugin 10049, CWE 524) x1
+  Totales por riesgo: {'High': 0, 'Medium': 0, 'Low': 1, 'Informational': 4}
+## zap-auth-api.json
+  [Low (High)] A Server Error response code was returned by the server (plugin 100000, CWE 388) x1
+  [Low (Medium)] Cross-Origin-Resource-Policy Header Missing or Invalid (plugin 90004, CWE 693) x5
+  [Informational (High)] A Client Error response code was returned by the server (plugin 100000, CWE 388) x209
+  [Informational (High)] Authentication Request Identified (plugin 10111, CWE -1) x1
+  [Informational (Medium)] Non-Storable Content (plugin 10049, CWE 524) x5
+  Totales por riesgo: {'High': 0, 'Medium': 0, 'Low': 2, 'Informational': 3}
+
