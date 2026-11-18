@@ -6,6 +6,7 @@ import ctypes
 import os
 from pathlib import Path
 import signal
+from uuid import UUID
 
 
 def process_identity(pid):
@@ -15,6 +16,12 @@ def process_identity(pid):
         return {"pid": pid, "start_ticks": values[19]}
     except (FileNotFoundError, ProcessLookupError):
         return None
+
+
+def process_scope():
+    """PID comparisons are evidence only within the same boot and namespace."""
+    boot = UUID(Path("/proc/sys/kernel/random/boot_id").read_text().strip())
+    return f"{boot}:{Path('/proc/self/ns/pid').stat().st_ino}"
 
 
 def protect_against_parent_exit(expected):

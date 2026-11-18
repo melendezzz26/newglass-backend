@@ -1,5 +1,22 @@
 # comparison-v2 — Catálogo y contratos de seis motores (TA-043 / B01)
 
+## Extensión EN-CONC-001 — cola multiusuario
+
+`POST /api/optimization/comparisons-v2` conserva `201`, `Location` y el cuerpo
+de comparación. Una solicitud admitida puede esperar en estado `EN_EJECUCION`
+con las seis ejecuciones `QUEUED`. Cuando se agota el cupo, responde
+`503 OPTIMIZER_BUSY` con `Retry-After` y `request_accepted: false`. Se puede
+reintentar con la misma clave de idempotencia.
+
+`GET /api/optimization/comparisons-v2/{comparison_id}/queue` requiere
+`optimization.view` y propiedad. Devuelve `comparison_id`, `version` y `state`
+(`WAITING`, `RUNNING`, `TERMINAL` o `RECOVERY_BLOCKED`). La cancelación en espera
+responde `200` cuando la transacción acredita que el trabajo no tenía procesos
+y ya devolvió los pedidos a `PENDIENTE`. La ruta de eventos da al despachador
+una ventana breve para atender una suscripción inmediata. Si la comparación
+sigue en espera, responde `410 VISUAL_DATA_UNAVAILABLE` al igual que las rutas
+de visualización. El cliente puede reintentar cuando el trabajo se despache.
+
 ## Extensión EN-UX-004 — cancelación segura (PR backend #6, pendiente de revisión)
 
 Esta extensión es **aditiva y optativa** para el perfil `comparison-v2`. No
