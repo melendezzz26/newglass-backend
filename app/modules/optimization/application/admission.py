@@ -10,6 +10,7 @@ from .errors import RunError
 RETRY_AFTER_SECONDS = 15
 
 _MESSAGES = {
+    "queued_comparisons": "La cola de comparaciones está llena. Intenta nuevamente más tarde.",
     "active_runs": "El optimizador está atendiendo otros cálculos. Intenta nuevamente en unos segundos.",
     "active_runs_per_user": "Ya tienes un cálculo en curso. Espera a que termine o revisa su resultado.",
 }

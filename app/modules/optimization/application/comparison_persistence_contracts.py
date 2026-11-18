@@ -58,6 +58,7 @@ class PersistedComparisonV2(Comparison):
     profile: str = "comparison-v2"
     runtime: object = None
     cancellation: object = None
+    queue_version: int | None = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -74,3 +75,8 @@ class PersistedComparisonV2(Comparison):
     @property
     def supervisor_stopped(self):
         return self.workers_stopped
+
+    @property
+    def waiting(self):
+        return (self.queue_version == 1 and not self.terminal and self.runtime.get("supervisor") is None
+                and all(execution.dispatch_state == "QUEUED" for execution in self.executions))

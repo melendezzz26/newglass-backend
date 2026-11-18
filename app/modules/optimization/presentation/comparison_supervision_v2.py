@@ -14,7 +14,7 @@ from ..application.errors import RunError, WorkersNotStopped
 from ..application.visual import MAX_COMPARISON_EVENT_BYTES as MAX_EVENT_BYTES
 from ..infrastructure.comparison_snapshot import canonical_json
 from ..infrastructure.comparison_transport import unpack_visual
-from ..infrastructure.process_lifecycle import process_identity
+from ..infrastructure.process_lifecycle import process_identity, process_scope
 from ..infrastructure.sequential_runner import SequentialProcessRunner
 from ..infrastructure.visual_store import InMemoryVisualStore
 from ..infrastructure.run_snapshot import json_value
@@ -151,22 +151,7 @@ class ComparisonV2Coordinator:
                 with self.uow() as tx:
                     if not tx.comparisons_v2.claim_supervisor(accepted.comparison_id,job.token,job.identity):
                         raise RunError("STATE_CONFLICT", "La comparación ya tiene supervisor.")
-                if self.retention is not None:
-                    self.retention.replace(job)
-                def work():
-                    job.mark("supervisor_started")
-                    try:
-                        CalculateComparisonV2(self.uow,runner).execute(accepted.comparison_id,job.token,
-                            cancel=job.cancel,observer=job.accept)
-                    except Exception as error:
-                        job.error_type=type(error).__name__
-                        job.unsafe=isinstance(error,WorkersNotStopped)
-                        logger.exception("V2 supervisor stopped with an error")
-                    finally: job.mark("supervisor_returning")
-                job.thread=Thread(target=work,name=f"comparison-v2-supervisor-{accepted.comparison_id}",daemon=True)
-                job.thread.start()
-                job.reaper=Thread(target=self._reap,args=(job,),name=f"comparison-v2-owner-{accepted.comparison_id}",daemon=True)
-                job.reaper.start()
+                self._launch(job)
                 return accepted
             except BaseException:
                 if self.job is not None and self.job.lease is lease:
@@ -183,6 +168,31 @@ class ComparisonV2Coordinator:
                     self.recovery_lease = lease
                     self.recovery_errors = {accepted.comparison_id: "UnclaimedAcceptedComparison"}
                 raise
+
+    def _launch(self, job):
+        identifier = job.comparison.comparison_id
+        if self.retention is not None:
+            self.retention.replace(job)
+
+        def work():
+            job.mark("supervisor_started")
+            try:
+                CalculateComparisonV2(self.uow, job.runner).execute(identifier, job.token,
+                    cancel=job.cancel, observer=job.accept)
+            except Exception as error:
+                job.error_type = type(error).__name__
+                job.unsafe = isinstance(error, WorkersNotStopped)
+                logger.exception("V2 supervisor stopped with an error")
+            finally:
+                job.mark("supervisor_returning")
+
+        job.thread = Thread(target=work, name=f"comparison-v2-supervisor-{identifier}", daemon=True)
+        job.thread.start()
+        job.reaper = Thread(target=self._reap, args=(job,), name=f"comparison-v2-owner-{identifier}", daemon=True)
+        job.reaper.start()
+
+    def start_service(self):
+        return self.recover_pending()
 
     def request_cancel(self, identifier, actor_id, key, expected_version):
         """Commit cancellation intent before signalling the matching live owner.
@@ -292,9 +302,11 @@ class ComparisonV2Coordinator:
         job=self.job
         if job is None: return
         job.cancel.set()
-        if job.thread is not None and job.thread is not current_thread(): job.thread.join(timeout=15)
+        if job.thread is not None and job.thread.ident is not None and job.thread is not current_thread():
+            job.thread.join(timeout=15)
         self._close(job)
-        if job.reaper is not None and job.reaper is not current_thread(): job.reaper.join(timeout=15)
+        if job.reaper is not None and job.reaper.ident is not None and job.reaper is not current_thread():
+            job.reaper.join(timeout=15)
 
     def recover_pending(self):
         """No recalculation or killing. Unknown identities keep global admission blocked."""
@@ -318,6 +330,10 @@ class ComparisonV2Coordinator:
                             if not historical: raise WorkersNotStopped("Historical owner remains unverified")
                             continue
                         current=tx.comparisons_v2.get(identifier)
+                    if current.waiting:
+                        continue  # Durable admission, with no supervisor or processes to recover.
+                    if current.queue_version == 1 and current.runtime.get("owner_scope") != process_scope():
+                        raise WorkersNotStopped("Cannot verify process identities in another PID namespace or boot")
                     owner=current.runtime.get('supervisor')
                     if owner is None or process_identity(owner['identity']['pid'])==dict(owner['identity']):
                         raise WorkersNotStopped("Owner is alive or unknown")
@@ -361,6 +377,8 @@ def get_comparison_v2_coordinator():
         from .run_routes import get_run_admission
         from .comparison_retention import COMPARISON_RETENTION
         from .comparison_http_runtime_v2 import HttpComparisonJob
-        _coordinator=ComparisonV2Coordinator(lambda:SqlComparisonPersistenceUnitOfWork(SessionLocal),get_run_admission(),
+        from .comparison_queue_v2 import QueuedComparisonV2Coordinator, queue_limits
+        _coordinator=QueuedComparisonV2Coordinator(lambda:SqlComparisonPersistenceUnitOfWork(SessionLocal),get_run_admission(),
+            **queue_limits(),
             retention=COMPARISON_RETENTION, job_factory=HttpComparisonJob)
     return _coordinator

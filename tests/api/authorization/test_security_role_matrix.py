@@ -1,6 +1,6 @@
 """TA-QA-006: matriz de seguridad rol × ruta protegida (SPEC §5.2, CA-01 a CA-03).
 
-Cubre las 61 rutas protegidas con los tres roles reales y sus permisos de la
+Cubre las 62 rutas protegidas con los tres roles reales y sus permisos de la
 asignación inicial (ASIGNACION_INICIAL), leídos en memoria:
 - cada ruta declara el permiso de la matriz (RN-06);
 - sin token responde 401 (RN-01);
@@ -100,6 +100,7 @@ ROUTES = [
     ("GET", f"{OPT}/comparisons-v2/requests/{KEY}", "optimization.view", False),
     ("GET", f"{OPT}/comparisons-v2/history", "optimization.view", False),
     ("GET", f"{OPT}/comparisons-v2/1", "optimization.view", False),
+    ("GET", f"{OPT}/comparisons-v2/1/queue", "optimization.view", False),
     ("GET", f"{OPT}/comparisons-v2/1/cancel", "optimization.view", False),
     ("GET", f"{OPT}/comparisons-v2/1/executions/1", "optimization.view", False),
     ("GET", f"{OPT}/comparisons-v2/1/events", "optimization.view", False),
@@ -186,7 +187,7 @@ class Spy:
 
 
 def spied_dependencies() -> list:
-    """Todas las dependencias de servicio y repositorio de las 61 rutas."""
+    """Todas las dependencias de servicio y repositorio de las rutas protegidas."""
     from app.modules.clients.presentation.dependencies import get_client_repository
     from app.modules.inventory.presentation.dependencies import get_inventory_service
     from app.modules.optimization.presentation.comparison_routes import (
@@ -311,9 +312,9 @@ def is_protected(route) -> bool:
 # --- Coherencia de la matriz con la SPEC y con ASIGNACION_INICIAL ---
 
 def test_matrix_has_the_totals_of_the_spec():
-    """SPEC §5.2 ampliada EN-UX-004: 61 rutas, 29 críticas y 45 rechazos (Almacenero 30, Operario 15)."""
-    assert len(ROUTES) == 61
-    assert len({(method, path) for method, path, *_ in ROUTES}) == 61
+    """Matriz con EN-UX-004 y EN-CONC-001, con 29 rutas críticas y 45 rechazos."""
+    assert len(ROUTES) == 62
+    assert len({(method, path) for method, path, *_ in ROUTES}) == 62
     assert sum(critical for *_, critical in ROUTES) == 29
     denied = {role: sum(role not in EXPECTED_ROLES[permission] for _, _, permission, _ in ROUTES)
               for role in ROLES}
@@ -331,11 +332,11 @@ def test_expected_roles_are_the_initial_assignment():
 # --- RN-06: permiso declarado en cada ruta ---
 
 def test_matrix_covers_exactly_the_protected_routes_of_the_app():
-    """La aplicación tiene exactamente 61 rutas protegidas y son las de la matriz."""
+    """La aplicación y la matriz cubren las mismas rutas protegidas."""
     protected = {(method, resolved_path)
                  for resolved_path, route in resolved_api_routes() if is_protected(route)
                  for method in route.methods}
-    assert len(protected) == 61, sorted(protected)
+    assert len(protected) == 62, sorted(protected)
     matrix = {(method, matching_route(method, path)[0]) for method, path, *_ in ROUTES}
     assert matrix == protected
 

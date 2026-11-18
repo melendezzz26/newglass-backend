@@ -18,7 +18,7 @@ from app.modules.optimization.presentation.router import router as optimization_
 @asynccontextmanager
 async def lifespan(app):
     from app.modules.optimization.presentation.comparison_supervision_v2 import get_comparison_v2_coordinator
-    await asyncio.to_thread(get_comparison_v2_coordinator().recover_pending)
+    await asyncio.to_thread(get_comparison_v2_coordinator().start_service)
     try:
         yield
     finally:

@@ -3,6 +3,7 @@ from dataclasses import replace
 import re
 
 from .comparison_v2_contracts import ComparisonInputV2
+from .admission import OptimizerBusy
 from .errors import RunError
 from .geometric_preflight import validate_individual_feasibility
 from .load_budget import DEFAULT_RUN_LOAD_BUDGET, check_selection, check_pieces
@@ -56,21 +57,30 @@ class AcceptComparisonV2:
             self._freeze(tx, ids)
         return None
 
-    def execute(self, order_ids, actor_id, key):
+    def execute(self, order_ids, actor_id, key, *, queue_capacity=None):
         ids = self.validate_request(order_ids,actor_id,key)
         check_selection(ids, self.budget)
         for attempt in range(3):
             try:
                 with self.unit_of_work() as tx:
-                    tx.consistent_snapshot()
+                    if queue_capacity is None:
+                        tx.consistent_snapshot()
+                    else:
+                        tx.consistent_snapshot(serializable=True)
+                        tx.comparisons_v2.lock_queue()
                     self.authorize(tx, actor_id)
                     previous = tx.comparisons_v2.find_by_key(actor_id, key)
                     if previous is not None:
                         if previous.problem.order_ids != ids:
                             raise RunError("STATE_CONFLICT", "La clave corresponde a otro lote.")
                         return previous
+                    if queue_capacity is not None:
+                        waiting = tx.comparisons_v2.waiting_count()
+                        if waiting >= queue_capacity:
+                            raise OptimizerBusy("queued_comparisons", queue_capacity, waiting)
                     frozen = self._freeze(tx, ids)
-                    current = tx.comparisons_v2.create(frozen, actor_id, key, managed=True)
+                    current = (tx.comparisons_v2.create(frozen, actor_id, key, managed=True) if queue_capacity is None
+                               else tx.comparisons_v2.create(frozen, actor_id, key, managed=True, queued=True))
                     tx.orders.transition(ids,"PENDIENTE","EN_OPTIMIZACION")
                 return current
             except SnapshotConflict:

@@ -5,7 +5,7 @@ import hashlib
 import logging
 import re
 
-from sqlalchemy import JSON, or_, select, text
+from sqlalchemy import JSON, and_, func, or_, select, text
 from sqlalchemy.exc import DBAPIError
 
 from app.models import (Configuracion, EjecucionOptimizacion, MaterialUtilizado,
@@ -24,9 +24,13 @@ from .comparison_uow import SqlComparisonRepository, SqlComparisonUnitOfWork, no
 from .comparison_v2_snapshot import (RESULT_SNAPSHOT_V4, encode_comparison_input_v2, decode_comparison_input_v2,
                                      encode_result_v4, decode_comparison_result)
 from .confirmation_adapter import confirmed_residual_view
+from .process_lifecycle import process_scope
 from .run_snapshot import json_value
 
 logger = logging.getLogger(__name__)
+
+# Separate two-integer advisory lock space from the per-key bigint locks.
+QUEUE_LOCK = (154632111, 1)
 
 
 def _utc(value):
@@ -71,14 +75,50 @@ class SqlComparisonV2Repository:
     def _execution(self, comparison_id, execution_id):
         return self.legacy._execution(comparison_id, execution_id)
 
-    def find_by_key(self, actor_id, key):
-        lock_id = int.from_bytes(hashlib.sha256(f"comparison:{actor_id}:{key}".encode()).digest()[:8], "big", signed=True)
-        self.session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_id})
+    def find_by_key(self, actor_id, key, *, lock=True):
+        if lock:
+            lock_id = int.from_bytes(hashlib.sha256(f"comparison:{actor_id}:{key}".encode()).digest()[:8], "big", signed=True)
+            self.session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_id})
         identifier = self.session.scalar(select(Optimizacion.id_optimizacion).where(
             Optimizacion.id_usuario_ejecutor == actor_id, Optimizacion.comparison_key == key))
         return self.get(identifier) if identifier is not None else None
 
-    def create(self, frozen: ComparisonInputV2, actor_id, key, *, managed=False):
+    def lock_queue(self, *, wait=True):
+        if wait:
+            self.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
+            self.session.execute(select(func.pg_advisory_xact_lock(*QUEUE_LOCK)))
+            return True
+        return self.session.scalar(select(func.pg_try_advisory_xact_lock(*QUEUE_LOCK)))
+
+    @staticmethod
+    def _waiting_rows():
+        snapshot = Optimizacion.comparison_snapshot
+        return and_(Optimizacion.estado == "EN_EJECUCION", Optimizacion.criterio_seleccion_version == "CMP-v2",
+                    snapshot["queue_version"].as_string() == "1",
+                    snapshot["runtime"]["supervisor"].as_string().is_(None))
+
+    def waiting_count(self):
+        return self.session.scalar(select(func.count()).select_from(Optimizacion).where(self._waiting_rows()))
+
+    def has_waiting(self, identifier=None):
+        query = select(Optimizacion.id_optimizacion).where(self._waiting_rows())
+        if identifier is not None:
+            query = query.where(Optimizacion.id_optimizacion == identifier)
+        return self.session.scalar(select(query.exists()))
+
+    def next_waiting(self):
+        if not self.lock_queue(wait=False):
+            return None
+        active = self.session.scalar(select(select(Optimizacion.id_optimizacion).where(
+            Optimizacion.estado == "EN_EJECUCION", Optimizacion.criterio_seleccion_version == "CMP-v2",
+            ~func.coalesce(self._waiting_rows(), False)).exists()))
+        if active:
+            return None
+        identifier = self.session.scalar(select(Optimizacion.id_optimizacion).where(self._waiting_rows())
+            .order_by(Optimizacion.id_optimizacion).limit(1).with_for_update(skip_locked=True))
+        return self.get(identifier) if identifier is not None else None
+
+    def create(self, frozen: ComparisonInputV2, actor_id, key, *, managed=False, queued=False):
         if (not isinstance(frozen, ComparisonInputV2) or type(actor_id) is not int
                 or not 0 < actor_id <= 2147483647 or not isinstance(key, str)
                 or re.fullmatch(r"[A-Za-z0-9_-]{8,64}", key) is None):
@@ -96,7 +136,8 @@ class SqlComparisonV2Repository:
             id_configuracion=frozen.configuration_id, id_usuario_ejecutor=actor_id,
             criterio_seleccion_version="CMP-v2", comparison_key=key, comparison_version=1,
             comparison_snapshot={**encoded, "runtime": (dict(runtime_version=1, supervisor_stopped_at=None,
-                supervisor=None, workers={}) if managed else {"supervisor_stopped_at": None})})
+                supervisor=None, workers={}) if managed else {"supervisor_stopped_at": None}),
+                **({"queue_version": 1} if queued else {})})
         self.session.add(row)
         self.session.flush()
         self.session.add_all([OptimizacionPedido(id_optimizacion=row.id_optimizacion, id_pedido=i)
@@ -151,12 +192,18 @@ class SqlComparisonV2Repository:
         if stored.get("comparison_snapshot_version") == 1:
             raise RunError("COMPARISON_PROFILE_MISMATCH", "La comparación pertenece al perfil comparison-v1.")
         try:
-            operational = {"runtime", "released_at", "released_by", "released_selection_id", "confirmation", "cancellation"}
+            operational = {"runtime", "released_at", "released_by", "released_selection_id", "confirmation", "cancellation", "queue_version"}
             frozen = decode_comparison_input_v2({k: v for k, v in stored.items() if k not in operational})
             if row.criterio_seleccion_version != "CMP-v2" or row.id_configuracion != frozen.configuration_id:
                 raise ValueError("Aggregate profile/configuration identity mismatch")
             runtime = stored["runtime"]
             runtime_metadata(runtime, [e.id_ejecucion for _, e in pairs if e is not None])
+            queue_version = stored.get("queue_version")
+            if "queue_version" in stored and (type(queue_version) is not int or queue_version != 1
+                                               or runtime.get("runtime_version") != 1):
+                raise ValueError("Invalid comparison queue metadata")
+            if queue_version == 1 and runtime.get("supervisor") is not None and "owner_scope" not in runtime:
+                raise ValueError("Queued comparison owner scope is missing")
             cancel = stored.get("cancellation")
             if cancel is not None:
                 if (not isinstance(cancel, dict)
@@ -250,7 +297,7 @@ class SqlComparisonV2Repository:
                 configuration_id=frozen.configuration_id, configuration_version=frozen.configuration_version,
                 minimum_width_mm=frozen.minimum_width_mm, minimum_height_mm=frozen.minimum_height_mm,
                 executions=executions, selected_execution_id=row.id_ejecucion_seleccionada, workers_stopped=stopped,
-                runtime=runtime, released=released, confirmation=confirmation, cancellation=cancel)
+                runtime=runtime, released=released, confirmation=confirmation, cancellation=cancel, queue_version=queue_version)
         except (KeyError, TypeError, ValueError, ArithmeticError, OverflowError) as error:
             logger.warning("Invalid persisted v2 trace for comparison %s: %s", identifier, error)
             raise RunError("INTERNAL_ERROR", "La trazabilidad persistida v2 requiere revisión.") from error
@@ -545,6 +592,8 @@ class SqlComparisonV2Repository:
             or any(e.dispatch_state != "QUEUED" for e in current.executions)):
             return False
         updated = {**runtime, "supervisor": dict(token=token, identity=identity(owner))}
+        if current.queue_version == 1:
+            updated["owner_scope"] = process_scope()
         runtime_metadata(updated, [e.execution_id for e in current.executions])
         row.comparison_snapshot = {**row.comparison_snapshot, "runtime": updated}
         row.comparison_version += 1
@@ -582,8 +631,8 @@ class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
         self.comparison_confirmation_v2 = SqlComparisonV2ConfirmationRepository(self.session, self.comparisons_v2)
         return self
 
-    def consistent_snapshot(self):
-        self.session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+    def consistent_snapshot(self, *, serializable=False):
+        self.session.connection(execution_options={"isolation_level": "SERIALIZABLE" if serializable else "REPEATABLE READ"})
 
     def captured_configuration(self):
         from ..domain.problem import OptimizationConfig
@@ -617,7 +666,7 @@ class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
     def __exit__(self, exc_type, exc, traceback):
         from ..application.comparison_acceptance_v2 import SnapshotConflict
         def conflict(error):
-            return isinstance(error, DBAPIError) and (getattr(error.orig, "sqlstate", None) in ("40001", "40P01")
+            return isinstance(error, DBAPIError) and (getattr(error.orig, "sqlstate", None) in ("40001", "40P01", "55P03")
                 or getattr(error.orig, "sqlstate", None) == "23505" and getattr(
                     getattr(error.orig, "diag", None), "constraint_name", None) == "uq_optimizaciones_comparison_key")
         try:

@@ -1,7 +1,7 @@
 """Explicit comparison-v2 HTTP surface with versioned manual confirmation."""
 import json
 import time
-from typing import Annotated
+from typing import Annotated, Literal
 from pydantic import Field
 
 from fastapi import APIRouter, Depends, Header, Path, Query, Response
@@ -18,7 +18,7 @@ from .confirmation_serialization import confirmation_response
 from .comparison_v2_serialization import comparison_response_v2, execution_response_v2
 from .run_auth import run_permission
 from .run_routes import RunRoute, visual_response
-from .run_schemas import RunRequestV1
+from .run_schemas import ContractV1, RunRequestV1
 from .visual_serialization import describe_record
 
 Id=Annotated[int,Path(gt=0,le=2147483647)]
@@ -30,13 +30,19 @@ class ComparisonRequestV2(RunRequestV1):
     order_ids: Annotated[list[PositiveIdV2],Field(min_length=1)]
 
 
+class ComparisonQueueStatusV2(ContractV1):
+    comparison_id: PositiveIdV2
+    version: PositiveIdV2
+    state: Literal['WAITING', 'RUNNING', 'TERMINAL', 'RECOVERY_BLOCKED']
+
+
 def get_comparison_v2_uow(coordinator=Depends(get_comparison_v2_coordinator)):
     return coordinator.uow
 
 
 def load(identifier,actor_id,uow,coordinator,*,response=None,allow_blocked=False):
     with uow() as tx: current=tx.comparisons_v2.get_owned(identifier,actor_id)
-    if not current.terminal:
+    if not current.terminal and not current.waiting:
         proven=coordinator.reconcile(identifier)
         with uow() as tx: current=tx.comparisons_v2.get_owned(identifier,actor_id)
         if not proven and not current.terminal:
@@ -57,6 +63,8 @@ def execution_in(current,identifier):
 def load_visual_owner(identifier, actor_id, uow, coordinator, execution_id=None):
     with uow() as tx:
         terminal = tx.comparisons_v2.visual_scope_owned(identifier, actor_id, execution_id)
+        if not terminal and tx.comparisons_v2.has_waiting(identifier):
+            raise RunError('VISUAL_DATA_UNAVAILABLE', 'La comparación aún está en espera.')
     if not terminal and not coordinator.reconcile(identifier):
         raise RunError('RECOVERY_BLOCKED', 'No se puede acreditar el cierre seguro; el trabajo sigue bloqueado.',
             details={'comparison_id':identifier})
@@ -79,9 +87,6 @@ def retained_job(coordinator,identifier):
 def start(request:ComparisonRequestV2,response:Response,key:Key,
           user=Depends(run_permission('optimization.execute')),
           uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
-    with uow() as tx:
-        previous=tx.comparisons_v2.find_by_key(user.user_id,key)
-        if previous is not None: tx.comparisons_v2.get_owned(previous.comparison_id,user.user_id)
     accepted=coordinator.start(request.order_ids,user.user_id,key)
     # An ambiguous recovered request must not masquerade as a successful new start.
     current=load(accepted.comparison_id,user.user_id,uow,coordinator)
@@ -93,7 +98,7 @@ def start(request:ComparisonRequestV2,response:Response,key:Key,
 def request_status(key:Annotated[str,Path(min_length=8,max_length=64,pattern=r'^[A-Za-z0-9_-]+$')],
                    user=Depends(run_permission('optimization.view')),
                    uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
-    with uow() as tx: current=tx.comparisons_v2.find_by_key(user.user_id,key)
+    with uow() as tx: current=tx.comparisons_v2.find_by_key(user.user_id,key,lock=False)
     if current is None: raise RunError('NOT_FOUND','No se encontró la solicitud comparativa.')
     return comparison_response_v2(load(current.comparison_id,user.user_id,uow,coordinator))
 
@@ -110,6 +115,21 @@ def history(before_id: Annotated[int | None, Query(gt=0, le=2147483647)] = None,
 def get_comparison(comparison_id:Id,user=Depends(run_permission('optimization.view')),
                    uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
     return comparison_response_v2(load(comparison_id,user.user_id,uow,coordinator))
+
+
+@router.get('/{comparison_id}/queue', response_model=ComparisonQueueStatusV2)
+def get_queue_status(comparison_id: Id, response: Response, user=Depends(run_permission('optimization.view')),
+                     uow=Depends(get_comparison_v2_uow), coordinator=Depends(get_comparison_v2_coordinator)):
+    current = load(comparison_id, user.user_id, uow, coordinator, response=response, allow_blocked=True)
+    if current.terminal:
+        state = 'TERMINAL'
+    elif current.waiting:
+        state = 'WAITING'
+    elif response.headers.get('X-Comparison-Recovery') == 'BLOCKED':
+        state = 'RECOVERY_BLOCKED'
+    else:
+        state = 'RUNNING'
+    return ComparisonQueueStatusV2(comparison_id=comparison_id, version=current.version, state=state)
 
 
 @router.get('/{comparison_id}/executions/{execution_id}',response_model=ExecutionResponseV2)

@@ -15,7 +15,7 @@ def runtime_metadata(value, execution_ids):
         raise ValueError("Invalid runtime metadata")
     if set(value) == {"supervisor_stopped_at"}:
         return value  # B02 reader compatibility; ownership is unknown, not inferred.
-    if (set(value) != {"runtime_version", "supervisor_stopped_at", "supervisor", "workers"}
+    if (set(value) - {"owner_scope"} != {"runtime_version", "supervisor_stopped_at", "supervisor", "workers"}
         or type(value["runtime_version"]) is not int or value["runtime_version"] != 1
         or not isinstance(value["workers"], dict)):
         raise ValueError("Invalid runtime ownership envelope")
@@ -26,6 +26,9 @@ def runtime_metadata(value, execution_ids):
         identity(owner["identity"])
     elif value["workers"]:
         raise ValueError("Workers have no supervisor owner")
+    if "owner_scope" in value and (owner is None or not isinstance(value["owner_scope"], str)
+            or re.fullmatch(r"[0-9a-f-]{36}:[1-9][0-9]*", value["owner_scope"]) is None):
+        raise ValueError("Invalid comparison owner scope")
     if any(key not in {str(i) for i in execution_ids} for key in value["workers"]):
         raise ValueError("Worker belongs to another comparison")
     for worker in value["workers"].values():
