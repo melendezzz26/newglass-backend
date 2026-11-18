@@ -7,6 +7,7 @@ from threading import Event, RLock, Thread, current_thread
 import time
 from uuid import uuid4
 
+from ..application.admission import OptimizerBusy
 from ..application.comparison_acceptance_v2 import AcceptComparisonV2
 from ..application.comparison_calculation_v2 import CalculateComparisonV2, fail_pending
 from ..application.comparison_persistence_contracts import VisualReferenceV2
@@ -246,7 +247,12 @@ class ComparisonV2Coordinator:
                 if job.thread is not None and job.thread.is_alive():
                     return True
                 return self._close(job)
-            return self.recover_pending()
+            try:
+                return self.recover_pending()
+            except OptimizerBusy:
+                # The read can have raced a completed job handing off capacity.
+                # Its caller re-reads durable state before reporting a blockage.
+                return False
 
     def _close(self, job):
         with self.lock:

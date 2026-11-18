@@ -149,6 +149,22 @@ def test_legacy_and_comparison_requests_never_overlap():
     assert admission.active() == 0
 
 
+def test_read_rereads_terminal_job_when_capacity_has_passed_to_another():
+    from app.modules.optimization.presentation.comparison_v2_routes import load
+
+    admission = InProcessRunAdmission()
+    lease = admission.acquire_comparison(0)
+    completed = SimpleNamespace(terminal=True)
+    states = iter((SimpleNamespace(terminal=False, waiting=False), completed))
+    tx = SimpleNamespace(comparisons_v2=SimpleNamespace(get_owned=lambda *_: next(states)))
+    coordinator = ComparisonV2Coordinator(lambda: nullcontext(tx), admission)
+    try:
+        assert load(1, 2, coordinator.uow, coordinator) is completed
+        assert admission.active() == 1
+    finally:
+        lease.release()
+
+
 @pytest.mark.parametrize("owner", ["local", "startup"])
 def test_new_request_retries_safe_recovery_before_reserving_capacity(monkeypatch, owner):
     tx = SimpleNamespace(comparisons_v2=SimpleNamespace(find_by_key=lambda *_: None))
