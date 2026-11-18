@@ -12,8 +12,10 @@ reintentar con la misma clave de idempotencia.
 `optimization.view` y propiedad. Devuelve `comparison_id`, `version` y `state`
 (`WAITING`, `RUNNING`, `TERMINAL` o `RECOVERY_BLOCKED`). La cancelación en espera
 responde `200` cuando la transacción acredita que el trabajo no tenía procesos
-y ya devolvió los pedidos a `PENDIENTE`. Las rutas de avance y visualización
-responden `410 VISUAL_DATA_UNAVAILABLE` mientras el trabajo está en espera.
+y ya devolvió los pedidos a `PENDIENTE`. La ruta de eventos da al despachador
+una ventana breve para atender una suscripción inmediata. Si la comparación
+sigue en espera, responde `410 VISUAL_DATA_UNAVAILABLE` al igual que las rutas
+de visualización. El cliente puede reintentar cuando el trabajo se despache.
 
 ## Extensión EN-UX-004 — cancelación segura (PR backend #6, pendiente de revisión)
 

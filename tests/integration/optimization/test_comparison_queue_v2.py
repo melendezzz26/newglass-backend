@@ -162,6 +162,8 @@ def test_three_roles_queued_restart_active_cancel_and_other_jobs_complete(queue_
     assert first < second and post(api, "O").json()["comparison_id"] == second
     assert all(get(api, actor, identifier, "/queue").json()["state"] == "WAITING"
                for actor, identifier in (("A", first), ("O", second)))
+    waiting = get(api, "A", first, "/events")
+    assert waiting.status_code == 410 and waiting.json()["detail"]["code"] == "VISUAL_DATA_UNAVAILABLE"
     for actor, other in (("A", second), ("O", first), ("L", first)):
         assert get(api, actor, other, "/queue").status_code == 404
         assert get(api, actor, other).status_code == 404

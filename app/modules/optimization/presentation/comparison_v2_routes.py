@@ -1,10 +1,12 @@
 """Explicit comparison-v2 HTTP surface with versioned manual confirmation."""
+import asyncio
 import json
 import time
 from typing import Annotated, Literal
 from pydantic import Field
 
 from fastapi import APIRouter, Depends, Header, Path, Query, Response
+from starlette.concurrency import run_in_threadpool
 
 from ..application.errors import RunError
 from ..application.comparison_confirmation import ConfirmComparisonV2
@@ -60,14 +62,17 @@ def execution_in(current,identifier):
     return execution
 
 
-def load_visual_owner(identifier, actor_id, uow, coordinator, execution_id=None):
+def load_visual_owner(identifier, actor_id, uow, coordinator, execution_id=None, *, allow_waiting=False):
     with uow() as tx:
         terminal = tx.comparisons_v2.visual_scope_owned(identifier, actor_id, execution_id)
         if not terminal and tx.comparisons_v2.has_waiting(identifier):
+            if allow_waiting:
+                return False
             raise RunError('VISUAL_DATA_UNAVAILABLE', 'La comparación aún está en espera.')
     if not terminal and not coordinator.reconcile(identifier):
         raise RunError('RECOVERY_BLOCKED', 'No se puede acreditar el cierre seguro; el trabajo sigue bloqueado.',
             details={'comparison_id':identifier})
+    return True
 
 
 def retained_job(coordinator,identifier):
@@ -162,15 +167,27 @@ def confirm(comparison_id: Id, request: ComparisonSelectionV2, key: Key,
         version=current.version, receipt=confirmation_response(receipt))
 
 
-@router.get('/{comparison_id}/events')
-def events(comparison_id:Id,after_sequence:Annotated[int,Query(ge=0)]=0,
-           user=Depends(run_permission('optimization.view')),
-           uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
-    load_visual_owner(comparison_id,user.user_id,uow,coordinator)
+def open_events(comparison_id, actor_id, after_sequence, uow, coordinator):
+    if not load_visual_owner(comparison_id, actor_id, uow, coordinator, allow_waiting=True):
+        return None
     job=retained_job(coordinator,comparison_id)
     job.check_cursor(after_sequence)
     observer=job.observe()
     return ObservationResponse(job.lines(after_sequence,observer),observer)
+
+
+@router.get('/{comparison_id}/events')
+async def events(comparison_id: Id, after_sequence: Annotated[int, Query(ge=0)] = 0,
+                 user=Depends(run_permission('optimization.view')),
+                 uow=Depends(get_comparison_v2_uow), coordinator=Depends(get_comparison_v2_coordinator)):
+    # Existing clients may subscribe as soon as POST returns, before the first dispatch tick.
+    for attempt in range(4):
+        observation = await run_in_threadpool(open_events, comparison_id, user.user_id, after_sequence, uow, coordinator)
+        if observation is not None:
+            return observation
+        if attempt < 3:
+            await asyncio.sleep(.25)
+    raise RunError('VISUAL_DATA_UNAVAILABLE', 'La comparación aún está en espera.')
 
 
 @router.get('/{comparison_id}/executions/{execution_id}/visual')
