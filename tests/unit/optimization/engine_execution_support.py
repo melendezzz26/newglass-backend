@@ -46,13 +46,14 @@ def main():
         adapted = EngineExecutionAdapter(definition.code).execute(scope, problem,
             minimum_width_mm=1, minimum_height_mm=1, checkpoint=lambda: checks.append(True), on_observation=facts.append)
         assert adapted.error_type is None
-        normalized = replace(adapted.payload, result=replace(adapted.payload.result, computation_time_ms=0))
+        normalized = replace(adapted.payload, result=replace(adapted.payload.result, computation_time_ms=0), residual_policy=None)
         assert encode_result_v3(native_payload) == encode_result_v3(normalized)
         assert tuple(residuals) == adapted.residuals
         records.append(dict(method=definition.code, label=definition.label, optimizer=definition.optimizer_type.__name__,
             scope=asdict(scope), input_sha256=problem_fingerprint(problem), result_type=type(raw).__name__,
             direct_sha256=digest(encode_result_v3(native_payload)), adapted_sha256=digest(encode_result_v3(normalized)),
-            equality_excludes_only_elapsed_time=True, residuals_equal=True, result_snapshot=encode_result_v3(adapted.payload),
+            equality_excludes_only_elapsed_time=True, residuals_equal=True,
+            result_snapshot=encode_result_v3(replace(adapted.payload, residual_policy=None)),
             checkpoint_calls=len(checks), native_milestone_count=len(raw_events),
             observations=dict(Counter(f"{f.kind}/{f.presentation}" for f in facts)),
             search_progress=[asdict(f.fact) for f in facts if f.kind == "search_progress"],

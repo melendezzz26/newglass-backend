@@ -22,7 +22,8 @@ def execution_summary_v2(current, execution):
 
 def comparison_response_v2(current):
     executions = [execution_summary_v2(current,e) for e in current.executions]
-    selected = next((e for e in executions if e.execution_id==current.selected_execution_id),None)
+    selected = next((summary for summary, result in zip(executions, current.executions)
+                     if summary.execution_id == current.selected_execution_id and result.residual_policy is not None), None)
     return ComparisonSummaryV2(comparison_id=current.comparison_id, version=current.version,status=current.status,
         input_sha256=current.input_sha256,order_ids=list(current.problem.order_ids),
         configuration=config_response(current.problem.config),configuration_id=current.configuration_id,
@@ -30,7 +31,8 @@ def comparison_response_v2(current):
         methods=list(current.methods),executions=executions,selected_execution_id=current.selected_execution_id,
         terminal=current.terminal,incomplete=current.incomplete,released=current.released,
         confirmed=current.confirmation is not None,confirmation=plain(current.confirmation),
-        selection_allowed=any(e.eligible for e in executions),confirmable=bool(selected and selected.eligible),
+        selection_allowed=any(e.eligible for e in executions),
+        confirmable=bool(selected and selected.eligible),
         supervisor_stopped=current.supervisor_stopped,
         cancellation_status=current.cancellation["status"] if current.cancellation else "NONE")
 

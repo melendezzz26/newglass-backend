@@ -139,9 +139,9 @@ def test_exhaustive_small_grids(width, height):
 def _record_real_inputs(monkeypatch):
     recorded = []
 
-    def spy(free_rows, columns, *, checkpoint=None):
+    def spy(free_rows, columns, **kwargs):
         recorded.append((tuple(free_rows), columns))
-        return largest_rectangle(free_rows, columns, checkpoint=checkpoint)
+        return largest_rectangle(free_rows, columns, **kwargs)
     for module in (metrics, beam_search, best_residual_fit):
         monkeypatch.setattr(module, "largest_rectangle", spy)
     return recorded

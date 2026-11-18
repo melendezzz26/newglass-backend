@@ -17,12 +17,13 @@ from ..application.comparison_persistence_contracts import (
 from ..application.comparison_v2_contracts import ComparisonInputV2, ExecutionPayloadV2
 from ..application.errors import RunError
 from ..application.supervision_contracts import runtime_metadata, identity
-from ..domain.metrics import ResidualRectangle
+from ..domain.metrics import ResidualPolicy, ResidualPolicyVersion, ResidualRectangle
 from ..domain.problem import MaterialSource
 from .comparison_snapshot import canonical_json
 from .comparison_uow import SqlComparisonRepository, SqlComparisonUnitOfWork, now
-from .comparison_v2_snapshot import (encode_comparison_input_v2, decode_comparison_input_v2,
-                                     encode_result_v3, decode_result_v3)
+from .comparison_v2_snapshot import (RESULT_SNAPSHOT_V4, encode_comparison_input_v2, decode_comparison_input_v2,
+                                     encode_result_v4, decode_comparison_result)
+from .confirmation_adapter import confirmed_residual_view
 from .run_snapshot import json_value
 
 logger = logging.getLogger(__name__)
@@ -117,11 +118,13 @@ class SqlComparisonV2Repository:
             minimum_height_mm=current.minimum_height_mm)
 
     @staticmethod
-    def _record(comparison_id, execution, dispatch, payload, residuals, references):
+    def _record(comparison_id, execution, dispatch, payload, residuals, references, *, frozen_identity=None):
         value = dict(profile="comparison-v2", comparison_id=comparison_id,
             execution_id=execution.id_ejecucion, method=execution.metodo, dispatch_state=dispatch,
-            snapshot=encode_result_v3(payload) if payload is not None else None,
+            snapshot=encode_result_v4(payload) if payload is not None else None,
             residual_rectangles=json_value(residuals), visual_references=[r.record() for r in references])
+        if payload is not None:
+            value["frozen_input"] = frozen_identity
         canonical_json(value)
         return value
 
@@ -189,7 +192,9 @@ class SqlComparisonV2Repository:
             by_method = {e.metodo: e for _, e in pairs if e is not None}
             if len(pairs) != len(frozen.methods) or set(by_method) != set(frozen.methods):
                 raise ValueError("Missing or inconsistent execution identities")
-            executions = tuple(self._read_execution(identifier, by_method[method], frozen.problem)
+            input_identity = dict(input_sha256=stored["input_sha256"], configuration_id=frozen.configuration_id,
+                                  configuration_version=frozen.configuration_version)
+            executions = tuple(self._read_execution(identifier, by_method[method], frozen, input_identity)
                                for method in frozen.methods)
             if stopped and any(e.dispatch_state != "TERMINATED" for e in executions):
                 raise ValueError("Stopped aggregate contains active execution")
@@ -336,17 +341,28 @@ class SqlComparisonV2Repository:
             raise ValueError("Duplicate visual reference")
         return references
 
-    def _read_execution(self, comparison_id, row, problem):
+    def _read_execution(self, comparison_id, row, frozen, input_identity):
         data = row.patron_resultado
-        if not isinstance(data, dict) or set(data) - {"confirmation"} != {"profile", "comparison_id", "execution_id", "method",
-                "dispatch_state", "snapshot", "residual_rectangles", "visual_references"}:
+        envelope = {"profile", "comparison_id", "execution_id", "method", "dispatch_state", "snapshot",
+                    "residual_rectangles", "visual_references"}
+        if not isinstance(data, dict) or set(data) - {"confirmation", "frozen_input"} != envelope:
             raise ValueError("Invalid execution envelope")
-        if (data["profile"], data["comparison_id"], data["execution_id"], data["method"]) != (
-            "comparison-v2", comparison_id, row.id_ejecucion, row.metodo):
+        if (type(data["comparison_id"]) is not int or type(data["execution_id"]) is not int
+                or (data["profile"], data["comparison_id"], data["execution_id"], data["method"]) != (
+                    "comparison-v2", comparison_id, row.id_ejecucion, row.metodo)):
             raise ValueError("Execution snapshot belongs to another owner")
         refs = self._references(data["visual_references"], comparison_id, row.id_ejecucion, row.metodo)
-        payload = decode_result_v3(data["snapshot"], expected_method=row.metodo) if data["snapshot"] is not None else None
+        snapshot = data["snapshot"]
+        payload = decode_comparison_result(snapshot, expected_method=row.metodo) if snapshot is not None else None
+        if snapshot is not None and snapshot["snapshot_version"] == RESULT_SNAPSHOT_V4:
+            binding = data.get("frozen_input")
+            if (binding != input_identity or any(type(binding[key]) is not type(value)
+                                                for key, value in input_identity.items())):
+                raise ValueError("Result differs from its frozen input identity")
+        elif "frozen_input" in data:
+            raise ValueError("Unexpected frozen input identity")
         result = payload.result if payload else None
+        policy = payload.residual_policy if payload else None
         if payload is None:
             if (data["dispatch_state"] not in ("QUEUED", "STARTING", "RUNNING") or row.estado != "EN_EJECUCION"
                     or row.completo or row.fecha_fin is not None or data["residual_rectangles"]):
@@ -356,9 +372,12 @@ class SqlComparisonV2Repository:
                 raise ValueError("Terminal result lacks its stop state")
             if row.estado != ("COMPLETADA" if result is not None else "FALLIDA") or row.completo != bool(result and result.complete):
                 raise ValueError("SQL state/completeness differs from durable result")
-            if result is not None and (result.problem != problem or result.computation_time_ms is None
+            if result is not None and (result.problem != frozen.problem or result.computation_time_ms is None
                                       or result.placements and result.metrics is None):
                 raise ValueError("Result differs from frozen input or lacks calculated metrics/time")
+        if policy is not None and (policy.minimum_width_mm, policy.minimum_height_mm) != (
+                frozen.minimum_width_mm, frozen.minimum_height_mm):
+            raise ValueError("Result policy differs from frozen residual dimensions")
         residuals = tuple(ResidualRectangle(**{k: Decimal(v) if k in (
             "x_mm", "y_mm", "width_mm", "height_mm", "area_mm2") else v for k, v in item.items()})
             for item in data["residual_rectangles"])
@@ -366,15 +385,11 @@ class SqlComparisonV2Repository:
         if any((r.material_source, r.material_id, r.stock_unit_index) not in used for r in residuals):
             raise ValueError("Residual references an unowned source")
         if data.get("confirmation") is not None:
-            created = data["confirmation"]["receipt"]["remnants_created"]
-            persisted = {(r["source"]["source"], r["source"]["material_id"],
-                          r["source"]["physical_unit_index"]) for r in created}
-            residuals = tuple(r for r in residuals if
-                (r.material_source, r.material_id, r.stock_unit_index) in persisted)
+            result, residuals = confirmed_residual_view(result, residuals, data["confirmation"], versioned=policy is not None)
         return PersistedExecutionV2(execution_id=row.id_ejecucion, method=row.metodo, status=row.estado,
             result=result, residuals=residuals, diagnostic=payload.diagnostic if payload else None,
             failure_code=payload.diagnostic.termination_reason if payload and result is None else None,
-            dispatch_state=data["dispatch_state"], visual_references=refs)
+            dispatch_state=data["dispatch_state"], visual_references=refs, residual_policy=policy)
 
     def _writable(self, comparison_id, expected_version):
         row = self.legacy._lock(comparison_id)
@@ -402,9 +417,15 @@ class SqlComparisonV2Repository:
                 or payload.result is not None and (payload.result.problem != current.problem
                     or execution.patron_resultado["dispatch_state"] != "RUNNING")):
             raise RunError("STATE_CONFLICT", "Resultado, motor o despacho no corresponde a la ejecución.")
+        if payload.result is not None and payload.residual_policy != ResidualPolicy(
+                version=ResidualPolicyVersion.CORRECTED, minimum_width_mm=current.minimum_width_mm,
+                minimum_height_mm=current.minimum_height_mm):
+            raise RunError("STATE_CONFLICT", "El resultado no acredita la política de cálculo vigente.")
         previous = next(e for e in current.executions if e.execution_id == execution_id)
+        frozen_identity = dict(input_sha256=current.input_sha256, configuration_id=current.configuration_id,
+                               configuration_version=current.configuration_version)
         execution.patron_resultado = self._record(comparison_id, execution, "TERMINATED", payload,
-                                                residuals, previous.visual_references)
+            residuals, previous.visual_references, frozen_identity=frozen_identity)
         execution.estado = "COMPLETADA" if payload.result is not None else "FALLIDA"
         execution.completo = bool(payload.result and payload.result.complete)
         execution.fecha_fin = now()

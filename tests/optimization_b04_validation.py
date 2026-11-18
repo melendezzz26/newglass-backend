@@ -48,7 +48,7 @@ def main():
         parity=[]
         for value,native in zip(values,fixture['records']):
             normalized=replace(value.payload,result=replace(value.payload.result,computation_time_ms=0)) if value.payload.result else value.payload
-            digest=hashlib.sha256(canonical_json(encode_result_v3(normalized)).encode()).hexdigest()
+            digest=hashlib.sha256(canonical_json(encode_result_v3(replace(normalized, residual_policy=None))).encode()).hexdigest()
             parity.append(dict(method=value.scope.method,complete=bool(value.payload.result and value.payload.result.complete),
                 reason=value.payload.diagnostic.public(),dispatched=value.dispatched,engine_started=value.engine_started,
                 normalized_snapshot_sha256=digest,equals_b03_direct=digest==native['direct_sha256']))

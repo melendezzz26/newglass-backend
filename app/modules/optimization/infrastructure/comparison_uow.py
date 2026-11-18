@@ -15,11 +15,12 @@ from app.models import (Configuracion, EjecucionOptimizacion, MaterialUtilizado,
                         MetricaEjecucion, Optimizacion, OptimizacionPedido, Pieza, TipoVidrio)
 from ..application.comparison_contracts import Comparison, ComparisonExecution, METHODS
 from ..application.errors import RunError
-from ..domain.metrics import ResidualRectangle
+from ..domain.metrics import ResidualPolicy, ResidualPolicyVersion, ResidualRectangle
 from ..domain.problem import MaterialSource
 from .comparison_snapshot import (canonical_json, decode_problem, decode_result,
     encode_problem, encode_result, problem_fingerprint)
 from .comparison_stock import SqlComparisonStock
+from .confirmation_adapter import confirmed_residual_view
 from .run_snapshot import json_value
 from .run_uow import SqlOrdersBatch, SqlRunUnitOfWork
 
@@ -110,11 +111,8 @@ class SqlComparisonRepository:
                         "x_mm", "y_mm", "width_mm", "height_mm", "area_mm2") else v
                         for k, v in region.items()}) for region in stored["residual_rectangles"])
                     if execution.id_ejecucion == row.id_ejecucion_seleccionada and snapshot.get("confirmation"):
-                        created = snapshot["confirmation"]["receipt"]["remnants_created"]
-                        persisted = {(r["source"]["source"], r["source"]["material_id"],
-                                      r["source"]["physical_unit_index"]) for r in created}
-                        residuals = tuple(r for r in residuals if
-                            (r.material_source, r.material_id, r.stock_unit_index) in persisted)
+                        result, residuals = confirmed_residual_view(result, residuals, snapshot["confirmation"],
+                            versioned=stored.get("residual_policy") is not None)
                 elif execution.completo or execution.estado not in ("EN_EJECUCION", "FALLIDA"):
                     raise ValueError("Invalid execution state")
                 executions.append(ComparisonExecution(execution_id=execution.id_ejecucion, method=method,
@@ -217,7 +215,10 @@ class SqlComparisonRepository:
             raise RunError("STATE_CONFLICT", "El resultado no corresponde a la entrada o al motor aceptado.")
         if result.computation_time_ms is None or (result.placements and result.metrics is None):
             raise RunError("STATE_CONFLICT", "El resultado debe incluir las métricas y el tiempo de cálculo.")
-        execution.patron_resultado = {"snapshot": encode_result(result), "residual_rectangles": json_value(residuals)}
+        policy = ResidualPolicy(version=ResidualPolicyVersion.CORRECTED, minimum_width_mm=current.minimum_width_mm,
+                                minimum_height_mm=current.minimum_height_mm)
+        execution.patron_resultado = {"snapshot": encode_result(result), "residual_rectangles": json_value(residuals),
+                                      "residual_policy": json_value(policy)}
         execution.estado, execution.completo, execution.fecha_fin = "COMPLETADA", result.complete, now()
         row.comparison_version += 1
         quantities = {}

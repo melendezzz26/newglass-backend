@@ -5,7 +5,7 @@ remnants ASC. Writes only flush; SqlRunUnitOfWork owns the SINGLE commit.
 """
 from dataclasses import replace
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy import select
 
@@ -18,7 +18,40 @@ from ..application.errors import RunError
 from ..domain.metrics import ResidualRectangle
 from ..domain.problem import MaterialSource
 from ..domain.rotation import raster_number, RasterPreparationError
-from .run_snapshot import json_value, encode
+from .run_snapshot import decode_residual_policy, json_value
+
+
+def result_after_confirmation(result, created_areas):
+    metrics = result.metrics
+    recovered = sum(created_areas, Decimal(0))
+    if recovered == metrics.recoverable_remnant_mm2:
+        return result
+    return replace(result, metrics=replace(metrics, recoverable_remnant_mm2=recovered,
+        waste_mm2=metrics.material_area_mm2 - metrics.placed_piece_area_mm2 - recovered))
+
+
+def confirmed_residual_view(result, residuals, confirmation, *, versioned):
+    created = {}
+    for remnant in confirmation["receipt"]["remnants_created"]:
+        source = remnant["source"]
+        key = (source["source"], source["material_id"], source["physical_unit_index"])
+        if versioned and key in created:
+            raise ValueError("Confirmation receipt duplicates a physical source")
+        created[key] = remnant
+    persisted = []
+    for residual in residuals:
+        remnant = created.get((residual.material_source, residual.material_id, residual.stock_unit_index))
+        if remnant is None:
+            continue
+        if versioned and (Decimal(remnant["x_mm"]), Decimal(remnant["y_mm"]), Decimal(remnant["exact_area_mm2"])) != (
+                residual.x_mm, residual.y_mm, residual.area_mm2):
+            raise ValueError("Confirmation receipt differs from measured residuals")
+        persisted.append(residual)
+    if versioned:
+        if result is None or result.metrics is None or len(persisted) != len(created):
+            raise ValueError("Confirmation receipt differs from measured residuals")
+        result = result_after_confirmation(result, (r.area_mm2 for r in persisted))
+    return result, tuple(persisted)
 
 
 class SqlConfirmationRepository:
@@ -53,17 +86,41 @@ class SqlConfirmationRepository:
             snapshot = execution.patron_resultado
             residuals = tuple(ResidualRectangle(**{**r, **{k: Decimal(r[k]) for k in (
                 "x_mm", "y_mm", "width_mm", "height_mm", "area_mm2")}}) for r in snapshot.get("residual_rectangles", []))
-            minimum_width, minimum_height = self.runs.residual_limits(optimization_id)
+            minimum_width = Decimal(snapshot["residual_minimum_width_mm"])
+            minimum_height = Decimal(snapshot["residual_minimum_height_mm"])
+            raw_policy = snapshot.get("residual_policy")
+            policy = decode_residual_policy(raw_policy) if raw_policy is not None else None
         except RunError as exc:
             if exc.code in ("INTERNAL_ERROR", "NOT_FOUND"):
                 raise RunError("NOT_CONFIRMABLE", "El resultado persistido requiere revisión antes de confirmar.") from exc
             raise
-        except (ValueError, TypeError, KeyError) as exc:
+        except (ValueError, TypeError, KeyError, ArithmeticError) as exc:
             raise RunError("NOT_CONFIRMABLE", "El resultado persistido no es confirmable.") from exc
         return ConfirmationContext(run=run, execution_id=execution.id_ejecucion,
-            minimum_width_mm=minimum_width, minimum_height_mm=minimum_height, residuals=residuals)
+            minimum_width_mm=minimum_width, minimum_height_mm=minimum_height, residuals=residuals,
+            residual_policy=policy)
+
+    def _lock_metric(self, context):
+        metric = self.session.scalar(select(MetricaEjecucion).where(
+            MetricaEjecucion.id_ejecucion == context.execution_id).with_for_update().execution_options(populate_existing=True))
+        result = context.run.result
+        metrics = result.metrics
+        if metric is None or metrics is None:
+            raise RunError("NOT_CONFIRMABLE", "No se encontraron las métricas de la solución elegida.")
+        # NUMERIC(18,2) rounds the area projection independently of the exact JSON proof.
+        for stored, exact in ((metric.area_material_total_mm2, metrics.material_area_mm2),
+                              (metric.area_piezas_colocadas_mm2, metrics.placed_piece_area_mm2),
+                              (metric.retazo_recuperable_mm2, metrics.recoverable_remnant_mm2),
+                              (metric.merma_mm2, metrics.waste_mm2)):
+            if stored != exact.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP):
+                raise RunError("NOT_CONFIRMABLE", "Las métricas persistidas difieren del resultado.")
+        if (metric.aprovechamiento_pct, metric.planchas_nuevas_usadas, metric.tiempo_computacional_ms) != (
+                metrics.utilization_pct, metrics.new_sheets_used, result.computation_time_ms):
+            raise RunError("NOT_CONFIRMABLE", "Las métricas persistidas difieren del resultado.")
+        return metric
 
     def lock_and_revalidate(self, consumptions, context):
+        self.metric = self._lock_metric(context)
         for model, source, id_column in ((Plancha, MaterialSource.SHEET, Plancha.id_plancha),
                                          (Retazo, MaterialSource.REMNANT, Retazo.id_retazo)):
             selected = [c for c in consumptions if c.stock.source is source]
@@ -151,17 +208,9 @@ class SqlConfirmationRepository:
 
     def mark_confirmed(self, context, receipt, actor_id):
         execution = self.session.get(EjecucionOptimizacion, context.execution_id)
-        result = context.run.result
-        if result.metrics is not None:
-            recovered = sum((r.exact_area_mm2 for r in receipt.remnants_created), Decimal(0))
-            m = result.metrics
-            result = replace(result, metrics=replace(m, recoverable_remnant_mm2=recovered,
-                             waste_mm2=m.material_area_mm2 - m.placed_piece_area_mm2 - recovered))
-            row = self.session.scalar(select(MetricaEjecucion).where(MetricaEjecucion.id_ejecucion == context.execution_id))
-            if row is None:
-                raise RunError("NOT_CONFIRMABLE", "No se encontraron las métricas persistidas de la solución.")
-            row.retazo_recuperable_mm2 = result.metrics.recoverable_remnant_mm2
-            row.merma_mm2 = result.metrics.waste_mm2
-        execution.patron_resultado = {**execution.patron_resultado, **encode(result), "confirmation": {
+        result = result_after_confirmation(context.run.result, (r.exact_area_mm2 for r in receipt.remnants_created))
+        self.metric.retazo_recuperable_mm2 = result.metrics.recoverable_remnant_mm2
+        self.metric.merma_mm2 = result.metrics.waste_mm2
+        execution.patron_resultado = {**execution.patron_resultado, "confirmation": {
             "receipt_version": 1, "actor_id": actor_id, "confirmed_at": datetime.now(timezone.utc).isoformat(),
             "receipt": json_value(receipt), "skipped_residuals": self.skipped}}

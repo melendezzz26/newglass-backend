@@ -7,6 +7,7 @@ from typing import Literal
 
 from .comparison_catalog import BY_METHOD, METHODS_V2, validate_methods
 from .comparison_contracts import immutable_json
+from ..domain.metrics import ResidualPolicy
 from ..domain.problem import OptimizationProblem, OptimizationResult, decimal_value
 
 TerminationReason = Literal[
@@ -50,9 +51,12 @@ class ExecutionPayloadV2:
     method: str
     result: OptimizationResult | None
     diagnostic: ExecutionDiagnostic | None
+    residual_policy: ResidualPolicy | None = None
 
     def __post_init__(self):
         validate_methods((self.method,))
+        if self.residual_policy is not None and (self.result is None or not isinstance(self.residual_policy, ResidualPolicy)):
+            raise ValueError("A residual policy requires a measured result")
         if self.result is not None and (
             not isinstance(self.result, OptimizationResult)
             or self.result.method != self.method

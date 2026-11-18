@@ -19,7 +19,7 @@ from app.modules.optimization.domain.problem import MaterialSource
 from app.modules.optimization.domain.rasterizer import rasterize_material, rasterize_rectangle
 from app.modules.optimization.domain.rotation import RasterCache
 from app.modules.optimization.domain.run_geometry import prepare_run_geometry
-from app.modules.optimization.infrastructure.comparison_v2_snapshot import decode_result_v3, encode_result_v3
+from app.modules.optimization.infrastructure.comparison_v2_snapshot import decode_result_v4, encode_result_v4
 from tests.unit.optimization.test_first_fit import config, problem, stock
 from tests.unit.optimization.test_preparation import piece
 
@@ -195,6 +195,6 @@ def test_integrated_adapter_and_result_snapshot_keep_fractional_geometry(definit
     result = adapted.payload.result
     assert result is not None and result.complete
     assert adapted.payload.diagnostic.termination_reason == 'COMPLETED'
-    restored = decode_result_v3(encode_result_v3(adapted.payload))
+    restored = decode_result_v4(encode_result_v4(adapted.payload))
     assert restored == adapted.payload
     assert_geometry(restored.result)

@@ -1,16 +1,35 @@
 """R4 metrics and conservative residual rectangles; never creates inventory.
 
-One largest exact free raster rectangle per USED physical unit, PLAN §8.
+One largest free raster rectangle meeting the minimum dimensions per used physical unit.
 Tie order: area DESC, top row ASC, left column ASC, width DESC, height DESC.
 """
 from dataclasses import dataclass, replace
 from decimal import Decimal, ROUND_HALF_UP
+from enum import Enum
 from itertools import groupby
 
-from .first_fit import _empty_layout
-from .problem import MaterialSource, OptimizationMetrics
+from .packing import _distance_cells, _empty_layout
+from .problem import MaterialSource, OptimizationMetrics, decimal_value
 from .raster_mask import RasterMask
 from .rotation import RasterCache, raster_number
+
+
+class ResidualPolicyVersion(str, Enum):
+    LEGACY = "largest-then-filter-v1"
+    CORRECTED = "largest-admissible-v2"
+
+
+@dataclass(frozen=True, kw_only=True)
+class ResidualPolicy:
+    version: ResidualPolicyVersion
+    minimum_width_mm: Decimal
+    minimum_height_mm: Decimal
+
+    def __post_init__(self):
+        if not isinstance(self.version, ResidualPolicyVersion):
+            raise ValueError("Unknown residual calculation policy")
+        for name in ("minimum_width_mm", "minimum_height_mm"):
+            object.__setattr__(self, name, decimal_value(getattr(self, name), name))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -46,7 +65,8 @@ def _column_segments(rows, columns):
     return starts, full
 
 
-def largest_rectangle(free_rows, columns, *, checkpoint=None):
+def largest_rectangle(free_rows, columns, *, min_width_cells=1, min_height_cells=1, checkpoint=None):
+    """Return (top, left, width, height) in cells, subject to both minima."""
     rows = free_rows if isinstance(free_rows, (tuple, list)) else tuple(free_rows)
     # S2-M6 (F4b): the original scan visited every column of every run. Inside
     # a segment of equal columns its stack neither pops (the top already has
@@ -89,10 +109,14 @@ def largest_rectangle(free_rows, columns, *, checkpoint=None):
                     last_seen[index] = row
                 while stack and stack[-1][1] > height:
                     left, h = stack.pop()
-                    width, top = column - left, row - h + 1
-                    key = (-width * h, top, left, -width, -h)
-                    if best_key is None or key < best_key:
-                        best_key, best = key, (top, left, width, h)
+                    width = column - left
+                    # Extending a feasible rectangle preserves both lower bounds,
+                    # so the histogram's maximal candidates still suffice.
+                    if width >= min_width_cells and h >= min_height_cells:
+                        top = row - h + 1
+                        key = (-width * h, top, left, -width, -h)
+                        if best_key is None or key < best_key:
+                            best_key, best = key, (top, left, width, h)
                     start = left
                 if height and (not stack or stack[-1][1] < height):
                     stack.append((start, height))
@@ -100,15 +124,20 @@ def largest_rectangle(free_rows, columns, *, checkpoint=None):
     return best
 
 
-def calculate_metrics(result, minimum_width_mm, minimum_height_mm):
+def calculate_metrics(result, minimum_width_mm, minimum_height_mm, *, policy=ResidualPolicyVersion.CORRECTED):
     """Return calculated result and exact residual proposals; no stock mutation.
 
     Zero placed units means no valid R4 denominator, hence metrics=None.
     Geometry remains the existing numeric contract; all area arithmetic Decimal.
     """
+    if not isinstance(policy, ResidualPolicyVersion):
+        raise ValueError("Unknown residual calculation policy")
     if not result.placements:
         return result, ()
     config, cache, residuals = result.problem.config, RasterCache(), []
+    legacy = policy is ResidualPolicyVersion.LEGACY
+    min_width_cells = 1 if legacy else _distance_cells(Decimal(str(minimum_width_mm)), config.resolution_mm)
+    min_height_cells = 1 if legacy else _distance_cells(Decimal(str(minimum_height_mm)), config.resolution_mm)
     for stock in result.materials_used:
         layout = _empty_layout(cache.material(stock, config.resolution_mm), config)
         for placement in result.placements:
@@ -122,12 +151,13 @@ def calculate_metrics(result, minimum_width_mm, minimum_height_mm):
                 raise ValueError("Placement is not aligned to the effective raster grid.")
             layout = layout.place(mask, int(row), int(column))
         free = tuple(usable & ~blocked for usable, blocked in zip(layout.usable, layout.blocked))
-        rectangle = largest_rectangle(free, layout.material.columns)
+        rectangle = largest_rectangle(free, layout.material.columns,
+                                      min_width_cells=min_width_cells, min_height_cells=min_height_cells)
         if rectangle is None:
             continue
         row, column, columns, rows = rectangle
         width, height = columns * config.resolution_mm, rows * config.resolution_mm
-        if width < minimum_width_mm or height < minimum_height_mm:
+        if legacy and (width < minimum_width_mm or height < minimum_height_mm):
             continue
         mask = RasterMask(raster_number(config.resolution_mm), columns, ((1 << columns) - 1,) * rows)
         if not layout.check(mask, row, column).is_valid:

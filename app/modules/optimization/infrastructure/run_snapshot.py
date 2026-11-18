@@ -3,6 +3,7 @@ from dataclasses import fields
 from decimal import Decimal
 from enum import Enum
 from collections.abc import Mapping
+from ..domain.metrics import ResidualPolicy, ResidualPolicyVersion
 from ..domain.problem import (OptimizationProblem, OptimizationConfig, MaterialGroup, PieceUnit,
                               StockCandidate, MaterialSource, Placement, OptimizationResult, OptimizationMetrics)
 
@@ -24,6 +25,15 @@ def json_value(value):
 
 def encode(result):
     return {"snapshot_version": 1, "result": json_value(result)}
+
+
+def decode_residual_policy(value):
+    keys = ("version", "minimum_width_mm", "minimum_height_mm")
+    if (not isinstance(value, Mapping) or set(value) != set(keys)
+            or any(type(value[key]) is not str for key in keys)):
+        raise ValueError("Invalid residual policy metadata")
+    return ResidualPolicy(version=ResidualPolicyVersion(value["version"]),
+        minimum_width_mm=Decimal(value["minimum_width_mm"]), minimum_height_mm=Decimal(value["minimum_height_mm"]))
 
 
 def decode(snapshot):

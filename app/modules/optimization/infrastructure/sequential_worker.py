@@ -11,7 +11,7 @@ from ..application.visual import OrientationSampler
 from ..domain.beam_search import BeamSearchLimits
 from .comparison_snapshot import canonical_json, decode_problem, problem_fingerprint
 from .comparison_transport import VisualEncoder
-from .comparison_v2_snapshot import encode_result_v3
+from .comparison_v2_snapshot import encode_result_v4
 from .run_snapshot import json_value
 from .process_lifecycle import process_identity, protect_against_parent_exit
 
@@ -64,7 +64,7 @@ def calculation_worker_v2(scope_values, payload, minimums, connection, gate, sta
         adapted = EngineExecutionAdapter(scope.method, beam_limits=beam_limits).execute(scope, problem,
             minimum_width_mm=Decimal(minimums[0]), minimum_height_mm=Decimal(minimums[1]),
             checkpoint=checkpoint, on_observation=observe if observed else None)
-        send("result", dict(snapshot=encode_result_v3(adapted.payload), residuals=json_value(adapted.residuals),
+        send("result", dict(snapshot=encode_result_v4(adapted.payload), residuals=json_value(adapted.residuals),
             observer_error_type=adapted.observer_error_type, error_type=adapted.error_type,
             observations=observations, observation_bytes=observation_bytes,
             engine_stop_reason=adapted.beam_outcome.stop_reason if adapted.beam_outcome else None,

@@ -6,7 +6,7 @@ from typing import Mapping
 from .dto import OptimizationRun, RunStatus
 from .errors import RunError
 from ..domain.confirmation import consumption_groups, validate_stored_geometry
-from ..domain.metrics import ResidualRectangle
+from ..domain.metrics import ResidualPolicy, ResidualRectangle
 from ..domain.problem import StockCandidate
 
 
@@ -17,6 +17,16 @@ class ConfirmationContext:
     minimum_width_mm: Decimal
     minimum_height_mm: Decimal
     residuals: tuple[ResidualRectangle, ...]
+    residual_policy: ResidualPolicy | None = None
+
+    def validate_residuals(self):
+        policy = self.residual_policy
+        if not isinstance(policy, ResidualPolicy):
+            raise RunError("NOT_CONFIRMABLE", "La política del resultado no está acreditada. Ejecuta una nueva optimización.")
+        if (policy.minimum_width_mm, policy.minimum_height_mm) != (self.minimum_width_mm, self.minimum_height_mm):
+            raise ValueError("Residual policy differs from the frozen minimum dimensions")
+        return validate_stored_geometry(self.run.result, self.minimum_width_mm, self.minimum_height_mm,
+                                        self.residuals, policy=policy.version)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -60,9 +70,8 @@ class ConfirmRun:
             uow.orders.require_state(run.result.problem.order_ids, "OPTIMIZADO")
             try:
                 consumptions = consumption_groups(run.result)
-                residuals = validate_stored_geometry(run.result, context.minimum_width_mm,
-                                                    context.minimum_height_mm, context.residuals)
-            except ValueError as exc:
+                residuals = context.validate_residuals()
+            except (ValueError, ArithmeticError) as exc:
                 raise RunError("NOT_CONFIRMABLE", "El patrón persistido requiere revisión antes de confirmar.") from exc
             uow.confirmation.lock_and_revalidate(consumptions, context)
             uow.confirmation.consume(consumptions)
