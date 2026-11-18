@@ -1,5 +1,6 @@
 """EN-CONC-001 on disposable PostgreSQL with explicit, local RBAC fixtures."""
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from functools import partial
 import os
@@ -84,7 +85,7 @@ def queue_api(isolated_postgres, monkeypatch):
                 InProcessRunAdmission(), job_factory=HttpComparisonJob, **options)
 
         api = SimpleNamespace(sessions=sessions, orders=orders, actors=actors, headers=headers, codes=codes,
-                              queue=new_coordinator(max_active=0), new_coordinator=new_coordinator)
+                              queue=new_coordinator(max_active=0))
 
         def session():
             with sessions() as db:
@@ -95,8 +96,15 @@ def queue_api(isolated_postgres, monkeypatch):
         monkeypatch.setitem(app.dependency_overrides, get_database_session, session)
         monkeypatch.setitem(app.dependency_overrides, get_inventory_service,
                             lambda: InventoryService(SqlAlchemyInventoryRepository(sessions)))
-        with TestClient(app) as client:
-            api.client = client
+        with ExitStack() as lifecycle:
+            api.client = lifecycle.enter_context(TestClient(app))
+
+            def restart(**options):
+                lifecycle.close()
+                api.queue = new_coordinator(**options)
+                api.client = lifecycle.enter_context(TestClient(app))
+
+            api.restart = restart
             yield api
 
 
@@ -160,9 +168,7 @@ def test_three_roles_queued_restart_active_cancel_and_other_jobs_complete(queue_
     assert api.client.post(f"{BASE}/{first}/confirm", headers={**api.headers["L"], "Idempotency-Key": "not-authorized"},
         json={"execution_id": a.json()["executions"][0]["execution_id"], "expected_version": a.json()["version"]}).status_code == 403
 
-    api.queue.shutdown()
-    api.queue = api.new_coordinator(runner_factory=partial(SequentialProcessRunner, worker_target=started_then_blocked))
-    api.queue.start_service()
+    api.restart(runner_factory=partial(SequentialProcessRunner, worker_target=started_then_blocked))
     active = await_status(api, "A", first, "RUNNING")
     assert get(api, "O", second, "/queue").json()["state"] == "WAITING"
     deadline = time.monotonic() + 15
