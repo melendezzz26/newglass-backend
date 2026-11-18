@@ -36,7 +36,7 @@ with patch.dict(sys.modules, {"app.shared.database": isolated_base}):
 
 
 NOW = datetime(2026, 10, 5, 12, 30, tzinfo=timezone.utc)
-HEAD = "s2sec01a1b2c"  # EN-SEC-001: nueva cabeza (tabla intentos_login)
+HEAD = "s2conc01b100"
 
 
 @pytest.mark.parametrize("geometry", [

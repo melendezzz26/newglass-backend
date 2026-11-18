@@ -18,6 +18,7 @@ from app.modules.optimization.presentation.router import router as optimization_
 @asynccontextmanager
 async def lifespan(app):
     from app.modules.optimization.presentation.comparison_supervision_v2 import get_comparison_v2_coordinator
+    # The production provider starts no V2 calculation threads in the API.
     await asyncio.to_thread(get_comparison_v2_coordinator().start_service)
     try:
         yield

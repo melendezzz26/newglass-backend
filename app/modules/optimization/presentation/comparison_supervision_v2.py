@@ -169,7 +169,7 @@ class ComparisonV2Coordinator:
                     self.recovery_errors = {accepted.comparison_id: "UnclaimedAcceptedComparison"}
                 raise
 
-    def _launch(self, job):
+    def _launch(self, job, *, observe=True):
         identifier = job.comparison.comparison_id
         if self.retention is not None:
             self.retention.replace(job)
@@ -178,7 +178,7 @@ class ComparisonV2Coordinator:
             job.mark("supervisor_started")
             try:
                 CalculateComparisonV2(self.uow, job.runner).execute(identifier, job.token,
-                    cancel=job.cancel, observer=job.accept)
+                    cancel=job.cancel, observer=job.accept if observe else None)
             except Exception as error:
                 job.error_type = type(error).__name__
                 job.unsafe = isinstance(error, WorkersNotStopped)
@@ -308,13 +308,14 @@ class ComparisonV2Coordinator:
         if job.reaper is not None and job.reaper.ident is not None and job.reaper is not current_thread():
             job.reaper.join(timeout=15)
 
-    def recover_pending(self):
+    def recover_pending(self, *, legacy_only=False):
         """No recalculation or killing. Unknown identities keep global admission blocked."""
         with self.lock:
             if self.recovery_lease is None:
                 self.recovery_lease=self.admission.acquire_comparison(0)
             try:
-                with self.uow() as tx: identifiers=tx.unfinished()
+                with self.uow() as tx:
+                    identifiers = tx.unfinished(legacy_only=True) if legacy_only else tx.unfinished()
                 if identifiers:
                     self.runner_factory().preflight()  # No PID proof on an unsupported platform.
             except Exception as error:
@@ -375,10 +376,7 @@ def get_comparison_v2_coordinator():
         from app.shared.database.session import SessionLocal
         from ..infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
         from .run_routes import get_run_admission
-        from .comparison_retention import COMPARISON_RETENTION
-        from .comparison_http_runtime_v2 import HttpComparisonJob
-        from .comparison_queue_v2 import QueuedComparisonV2Coordinator, queue_limits
-        _coordinator=QueuedComparisonV2Coordinator(lambda:SqlComparisonPersistenceUnitOfWork(SessionLocal),get_run_admission(),
-            **queue_limits(),
-            retention=COMPARISON_RETENTION, job_factory=HttpComparisonJob)
+        from .comparison_queue_v2 import SeparatedComparisonApi, queue_limits
+        _coordinator = SeparatedComparisonApi(lambda: SqlComparisonPersistenceUnitOfWork(SessionLocal),
+                                              get_run_admission(), queue_capacity=queue_limits()["queue_capacity"])
     return _coordinator

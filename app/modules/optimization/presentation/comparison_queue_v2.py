@@ -35,6 +35,43 @@ def finish_waiting(tx, current, reason, *, statistics=None):
     return tx.comparisons_v2.record_supervisor_stopped(identifier, datetime.now(timezone.utc), current.version)
 
 
+class SeparatedComparisonApi(ComparisonV2Coordinator):
+    """API-side commands. Supervisors only exist in the standalone service."""
+
+    external_worker = True
+
+    def __init__(self, *args, queue_capacity, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.queue_capacity = queue_capacity
+
+    def start_service(self):
+        self.recover_pending(legacy_only=True)
+
+    def start(self, order_ids, actor_id, key):
+        try:
+            return AcceptComparisonV2(self.uow, self.authorize).execute(
+                order_ids, actor_id, key, queue_capacity=self.queue_capacity, external_worker=True)
+        except OptimizerBusy as error:
+            error.details = {**error.details, "request_accepted": False}
+            raise
+
+    def reconcile(self, identifier):
+        with self.uow() as tx:
+            return tx.worker_jobs.status(identifier) in ("RUNNING", "TERMINAL")
+
+    def request_cancel(self, identifier, actor_id, key, expected_version):
+        with self.uow() as tx:
+            tx.comparisons_v2.lock_queue()
+            self.authorize(tx, actor_id)
+            current = tx.comparisons_v2.get_owned(identifier, actor_id)
+            waiting = current.waiting
+            if (not waiting and not current.terminal and current.cancellation is None
+                    and tx.worker_jobs.status(identifier) != "RUNNING"):
+                raise RunError("RECOVERY_BLOCKED", "No se puede acreditar el propietario activo para cancelar.")
+            current = tx.comparisons_v2.request_cancellation(identifier, actor_id, key, expected_version)
+            return finish_waiting(tx, current, "CANCELLED") if waiting else current
+
+
 class QueuedComparisonV2Coordinator(ComparisonV2Coordinator):
     def __init__(self, *args, queue_capacity=8, max_active=1, **kwargs):
         super().__init__(*args, **kwargs)

@@ -9,3 +9,13 @@ Se aplican permisos efectivos de `rol_permisos`. El solicitante necesita `optimi
 El `POST` V2 conserva `201`, `Location` y su cuerpo. Mientras el trabajo espera, la comparación conserva `EN_EJECUCION` y sus ejecuciones `QUEUED`. `GET /api/optimization/comparisons-v2/{id}/queue` expone `comparison_id`, `version` y `state` (`WAITING`, `RUNNING`, `TERMINAL` o `RECOVERY_BLOCKED`). El cupo por defecto es de ocho trabajos en espera, con valores entre 1 y 100. El cupo lleno devuelve `503 OPTIMIZER_BUSY` con `Retry-After`. La cancelación de un trabajo en espera resuelve el lote en una sola transacción sin señalizar procesos. La cancelación activa conserva la prueba de cierre de EN-UX-004.
 
 Sprint 2 vincula este incremento con TA-037 (admisión y recursos), TA-038 (cierre y recuperación) y EN-UX-004 (cancelación). En 2B quedan pendientes la supervisión agregada de varias comparaciones, la exclusión distribuida también para FF/V1 y la retención visual entre procesos. Los resultados históricos siguen sujetos a sus reglas V3/V4.
+
+## Fase 2B.1
+
+FastAPI admite, reserva, consulta y confirma. Un servicio Linux externo reclama y ejecuta V2. La plaza se reserva en PostgreSQL junto con el propietario y la traza comercial de supervisor. La restricción `UNIQUE(slot)` permite muchos trabajos con plaza nula y una sola fila con plaza `1`. Cada escritura operativa del supervisor comprueba su token y vigencia dentro de la transacción.
+
+El piloto es una elección de la base de datos. Tras la migración, el modo por defecto mantiene las corridas FF y V1. La activación optativa impide nuevos cálculos legacy en todos los procesos conectados a esa base. Requiere haber detenido los binarios 2A y verificar que ninguna ejecución anterior conserve procesos. La activación adopta únicamente trabajos 2A en espera sin propietario, preservando el JSON existente. Un registro anterior ambiguo aborta la activación completa. Los resultados terminados V3/V4 y sus recibos permanecen en las tablas comerciales.
+
+El estado operativo es `WAITING`, `RUNNING`, `RECOVERY_BLOCKED` o `TERMINAL`. Perder el heartbeat durante 10 segundos bloquea el trabajo y retiene la plaza. El servicio puede reconciliar su propio cierre si los descendientes ya terminaron y su token sigue vigente. La fase no dispone de relevo automático. Una cancelación activa registra la intención en API y el worker la consulta en su heartbeat.
+
+La API conserva los cuerpos e identidades de V2 y la consulta `/{id}/queue`. El historial y el resultado persistido se sirven desde cualquier instancia. Los eventos y visuales devuelven `410 VISUAL_DATA_UNAVAILABLE` en el piloto y preservan autorización y propiedad. Las vistas visuales compartidas y el aumento de capacidad pertenecen a las fases posteriores.
