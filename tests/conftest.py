@@ -41,7 +41,7 @@ def session_factory():
     Se omiten las restricciones CHECK porque usan sintaxis propia de PostgreSQL.
     Los roles reciben la asignación inicial de permisos (S1-RBAC).
     """
-    from app.models import Permiso, Rol, RolPermiso, Usuario
+    from app.models import IntentoLogin, Permiso, Rol, RolPermiso, Usuario
     from app.modules.authentication.infrastructure.permission_seed import seed_permissions
 
     engine = create_engine(
@@ -50,7 +50,9 @@ def session_factory():
         poolclass=StaticPool,
     )
     metadata = MetaData()
-    for table in (Rol.__table__, Usuario.__table__, Permiso.__table__, RolPermiso.__table__):
+    # IntentoLogin (EN-SEC-001): el login registra intentos fallidos en la base.
+    for table in (Rol.__table__, Usuario.__table__, Permiso.__table__, RolPermiso.__table__,
+                  IntentoLogin.__table__):
         copy = table.to_metadata(metadata)
         for constraint in [c for c in copy.constraints if isinstance(c, CheckConstraint)]:
             copy.constraints.discard(constraint)

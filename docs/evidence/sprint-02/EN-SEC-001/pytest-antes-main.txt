@@ -1,0 +1,5 @@
+# Backend main 2afa9d7 (antes), Windows, Python 3.11.9
+# python -m pytest tests -q --ignore=tests/unit/optimization/test_comparison_runner.py --ignore=tests/unit/optimization/test_sequential_runner.py --ignore=tests/unit/optimization/test_resource_profile.py
+
+2748 passed, 955 skipped, 1 warning in 62.76s (0:01:02)
+EXIT=0

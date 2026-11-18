@@ -1,15 +1,23 @@
 """Dependencias de FastAPI: conectan las rutas con los casos de uso."""
 import jwt
+from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.permissions import CODIGOS
-from app.modules.authentication.application.ports import PermissionReader, UserReader
+from app.modules.authentication.application.ports import (
+    LoginAttemptStore,
+    PermissionReader,
+    UserReader,
+)
 from app.modules.authentication.application.use_cases import get_active_user
 from app.modules.authentication.domain.errors import SessionNotValidError
+from app.modules.authentication.domain.login_attempts import AttemptPolicy
 from app.modules.authentication.domain.user import AuthenticatedUser
+from app.shared.config import login_attempt_limits
 from app.shared.security import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -42,6 +50,41 @@ def get_permission_reader(db: Session = Depends(get_database_session)) -> Permis
     )
 
     return SqlAlchemyPermissionReader(db)
+
+
+def get_login_attempt_store(db: Session = Depends(get_database_session)) -> LoginAttemptStore:
+    """Único punto donde se elige el almacén real de intentos de login (EN-SEC-001)."""
+    from app.modules.authentication.infrastructure.sqlalchemy_login_attempt_store import (
+        SqlAlchemyLoginAttemptStore,
+    )
+
+    return SqlAlchemyLoginAttemptStore(db)
+
+
+def get_login_attempt_policy() -> AttemptPolicy:
+    """Umbral, ventana y bloqueo leídos del entorno en cada petición (EN-SEC-001)."""
+    max_failures, window_minutes, lockout_minutes = login_attempt_limits()
+    return AttemptPolicy(
+        max_failures=max_failures,
+        window=timedelta(minutes=window_minutes),
+        lockout=timedelta(minutes=lockout_minutes),
+    )
+
+
+def get_clock() -> Callable[[], datetime]:
+    """Reloj UTC. Las pruebas lo sustituyen para simular el paso del tiempo."""
+    return lambda: datetime.now(timezone.utc)
+
+
+def get_client_ip(request: Request) -> str | None:
+    """IP del cliente tal como la entrega Uvicorn (D-07 de SPEC-EN-SEC-001).
+
+    Detrás del router de Heroku, Uvicorn solo la toma de X-Forwarded-For si
+    la conexión viene de una IP en FORWARDED_ALLOW_IPS (o --forwarded-allow-ips).
+    La aplicación no lee cabeceras de proxy por su cuenta: así un cliente no
+    puede elegir su IP enviando X-Forwarded-For.
+    """
+    return request.client.host if request.client else None
 
 
 FORBIDDEN_MESSAGE = "No tienes permiso para realizar esta acción."

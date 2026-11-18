@@ -41,6 +41,22 @@ def token_minutes() -> int:
     return minutes
 
 
+def login_attempt_limits() -> tuple[int, int, int]:
+    """EN-SEC-001: (intentos fallidos, ventana en minutos, bloqueo en minutos).
+
+    Por defecto 5 intentos en 15 minutos provocan 15 minutos de bloqueo.
+    """
+    max_failures = integer_value("LOGIN_MAX_FAILED_ATTEMPTS", default=5)
+    window = integer_value("LOGIN_ATTEMPT_WINDOW_MINUTES", default=15)
+    lockout = integer_value("LOGIN_LOCKOUT_MINUTES", default=15)
+    for name, minutes in (("LOGIN_ATTEMPT_WINDOW_MINUTES", window), ("LOGIN_LOCKOUT_MINUTES", lockout)):
+        try:
+            datetime.now(timezone.utc) + timedelta(minutes=minutes)
+        except OverflowError:
+            raise RuntimeError(f"{name} excede el rango de fechas admitido.") from None
+    return max_failures, window, lockout
+
+
 def cors_origins() -> list[str]:
     raw = os.getenv("CORS_ORIGINS")
     if raw is None:

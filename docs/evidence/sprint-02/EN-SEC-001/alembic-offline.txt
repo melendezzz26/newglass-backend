@@ -1,0 +1,58 @@
+# Migración validada sin conexión (DATABASE_URL de ejemplo de .env.example)
+# alembic heads; alembic upgrade s2cmp02d4e6f8:s2sec01a1b2c --sql;
+# alembic downgrade s2sec01a1b2c:s2cmp02d4e6f8 --sql; DDL PostgreSQL del modelo IntentoLogin
+
+## alembic heads
+s2sec01a1b2c (head)
+
+## upgrade --sql
+BEGIN;
+
+-- Running upgrade s2cmp02d4e6f8 -> s2sec01a1b2c
+
+CREATE TABLE intentos_login (
+    alcance VARCHAR(10) NOT NULL, 
+    clave VARCHAR(64) NOT NULL, 
+    fallos INTEGER NOT NULL, 
+    inicio_ventana TIMESTAMP WITH TIME ZONE, 
+    bloqueado_hasta TIMESTAMP WITH TIME ZONE, 
+    actualizado_en TIMESTAMP WITH TIME ZONE NOT NULL, 
+    CONSTRAINT pk_intentos_login PRIMARY KEY (alcance, clave), 
+    CONSTRAINT ck_intentos_login_alcance CHECK (alcance IN ('account', 'ip')), 
+    CONSTRAINT ck_intentos_login_fallos CHECK (fallos >= 0)
+);
+
+CREATE INDEX ix_intentos_login_actualizado_en ON intentos_login (actualizado_en);
+
+UPDATE alembic_version SET version_num='s2sec01a1b2c' WHERE alembic_version.version_num = 's2cmp02d4e6f8';
+
+COMMIT;
+
+
+## downgrade --sql
+BEGIN;
+
+-- Running downgrade s2sec01a1b2c -> s2cmp02d4e6f8
+
+DROP INDEX ix_intentos_login_actualizado_en;
+
+DROP TABLE intentos_login;
+
+UPDATE alembic_version SET version_num='s2cmp02d4e6f8' WHERE alembic_version.version_num = 's2sec01a1b2c';
+
+COMMIT;
+
+
+## DDL del modelo ORM
+CREATE TABLE intentos_login (
+	alcance VARCHAR(10) NOT NULL, 
+	clave VARCHAR(64) NOT NULL, 
+	fallos INTEGER NOT NULL, 
+	inicio_ventana TIMESTAMP WITH TIME ZONE, 
+	bloqueado_hasta TIMESTAMP WITH TIME ZONE, 
+	actualizado_en TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_intentos_login PRIMARY KEY (alcance, clave), 
+	CONSTRAINT ck_intentos_login_alcance CHECK (alcance IN ('account', 'ip')), 
+	CONSTRAINT ck_intentos_login_fallos CHECK (fallos >= 0)
+);
+CREATE INDEX ix_intentos_login_actualizado_en ON intentos_login (actualizado_en);

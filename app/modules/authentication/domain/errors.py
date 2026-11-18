@@ -15,3 +15,14 @@ class InactiveAccountError(Exception):
 
 class SessionNotValidError(Exception):
     """La cuenta de una sesión abierta ya no existe o fue desactivada."""
+
+
+class TooManyLoginAttemptsError(Exception):
+    """La cuenta o la IP superó el límite de intentos fallidos (EN-SEC-001).
+
+    No indica cuál de las dos claves está bloqueada ni si la cuenta existe.
+    """
+
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__("Demasiados intentos fallidos.")
+        self.retry_after_seconds = retry_after_seconds

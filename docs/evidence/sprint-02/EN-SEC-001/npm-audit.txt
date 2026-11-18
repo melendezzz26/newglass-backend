@@ -1,0 +1,53 @@
+# newglass-frontend: npm audit --omit=dev --audit-level=high (paso del CI) y npm audit completo
+
+## main 428652b / feature/EN-SEC-001-auditoria-dependencias: --omit=dev --audit-level=high
+found 0 vulnerabilities
+EXIT=0
+
+## main 428652b: npm audit (incluye desarrollo), resumen
+minimatch  7.0.0 - 11.0.0
+Severity: moderate
+picomatch  *
+Severity: high
+undici  8.0.0 - 8.12.1
+Severity: high
+zod  <4.6.6
+Severity: high
+10 vulnerabilities (3 moderate, 7 high)
+
+## seguridad-owasp-zap e715162: --omit=dev --audit-level=high
+found 0 vulnerabilities
+EXIT=0
+
+## seguridad-owasp-zap e715162: npm audit (incluye desarrollo)
+# npm audit report
+picomatch  *
+Severity: high
+picomatch vulnerable to ReDoS through single-branch repeated extglobs - https://github.com/advisories/GHSA-fc5q-39xc-vjpf
+fix available via `npm audit fix --force`
+Will install vitest@3.1.4, which is a breaking change
+node_modules/picomatch
+  fdir  >=5.2.1
+  Depends on vulnerable versions of picomatch
+  node_modules/fdir
+  tinyglobby  *
+  Depends on vulnerable versions of fdir
+  Depends on vulnerable versions of picomatch
+  node_modules/tinyglobby
+    vitest  >=3.1.2
+    Depends on vulnerable versions of picomatch
+    Depends on vulnerable versions of tinyglobby
+    Depends on vulnerable versions of vite
+    node_modules/vitest
+  vite  >=6.3.0-beta.0
+  Depends on vulnerable versions of picomatch
+  Depends on vulnerable versions of tinyglobby
+  node_modules/vite
+    @vitejs/plugin-react  >=6.0.0-beta.0
+    Depends on vulnerable versions of vite
+    node_modules/@vitejs/plugin-react
+6 high severity vulnerabilities
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
