@@ -10,6 +10,8 @@ La política persistida en `optimization_worker_policy` es común a todas las AP
 
 Si quedan comparaciones V2 abiertas antes de activar el piloto, la admisión legacy también queda bloqueada. Las comparaciones 2A que nunca se reclamaron se pueden cancelar o adoptar al activar. Un propietario 2A no acreditado requiere intervención documentada.
 
+Si la política no se puede leer, por ejemplo porque RLS oculta la fila, se rechaza la admisión. La ausencia de la fila no implica que esté habilitado el modo legacy.
+
 El heartbeat usa el reloj de PostgreSQL. La expiración impide nuevas escrituras del supervisor y conserva la plaza en `RECOVERY_BLOCKED`. El siguiente worker no deduce cierre de la ausencia de un PID. La fase deja el relevo y la recuperación avanzada para 2B.2. Compartir eventos y visuales corresponde a 2B.3 y probar dos comparaciones simultáneas a 2B.4.
 
 ## Arranque del piloto en WSL2

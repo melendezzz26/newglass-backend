@@ -15,13 +15,14 @@ import httpx
 import pytest
 from sqlalchemy import create_engine, delete, func, select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.models import EjecucionOptimizacion, Optimizacion, OptimizationWorkerJob, Pedido, RolPermiso
 from app.modules.optimization.application.comparison_acceptance_v2 import AcceptComparisonV2
 from app.modules.optimization.application.errors import RunError
 from app.modules.optimization.infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
 from app.modules.optimization.infrastructure.process_lifecycle import process_identity
-from app.modules.optimization.infrastructure.worker_jobs import enable_pilot, pilot_enabled
+from app.modules.optimization.infrastructure.worker_jobs import enable_pilot, pilot_enabled, require_legacy_admission
 from app.modules.optimization.presentation.comparison_supervision_v2 import authorize_actor
 from tests.integration.postgres_support import BACKEND, new_database, upgrade
 from .test_comparison_queue_v2 import BASE, inventory, prepare_queue_data
@@ -378,3 +379,17 @@ def test_cutover_rolls_back_if_a_2a_owner_is_ambiguous(worker_db):
         assert not pilot_enabled(db)
         assert db.get(OptimizationWorkerJob, waiting) is None
         assert db.get(Pedido, data.orders["O"]).estado == "EN_OPTIMIZACION"
+
+
+def test_hidden_pilot_policy_rejects_legacy_admission(worker_db):
+    data = worker_db
+    activate(data)
+    role = f"qa_restricted_{uuid4().hex}"
+    with data.engine.begin() as connection:
+        connection.exec_driver_sql(f'CREATE ROLE "{role}" NOLOGIN')
+        connection.exec_driver_sql(f'GRANT SELECT, UPDATE ON optimization_worker_policy TO "{role}"')
+        connection.exec_driver_sql(f'SET LOCAL ROLE "{role}"')
+        with Session(bind=connection) as db, pytest.raises(RunError) as refused:
+            require_legacy_admission(db)
+        assert refused.value.code == "RESOURCE_UNAVAILABLE"
+        assert refused.value.details["request_accepted"] is False

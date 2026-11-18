@@ -13,7 +13,11 @@ def pilot_enabled(session, *, protect_admission=False):
     query = select(Policy.pilot).where(Policy.id == 1)
     if protect_admission:
         query = query.with_for_update(read=True)
-    return session.scalar(query) is True
+    mode = session.scalar(query)
+    if mode is None:
+        raise RunError("RESOURCE_UNAVAILABLE", "La política de ejecución no está disponible.",
+                       details={"request_accepted": False})
+    return mode
 
 
 def require_legacy_admission(session):

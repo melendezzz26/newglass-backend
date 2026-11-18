@@ -25,3 +25,5 @@ python -m pytest -q -s tests/integration/optimization/test_comparison_v2_http_re
 ```
 
 Las pruebas incluyen caída del reclamante, pérdida temporal de conexión, escritura con token obsoleto, cancelaciones, revocación en espera y adopción transaccional de pendientes 2A. La regresión V3/V4 y el rollback de confirmación se comprueban con las tandas de política residual y cola del backend.
+
+La prueba de RLS da a un rol del PostgreSQL temporal permiso SQL para consultar la tabla de política, pero ninguna política de RLS que le permita ver la fila. En ese caso, la admisión de FF/V1 falla cerrada.

@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     CHAR,
     CheckConstraint,
+    DDL,
     DateTime,
     Float,
     ForeignKey,
@@ -17,6 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     BigInteger,
+    event,
     func,
     text,
     true,
@@ -347,6 +349,10 @@ class OptimizationWorkerPolicy(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     pilot: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+
+
+event.listen(OptimizationWorkerPolicy.__table__, "after_create",
+             DDL("INSERT INTO %(fullname)s (id, pilot) VALUES (1, false)"))
 
 
 class OptimizationWorkerJob(Base):
