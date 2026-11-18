@@ -44,8 +44,7 @@ Cerrar dos vacíos de seguridad del modelo de calidad:
 ### Fuera de alcance
 
 - Cambiar el `Procfile` o la configuración de Heroku: solo se propone (D-07, P-01).
-- Corregir las vulnerabilidades que hoy tiene `main` (python-multipart 0.0.20): se resuelven
-  con la rama `seguridad-owasp-zap` (§4.3).
+- Otras actualizaciones de dependencias distintas de python-multipart (§4.3, D-14).
 - CAPTCHA, segundo factor, avisos por correo o desbloqueo manual por un administrador.
 - La diferencia de tiempo de respuesta entre una cuenta inexistente (sin bcrypt) y una
   contraseña errónea, que existía antes de esta tarea (P-05).
@@ -89,8 +88,9 @@ Heroku, Uvicorn debe confiar en el router (P-01).
 | frontend | `npm audit --omit=dev --audit-level=high` | 0 vulnerabilidades |
 | frontend | `npm audit` (incluye desarrollo) | 10 (3 moderadas, 7 altas), todas de desarrollo |
 
-La rama `seguridad-owasp-zap` sube python-multipart a 0.0.31 (0 avisos). Por eso el paso nuevo
-del backend falla en esta rama hasta que esa rama se integre (D-13).
+Esta rama sube python-multipart a 0.0.31 (D-14): `pip-audit` pasa a 0 avisos y el paso nuevo
+del CI queda en verde. La rama `seguridad-owasp-zap` trae el mismo cambio y debe quitarlo al
+rehacerse.
 
 ## 5. Reglas
 
@@ -129,6 +129,7 @@ del backend falla en esta rama hasta que esa rama se integre (D-13).
 | D-11 | Limpieza oportunista: cada fallo borra filas sin actividad hace más de ventana + bloqueo y sin bloqueo vigente. | Evita que la tabla crezca con usuarios inexistentes sin agregar tareas programadas. Usa el índice `ix_intentos_login_actualizado_en`. |
 | D-12 | Las escrituras del almacén confirman su propia transacción en la sesión de la petición. | En el login, antes de escribir solo hubo lecturas; así el contador queda guardado aunque la respuesta sea un error. |
 | D-13 | Auditoría de dependencias como último paso de cada job de CI, con `if: !cancelled()`. Backend: `pip-audit==2.10.1 --requirement requirements.txt`. Frontend: `npm audit --omit=dev --audit-level=high`. | Las pruebas corren y se informan aunque la auditoría falle, y el job falla si hay avisos. En el frontend se audita lo que llega al bundle (dependencias de producción). |
+| D-14 | Esta rama actualiza `python-multipart` de 0.0.20 a 0.0.31 en `requirements.txt`. | Decisión del responsable (18/11/2026): sin ella el paso de `pip-audit` deja el CI en rojo. El cambio se comprobó sin diferencias en `/api/orders/import/preview` (CSV, XLSX, nombre con tildes, 1 MB, > 1 MB y sin archivo) y la suite queda en verde. La rama `seguridad-owasp-zap` debe quitar ese mismo cambio al rehacerse. |
 
 **Por qué se agrega `pip-audit` (D-13):** el backend no tenía ninguna herramienta de
 auditoría de dependencias (V-20) y `pip` no trae una. `pip-audit` lo mantiene la PyPA, consulta

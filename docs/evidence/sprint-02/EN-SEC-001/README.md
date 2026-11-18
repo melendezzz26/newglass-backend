@@ -48,13 +48,12 @@ falla sin `populate_existing` (`assert 2 == 3`: se pierde un fallo concurrente) 
 
 | Archivo | Resultado |
 |---|---|
-| [pip-audit.txt](pip-audit.txt) | `main` y esta rama: **12 avisos (6 distintos)** en `python-multipart==0.0.20` → el paso nuevo falla, como debe. Rama `seguridad-owasp-zap`: 0. |
+| [pip-audit.txt](pip-audit.txt) | `main`: **12 avisos (6 distintos)** en `python-multipart==0.0.20` → el paso nuevo falla, como debe. Esta rama, con python-multipart 0.0.31 (SPEC D-14), y la rama `seguridad-owasp-zap`: 0. |
 | [npm-audit.txt](npm-audit.txt) | Paso del CI (`--omit=dev --audit-level=high`): 0 en `main` y en `seguridad-owasp-zap`. Auditoría completa: `main` 10 (3 moderadas, 7 altas), `seguridad-owasp-zap` 6 altas (`picomatch`), todas de desarrollo. |
 
-Las vulnerabilidades de `main` **no se corrigen en esta rama**: las resuelve la rama
-`seguridad-owasp-zap` de Luis (python-multipart 0.0.31). Por eso el CI del backend de
-EN-SEC-001 quedará en rojo en el paso de auditoría hasta que esa rama se integre y esta se
-actualice con `main`.
+Esta rama actualiza python-multipart a 0.0.31 (commit `fix(deps)`, SPEC D-14), así que su
+paso de auditoría queda en verde; después del cambio la suite sigue en 2818 passed y 0 failed.
+La rama `seguridad-owasp-zap` de Luis trae el mismo cambio y debe quitarlo al rehacerse.
 
 ## 5. Frontend
 

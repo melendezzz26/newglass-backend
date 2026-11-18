@@ -203,7 +203,8 @@ funcional (el CSP rompe `/docs` y `/redoc`). El resto son ajustes del informe y 
 
 ## Orden de integración sugerido
 
-1. Esta rama (tras corregir B-01 a B-03) **antes** de EN-SEC-001: el paso nuevo de
-   `pip-audit` del CI de EN-SEC-001 falla en `main` por python-multipart 0.0.20 y pasa a verde
-   cuando esta rama está integrada.
-2. Después, EN-SEC-001 (backend) se actualiza con `main` y se vuelve a correr su CI.
+1. EN-SEC-001 (backend) ya incluye la actualización de `python-multipart` a 0.0.31 (commit
+   `fix(deps): update python-multipart to 0.0.31`), porque su paso nuevo de `pip-audit` fallaba
+   en `main` por la versión 0.0.20.
+2. Al rehacer esta rama sobre `main` actualizado, **quitar el cambio de `requirements.txt`**
+   para no duplicarlo ni generar conflictos; el resto de la rama no cambia.
