@@ -1,6 +1,6 @@
 """TA-QA-006: matriz de seguridad rol × ruta protegida (SPEC §5.2, CA-01 a CA-03).
 
-Cubre las 62 rutas protegidas con los tres roles reales y sus permisos de la
+Cubre las 64 rutas protegidas con los tres roles reales y sus permisos de la
 asignación inicial (ASIGNACION_INICIAL), leídos en memoria:
 - cada ruta declara el permiso de la matriz (RN-06);
 - sin token responde 401 (RN-01);
@@ -75,6 +75,7 @@ ROUTES = [
     ("POST", f"{OPT}/start", "optimization.execute", False),
     ("POST", f"{OPT}/rasterize", "optimization.execute", False),
     ("POST", f"{OPT}/runs", "optimization.execute", False),
+    ("POST", f"{OPT}/runs/durable", "optimization.execute", False),
     ("POST", f"{OPT}/comparisons", "optimization.execute", False),
     ("POST", f"{OPT}/comparisons-v2", "optimization.execute", False),
     # Selección y liberación
@@ -89,6 +90,7 @@ ROUTES = [
     ("POST", f"{OPT}/comparisons-v2/1/confirm", "optimization.confirm", True),
     # Resultados: lectura
     ("GET", f"{OPT}/runs/1", "optimization.view", False),
+    ("GET", f"{OPT}/runs/durable/1", "optimization.view", False),
     ("GET", f"{OPT}/runs/1/visual", "optimization.view", False),
     ("GET", f"{OPT}/runs/1/visual/masks/{MASK}", "optimization.view", False),
     ("GET", f"{OPT}/comparisons/requests/{KEY}", "optimization.view", False),
@@ -203,6 +205,7 @@ def spied_dependencies() -> list:
         get_start_use_case,
     )
     from app.modules.optimization.presentation.run_routes import (
+        get_durable_run_uow,
         get_run_admission,
         get_run_calculator,
         get_run_unit_of_work,
@@ -226,7 +229,7 @@ def spied_dependencies() -> list:
         get_client_repository, get_create_order_use_case, get_order_use_case,
         get_list_orders_use_case, get_update_order_use_case, get_cancel_order_use_case,
         get_start_use_case, get_rasterize_use_case, get_run_unit_of_work, get_run_calculator,
-        get_stock_counter, get_run_admission, get_visual_store, get_comparison_uow,
+        get_stock_counter, get_run_admission, get_visual_store, get_durable_run_uow, get_comparison_uow,
         get_comparison_runtime, get_comparison_v2_uow, get_comparison_v2_coordinator,
     ]
 
@@ -312,13 +315,13 @@ def is_protected(route) -> bool:
 # --- Coherencia de la matriz con la SPEC y con ASIGNACION_INICIAL ---
 
 def test_matrix_has_the_totals_of_the_spec():
-    """Matriz con EN-UX-004 y EN-CONC-001, con 29 rutas críticas y 45 rechazos."""
-    assert len(ROUTES) == 62
-    assert len({(method, path) for method, path, *_ in ROUTES}) == 62
+    """Matriz con FF durable, con 29 rutas críticas y 46 rechazos."""
+    assert len(ROUTES) == 64
+    assert len({(method, path) for method, path, *_ in ROUTES}) == 64
     assert sum(critical for *_, critical in ROUTES) == 29
     denied = {role: sum(role not in EXPECTED_ROLES[permission] for _, _, permission, _ in ROUTES)
               for role in ROLES}
-    assert denied == {ADMIN: 0, WAREHOUSE: 30, OPERATOR: 15}
+    assert denied == {ADMIN: 0, WAREHOUSE: 31, OPERATOR: 15}
     assert {permission for _, _, permission, _ in ROUTES} - {None} == CODIGOS
 
 
@@ -336,7 +339,7 @@ def test_matrix_covers_exactly_the_protected_routes_of_the_app():
     protected = {(method, resolved_path)
                  for resolved_path, route in resolved_api_routes() if is_protected(route)
                  for method in route.methods}
-    assert len(protected) == 62, sorted(protected)
+    assert len(protected) == 64, sorted(protected)
     matrix = {(method, matching_route(method, path)[0]) for method, path, *_ in ROUTES}
     assert matrix == protected
 
