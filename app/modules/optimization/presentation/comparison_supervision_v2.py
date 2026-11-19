@@ -19,7 +19,6 @@ from ..infrastructure.process_lifecycle import process_identity, process_scope
 from ..infrastructure.sequential_runner import SequentialProcessRunner
 from ..infrastructure.visual_store import InMemoryVisualStore
 from ..infrastructure.run_snapshot import json_value
-from ..infrastructure.worker_jobs import WorkerClaim
 
 logger = logging.getLogger(__name__)
 
@@ -293,6 +292,7 @@ class ComparisonV2Coordinator:
                         tx.orders.transition(current.problem.order_ids,"EN_OPTIMIZACION",
                             "PENDIENTE" if cancelled else
                             "OPTIMIZADO" if any(e.eligible for e in current.executions) else "PENDIENTE")
+                        from ..infrastructure.worker_jobs import WorkerClaim
                         options = {"claim": job.claim} if isinstance(job.claim, WorkerClaim) else {}
                         current=tx.comparisons_v2.record_supervisor_stopped(current.comparison_id,
                             datetime.now(timezone.utc),current.version,**options)
