@@ -15,7 +15,7 @@ def test_single_integrated_head_and_complete_history():
     scripts = ScriptDirectory.from_config(config)
     assert scripts.get_heads() == ["s2conc01b210"]
     chain = list(scripts.walk_revisions())
-    assert len(chain) == 18
+    assert len(chain) == 19
     assert chain[-1].down_revision is None
     assert all(not revision.is_merge_point for revision in chain)
 
