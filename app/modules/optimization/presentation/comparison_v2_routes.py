@@ -7,6 +7,7 @@ from pydantic import Field
 
 from fastapi import APIRouter, Depends, Header, Path, Query, Response
 from starlette.concurrency import run_in_threadpool
+from app.modules.authentication.presentation.dependencies import get_database_session
 
 from ..application.errors import RunError
 from ..application.comparison_confirmation import ConfirmComparisonV2
@@ -21,6 +22,7 @@ from .comparison_v2_serialization import comparison_response_v2, execution_respo
 from .run_auth import run_permission
 from .run_routes import RunRoute, visual_response
 from .run_schemas import ContractV1, RunRequestV1
+from .progress import Cursor, PageSize, ProgressPage, admit_progress_reader, read_progress
 from .visual_serialization import describe_record
 
 Id=Annotated[int,Path(gt=0,le=2147483647)]
@@ -146,6 +148,14 @@ def get_execution(comparison_id:Id,execution_id:Id,response:Response,
                   uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
     current=load(comparison_id,user.user_id,uow,coordinator,response=response,allow_blocked=True)
     return execution_response_v2(current,execution_in(current,execution_id))
+
+
+@router.get('/{comparison_id}/progress', response_model=ProgressPage,
+            dependencies=[Depends(admit_progress_reader, scope="function")])
+def comparison_progress(comparison_id: Id, response: Response, after_sequence: Cursor = None, limit: PageSize = 16,
+        user=Depends(run_permission('optimization.view')), db=Depends(get_database_session, scope="function")):
+    return read_progress(db, comparison_id, user.user_id, profile="V2", after_sequence=after_sequence,
+                         limit=limit, response=response)
 
 
 @router.put('/{comparison_id}/selection', response_model=ComparisonSummaryV2)

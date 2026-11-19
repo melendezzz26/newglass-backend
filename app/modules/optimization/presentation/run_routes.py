@@ -3,7 +3,7 @@ import logging
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Query, Response
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, OperationalError, TimeoutError as PoolTimeout
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
@@ -17,6 +17,8 @@ from .confirmation_serialization import confirmation_response
 from .run_serialization import run_response
 from .run_stream import LiveRunStream, RunStreamingResponse
 from .run_auth import run_permission
+from app.modules.authentication.presentation.dependencies import get_database_session
+from .progress import Cursor, PageSize, ProgressPage, admit_progress_reader, read_progress
 from ..application.visual import MAX_RESPONSE_BYTES, mask_window
 from .visual_schemas import VisualManifestV2, VisualMaskV2
 from .visual_serialization import describe_record
@@ -39,7 +41,7 @@ class RunRoute(APIRoute):
                           "LOAD_LIMIT_EXCEEDED":422, "OPTIMIZER_BUSY":503,
                           "VISUAL_DATA_UNAVAILABLE":410, "RESOURCE_UNAVAILABLE":503,
                           "EVENT_CURSOR_EXPIRED":409, "COMPARISON_PROFILE_MISMATCH":409,
-                          "RECOVERY_BLOCKED":503, "FORBIDDEN":403}.get(error.code,500)
+                          "RECOVERY_BLOCKED":503, "FORBIDDEN":403, "PROGRESS_BUSY":429}.get(error.code,500)
                 # TA-037: public details (e.g. limit) only; internals stay in the server log.
                 retry = getattr(error, "retry_after", None)
                 raise HTTPException(status, detail=dict(code=error.code, message=error.message,
@@ -48,8 +50,13 @@ class RunRoute(APIRoute):
             except HTTPException as error:
                 code = {401:"UNAUTHENTICATED",403:"FORBIDDEN",404:"NOT_FOUND",422:"INVALID_INPUT"}.get(error.status_code,"INTERNAL_ERROR")
                 raise HTTPException(error.status_code, detail=dict(code=code, message=str(error.detail)), headers=error.headers) from error
-            except DBAPIError as error:
-                if getattr(error.orig, "sqlstate", None) in ("40001", "40P01", "55P03"):
+            except (DBAPIError, PoolTimeout) as error:
+                sqlstate = getattr(getattr(error, "orig", None), "sqlstate", None)
+                if request.url.path.endswith("/progress") and (isinstance(error, (OperationalError, PoolTimeout))
+                                                                or sqlstate == "57014"):
+                    raise HTTPException(503, detail=dict(code="RESOURCE_UNAVAILABLE",
+                        message="El progreso no está disponible temporalmente."), headers={"Retry-After": "1"}) from error
+                if sqlstate in ("40001", "40P01", "55P03"):
                     raise HTTPException(409, detail=dict(code="STATE_CONFLICT", message="La operación entró en conflicto. Revisa el resultado antes de reintentar.")) from error
                 logger.exception("Run database operation failed")
                 raise HTTPException(500, detail=dict(code="INTERNAL_ERROR", message="No se pudo completar la operación.")) from error
@@ -145,6 +152,15 @@ def get_durable_run(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)], 
         state = tx.worker_jobs.status(id_optimizacion) or "RECOVERY_BLOCKED"
     response.headers["Cache-Control"] = "no-store"
     return durable_run_status(id_optimizacion, state)
+
+
+@router.get("/durable/{id_optimizacion}/progress", response_model=ProgressPage,
+            dependencies=[Depends(admit_progress_reader, scope="function")])
+def durable_progress(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)], response: Response,
+        after_sequence: Cursor = None, limit: PageSize = 16, user=Depends(run_permission("optimization.view")),
+        db=Depends(get_database_session, scope="function")):
+    return read_progress(db, id_optimizacion, user.user_id, profile="FF", after_sequence=after_sequence,
+                         limit=limit, response=response)
 
 
 @router.post("", status_code=201, response_class=StreamingResponse,

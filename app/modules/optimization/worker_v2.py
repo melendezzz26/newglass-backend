@@ -162,6 +162,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
             require_pilot(tx.session)
         logger.info("worker_v2_ready max_active=%s pool_limit=%s", self.max_active, self.pool.size())
         stopping_at = None
+        maintenance_at = monotonic() + 15
         try:
             while True:
                 if stop.is_set():
@@ -173,6 +174,12 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                     if monotonic() >= stopping_at:
                         break
                 try:
+                    if monotonic() >= maintenance_at:
+                        maintenance_at = monotonic() + 15
+                        with self.uow() as tx:
+                            tx.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
+                            tx.worker_jobs.block_stale()
+                            tx.worker_jobs.progress.purge_expired()
                     if self.job is not None:
                         self._observe_claim(self.job)
                     elif self.max_active:

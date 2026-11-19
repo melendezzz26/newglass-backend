@@ -12,6 +12,8 @@ from ..application.admission import OptimizerBusy
 from ..application.errors import RunError
 from ..application.supervision_contracts import identity
 from .process_lifecycle import process_identity, process_scope
+from .progress import ProgressJournal
+from .stock_protection import protect_stock, release_stock
 
 HEARTBEAT_LIMIT = timedelta(seconds=10)
 
@@ -75,6 +77,7 @@ def require_durable_ff(session):
 class WorkerJobs:
     def __init__(self, session):
         self.session = session
+        self.progress = ProgressJournal(session)
 
     def require_pilot(self):
         require_pilot(self.session, protect_admission=True)
@@ -82,8 +85,11 @@ class WorkerJobs:
     def require_durable_ff(self):
         require_durable_ff(self.session)
 
-    def enqueue(self, comparison_id, *, kind="V2"):
+    def enqueue(self, comparison_id, problem, *, kind="V2"):
         self.session.add(Job(comparison_id=comparison_id, state="WAITING", kind=kind))
+        self.session.flush()
+        protect_stock(self.session, comparison_id, problem)
+        self.progress.append(comparison_id, "WAITING")
 
     def waiting_count(self):
         return self.session.scalar(select(func.count()).select_from(Job).where(Job.state == "WAITING"))
@@ -133,8 +139,12 @@ class WorkerJobs:
         return job.state
 
     def block_stale(self):
-        self.session.execute(update(Job).where(Job.state == "RUNNING",
-            Job.heartbeat_at <= func.clock_timestamp() - HEARTBEAT_LIMIT).values(state="RECOVERY_BLOCKED"))
+        blocked = self.session.execute(update(Job).where(Job.state == "RUNNING",
+            Job.heartbeat_at <= func.clock_timestamp() - HEARTBEAT_LIMIT).values(state="RECOVERY_BLOCKED")
+            .returning(Job.comparison_id, Job.kind))
+        for identifier, kind in blocked:
+            if kind in ("FF", "V2"):
+                self.progress.append(identifier, "RECOVERY_BLOCKED")
 
     def untracked_open(self):
         registered = select(Job.comparison_id).where(Job.comparison_id == Optimizacion.id_optimizacion).exists()
@@ -168,9 +178,10 @@ class WorkerJobs:
         claim = WorkerClaim(token, job.generation)
         self._record_attempt(job.comparison_id, claim, timestamp)
         self.session.flush()
+        self.progress.append(job.comparison_id, "RUNNING")
         return claim
 
-    def reserve_v1(self, identifier, token):
+    def reserve_v1(self, identifier, token, problem):
         if self.untracked_open() != [identifier]:
             raise RunError("RECOVERY_BLOCKED", "Existe otro cálculo sin dueño operativo acreditado.",
                            details={"request_accepted": False})
@@ -183,6 +194,7 @@ class WorkerJobs:
             error.details = {**error.details, "request_accepted": False}
             raise error
         self._record_attempt(identifier, WorkerClaim(token, 1), timestamp)
+        protect_stock(self.session, identifier, problem)
 
     def lookup_v1_claim(self, identifier, token):
         job = self.session.get(Job, identifier)
@@ -240,6 +252,9 @@ class WorkerJobs:
             attempt = self._assert_owner(job, timestamp, claim, recovery=isinstance(claim, RecoveredClaim))
             attempt.closed_at, attempt.closure = timestamp, closure
         job.state, job.slot = "TERMINAL", None
+        release_stock(self.session, identifier)
+        if job.kind in ("FF", "V2"):
+            self.progress.append(identifier, "TERMINAL")
 
     def blocked(self, kind):
         return self.session.scalar(select(Job).where(Job.slot == 1, Job.kind == kind,
@@ -250,6 +265,7 @@ class WorkerJobs:
         attempt = self._assert_owner(job, timestamp, claim, recovery=True)
         attempt.closed_at, attempt.closure = timestamp, "NO_DISPATCH"
         job.state, job.slot, job.owner_token, job.heartbeat_at = "WAITING", None, None, None
+        self.progress.append(identifier, "WAITING")
 
 
 def enable_pilot(tx, *, mixed=False):
@@ -275,7 +291,7 @@ def enable_pilot(tx, *, mixed=False):
             raise RunError("RECOVERY_BLOCKED", "Una comparación anterior tiene trazabilidad inválida.") from error
         if not current.waiting:
             raise RunError("RECOVERY_BLOCKED", "Existe una comparación anterior con cierre sin acreditar.")
-        tx.worker_jobs.enqueue(identifier)
+        tx.worker_jobs.enqueue(identifier, current.problem)
         adopted += 1
     policy.pilot = True
     policy.mixed = mixed

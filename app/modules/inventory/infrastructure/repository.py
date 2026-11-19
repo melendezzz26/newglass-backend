@@ -16,6 +16,7 @@ from app.modules.inventory.application.dto import (
 )
 from app.modules.inventory.domain.exceptions import InventoryConflictError, InventoryNotFoundError, InventoryValidationError
 from app.modules.inventory.domain.writeoff import TipoEventoBajaManual
+from app.shared.stock_protection import protected_units
 
 _MANUAL_WRITEOFF_EVENTS = tuple(event.value for event in TipoEventoBajaManual)
 
@@ -36,6 +37,7 @@ class SqlAlchemyInventoryRepository:
     def __init__(self, session_factory: Callable[[], Session]) -> None:
         self._session_factory = session_factory
         self._session: Session | None = None
+        self._locked_stock: dict[tuple[type, int], Plancha | Retazo] = {}
 
     # ------------------------------------------------------------------ #
     # Transacción                                                         #
@@ -45,6 +47,16 @@ class SqlAlchemyInventoryRepository:
         if self._session is None:
             raise RuntimeError("No active transaction — call transaction() first.")
         return self._session
+
+    def _lock_stock(self, model, identifier):
+        session = self._require_session()
+        key = model, identifier
+        row = self._locked_stock.get(key)
+        if row is None:
+            row = session.get(model, identifier, with_for_update=True, populate_existing=True)
+            if row is not None:
+                self._locked_stock[key] = row
+        return row
 
     @contextmanager
     def transaction(self) -> Generator[None, None, None]:
@@ -63,8 +75,11 @@ class SqlAlchemyInventoryRepository:
             session.rollback()
             raise
         finally:
-            session.close()
-            self._session = None
+            try:
+                session.close()
+            finally:
+                self._locked_stock.clear()
+                self._session = None
 
     @contextmanager
     def read_transaction(self) -> Generator[None, None, None]:
@@ -83,6 +98,7 @@ class SqlAlchemyInventoryRepository:
                 try:
                     session.close()
                 finally:
+                    self._locked_stock.clear()
                     self._session = None
 
     @staticmethod
@@ -215,12 +231,7 @@ class SqlAlchemyInventoryRepository:
         return self._to_plancha(row) if row is not None else None
 
     def lock_plancha_for_update(self, id_plancha: int) -> PlanchaData | None:
-        session = self._require_session()
-        row = session.execute(
-            select(Plancha)
-            .where(Plancha.id_plancha == id_plancha)
-            .with_for_update()
-        ).scalar_one_or_none()
+        row = self._lock_stock(Plancha, id_plancha)
         return self._to_plancha(row) if row is not None else None
 
     def has_manual_writeoff_plancha(self, id_plancha: int) -> bool:
@@ -311,9 +322,15 @@ class SqlAlchemyInventoryRepository:
 
     def save_plancha(self, data: PlanchaData) -> PlanchaData:
         session = self._require_session()
-        row = session.get(Plancha, data.id_plancha)
+        row = self._lock_stock(Plancha, data.id_plancha)
         if row is None:
             raise InventoryNotFoundError(f"Plancha {data.id_plancha} no encontrada.")
+        changed_shape = (data.ancho_mm, data.alto_mm, data.id_tipo_vidrio, data.espesor_mm) != (
+            row.ancho_mm, row.alto_mm, row.id_tipo_vidrio, row.espesor_mm)
+        if changed_shape or not data.estado or data.cantidad < row.cantidad:
+            minimum = protected_units(session, "PLANCHA", [data.id_plancha]).get(data.id_plancha, 0)
+            if minimum and (changed_shape or not data.estado or data.cantidad < minimum):
+                raise InventoryConflictError("La plancha tiene unidades protegidas por una optimización pendiente.")
         row.ancho_mm = data.ancho_mm
         row.alto_mm = data.alto_mm
         row.espesor_mm = data.espesor_mm
@@ -333,12 +350,7 @@ class SqlAlchemyInventoryRepository:
         return self._to_retazo(row) if row is not None else None
 
     def lock_retazo_for_update(self, id_retazo: int) -> RetazoData | None:
-        session = self._require_session()
-        row = session.execute(
-            select(Retazo)
-            .where(Retazo.id_retazo == id_retazo)
-            .with_for_update()
-        ).scalar_one_or_none()
+        row = self._lock_stock(Retazo, id_retazo)
         return self._to_retazo(row) if row is not None else None
 
     def has_manual_writeoff_retazo(self, id_retazo: int) -> bool:
@@ -437,12 +449,17 @@ class SqlAlchemyInventoryRepository:
 
     def save_retazo(self, data: RetazoData) -> RetazoData:
         session = self._require_session()
-        row = session.get(Retazo, data.id_retazo)
+        row = self._lock_stock(Retazo, data.id_retazo)
         if row is None:
             raise InventoryNotFoundError(f"Retazo {data.id_retazo} no encontrado.")
+        geometry = self._encode_geometria(data.geometria)
+        if not data.estado or (geometry, data.id_tipo_vidrio, data.espesor_mm) != (
+                row.geometria, row.id_tipo_vidrio, row.espesor_mm):
+            if protected_units(session, "RETAZO", [data.id_retazo]):
+                raise InventoryConflictError("El retazo está protegido por una optimización pendiente.")
         row.codigo = data.codigo
         row.espesor_mm = data.espesor_mm
-        row.geometria = deepcopy(self._encode_geometria(data.geometria)) # type: ignore
+        row.geometria = deepcopy(geometry) # type: ignore
         row.area_mm2 = data.area_mm2
         row.estado = data.estado
         row.id_tipo_vidrio = data.id_tipo_vidrio

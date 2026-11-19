@@ -48,6 +48,10 @@ class DurableFFWork:
                             # The intent commits before Process.start, and the child waits at its gate.
                             tx.worker_jobs.record_ff_dispatch(self.identifier, self.claim,
                                                               process=data.get("identity"))
+                    elif kind == "started":
+                        with uow() as tx:
+                            tx.worker_jobs.require_owner_if_registered(self.identifier, self.claim, required=True, kind="FF")
+                            tx.worker_jobs.progress.append(self.identifier, "ENGINE_STARTED", execution_id=self.scope.execution_id)
             if terminal is None or not self.runner.last_report["all_workers_stopped"]:
                 raise WorkersNotStopped("FF process closure remains unverified")
             self._persist_closed(uow, terminal)
@@ -65,6 +69,9 @@ class DurableFFWork:
                         tx.runs.fail(self.identifier, terminal.payload.diagnostic.termination_reason, claim=self.claim)
                     else:
                         tx.runs.save_result(self.identifier, terminal.payload.result, terminal.residuals, claim=self.claim)
+                    if terminal.engine_started:
+                        tx.worker_jobs.progress.append(self.identifier, "ENGINE_FINISHED",
+                            execution_id=self.scope.execution_id, reason=terminal.payload.diagnostic.termination_reason)
                     # Publish the business result, order state, and closure in a single commit.
                     tx.worker_jobs.finish_if_registered(self.identifier, self.claim)
                 return

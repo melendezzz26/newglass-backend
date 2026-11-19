@@ -292,6 +292,9 @@ def test_dead_worker_keeps_slot_and_fences_stale_token(worker_db):
             return db.get(OptimizationWorkerJob, first).state
 
     wait_for(persisted_state, lambda state: state == "RECOVERY_BLOCKED")
+    progress = owned_get(client, data, "A", first, "/progress")
+    assert progress.status_code == 200 and progress.json()["state"] == "RECOVERY_BLOCKED"
+    assert progress.json()["events"][-1]["kind"] == "RECOVERY_BLOCKED"
     assert queue_state(client, data, "O", second) == "WAITING"
     assert summary(client, data, "A", first)["terminal"] is False
     cancel_response = cancellation(client, data, "A", summary(client, data, "A", first))
@@ -513,6 +516,7 @@ def test_mixed_policy_excludes_v1_and_v2_both_ways_and_cancels_bf(worker_db):
     assert result.status_code == 201, result.text
     v1_id = result.json()["comparison_id"]
     wait_for(data.services.v1_ready.exists, bool)
+    assert b.patch("/api/inventory/planchas/1", headers=data.headers["L"], json={"cantidad": 0}).status_code == 409
     assert b.get(f"{path}/{v1_id}", headers=data.headers["O"]).status_code == 404
     assert v1(b, "A", "qa-mixed-first", data.orders["A"]).json()["comparison_id"] == v1_id
     v2_id = accept(b, data, "O").json()["comparison_id"]
@@ -826,7 +830,7 @@ def test_ff_worker_death_after_atomic_result_preserves_result_and_frees_slot(wor
     assert api.get(f"{RUNS}/{identifier}", headers=data.headers["A"]).json() == before
     assert operational_attempt(data, identifier, 2) is None
     reversed_revision = downgrade(data.engine, "s2conc01b200")
-    assert reversed_revision.returncode != 0 and "Durable FF history must be retained" in reversed_revision.stderr
+    assert reversed_revision.returncode != 0 and "Keep progress cursors and open stock protections" in reversed_revision.stderr
     assert inventory(data) == (1, 0, 0)
 
 

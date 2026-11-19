@@ -25,7 +25,7 @@ from app.modules.authentication.infrastructure.sqlalchemy_login_attempt_store im
 from tests.integration.postgres_support import BACKEND, _run, new_database, upgrade
 from tests.model_contracts import current_metadata
 
-HEAD = "s2conc01b210"
+HEAD = "s2conc01b300"
 PREVIOUS = "s2cmp02d4e6f8"
 NOW = datetime(2026, 11, 18, 12, 0, tzinfo=timezone.utc)
 

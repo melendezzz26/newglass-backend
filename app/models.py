@@ -412,6 +412,47 @@ class OptimizationWorkerAttempt(Base):
     closure: Mapped[str | None] = mapped_column(String(32))
 
 
+class OptimizationProgressStream(Base):
+    __tablename__ = "optimization_progress_streams"
+    __table_args__ = (CheckConstraint("last_sequence > 0", name="ck_optimization_progress_sequence"),)
+
+    job_id: Mapped[int] = mapped_column(ForeignKey("optimization_worker_jobs.comparison_id", ondelete="CASCADE"),
+                                        primary_key=True, autoincrement=False)
+    last_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    active_execution_id: Mapped[int | None] = mapped_column(ForeignKey("ejecuciones_optimizacion.id_ejecucion"))
+
+
+class OptimizationProgressEvent(Base):
+    __tablename__ = "optimization_progress_events"
+    __table_args__ = (CheckConstraint("sequence > 0", name="ck_optimization_progress_event_sequence"),
+        CheckConstraint("kind IN ('WAITING', 'RUNNING', 'RECOVERY_BLOCKED', 'TERMINAL', 'CANCELLATION_REQUESTED', "
+                        "'ENGINE_STARTED', 'ENGINE_FINISHED')", name="ck_optimization_progress_event_kind"),
+        CheckConstraint("(kind IN ('ENGINE_STARTED', 'ENGINE_FINISHED')) = (execution_id IS NOT NULL) AND "
+                        "(kind = 'ENGINE_FINISHED') = (reason IS NOT NULL)", name="ck_optimization_progress_event_data"),
+        Index("ix_optimization_progress_event_expiration", "occurred_at"))
+
+    job_id: Mapped[int] = mapped_column(ForeignKey("optimization_progress_streams.job_id", ondelete="CASCADE"),
+                                        primary_key=True, autoincrement=False)
+    sequence: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    execution_id: Mapped[int | None] = mapped_column(ForeignKey("ejecuciones_optimizacion.id_ejecucion"))
+    reason: Mapped[str | None] = mapped_column(String(32))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.clock_timestamp())
+
+
+class OptimizationStockProtection(Base):
+    __tablename__ = "optimization_stock_protections"
+    __table_args__ = (CheckConstraint("source IN ('PLANCHA', 'RETAZO') AND material_id > 0 AND units > 0 "
+                                     "AND (source = 'PLANCHA' OR units = 1)", name="ck_optimization_stock_protection_shape"),
+                      Index("ix_optimization_stock_protection_material", "source", "material_id"))
+
+    job_id: Mapped[int] = mapped_column(ForeignKey("optimization_worker_jobs.comparison_id", ondelete="CASCADE"),
+                                       primary_key=True, autoincrement=False)
+    source: Mapped[str] = mapped_column(String(7), primary_key=True)
+    material_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    units: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class OptimizacionPedido(Base):
     __tablename__ = "optimizacion_pedidos"
     __table_args__ = (

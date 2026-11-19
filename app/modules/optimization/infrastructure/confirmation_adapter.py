@@ -13,6 +13,7 @@ from app.models import (Optimizacion, OptimizacionPedido, EjecucionOptimizacion,
                         MovimientoInventario, MaterialUtilizado, MetricaEjecucion)
 from app.modules.inventory.domain.geometry import calculate_area_mm2
 from app.modules.inventory.domain.exceptions import InvalidGeometryError
+from app.shared.stock_protection import protected_units
 from ..application.confirmation import ConfirmationContext, CreatedRemnant
 from ..application.errors import RunError
 from ..domain.metrics import ResidualRectangle
@@ -134,6 +135,7 @@ class SqlConfirmationRepository:
             rows = self.session.scalars(select(model).where(id_column.in_(ids)).order_by(id_column)
                                         .with_for_update().execution_options(populate_existing=True)).all()
             by_id = {getattr(r, id_column.key): r for r in rows}
+            reserved = protected_units(self.session, source.value, ids)
             for consumption in selected:
                 stock = consumption.stock
                 row = by_id.get(stock.material_id)
@@ -152,6 +154,9 @@ class SqlConfirmationRepository:
                     compatible = compatible and previous is None
                 if not compatible:
                     raise RunError("STOCK_CONFLICT", "El stock utilizado cambió o ya no está disponible.")
+                minimum = reserved.get(stock.material_id, 0)
+                if minimum and (source is MaterialSource.REMNANT or row.cantidad - consumption.quantity < minimum):
+                    raise RunError("STOCK_CONFLICT", "El stock utilizado está protegido por una optimización pendiente.")
                 self.locked[(source, stock.material_id)] = row
         proposals = self.session.scalars(select(MaterialUtilizado).where(
             MaterialUtilizado.id_ejecucion == context.execution_id).order_by(MaterialUtilizado.id_material_utilizado)
