@@ -147,7 +147,7 @@ def start_run(request: RunRequestV1, user=Depends(run_permission("optimization.e
 def get_run(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)],
             user=Depends(run_permission("optimization.view")), unit_of_work=Depends(get_run_unit_of_work)):
     with unit_of_work() as uow:
-        run = uow.runs.get(id_optimizacion)
+        run = uow.runs.get_owned(id_optimizacion, user.user_id)
     return run_response(run)
 
 
@@ -165,7 +165,7 @@ def get_visual_manifest(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647
         user=Depends(run_permission('optimization.view')), unit_of_work=Depends(get_run_unit_of_work),
         store=Depends(get_visual_store)):
     with unit_of_work() as uow:
-        uow.runs.get(id_optimizacion)
+        uow.runs.get_owned(id_optimizacion, user.user_id)
     session = store.get(id_optimizacion)
     items, revision, next_offset = session.manifest(offset, limit)
     return visual_response(VisualManifestV2(schema_version=2, id_optimizacion=id_optimizacion,
@@ -183,7 +183,7 @@ def get_visual_mask(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)],
         user=Depends(run_permission('optimization.view')), unit_of_work=Depends(get_run_unit_of_work),
         store=Depends(get_visual_store)):
     with unit_of_work() as uow:
-        uow.runs.get(id_optimizacion)
+        uow.runs.get_owned(id_optimizacion, user.user_id)
     session = store.get(id_optimizacion)
     record = session.get(mask_ref)
     window = mask_window(record, row_start=row_start, row_count=row_count,
@@ -203,4 +203,6 @@ async def require_empty_confirmation_body(request: Request):
 def confirm_run(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)],
                 user=Depends(run_permission("optimization.confirm")), unit_of_work=Depends(get_run_unit_of_work),
                 no_body=Depends(require_empty_confirmation_body)):
+    with unit_of_work() as uow:
+        uow.runs.require_owned(id_optimizacion, user.user_id)
     return confirmation_response(ConfirmRun(unit_of_work).execute(id_optimizacion, user.user_id))

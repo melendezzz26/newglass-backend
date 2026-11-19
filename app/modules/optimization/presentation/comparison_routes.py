@@ -1,5 +1,6 @@
 """Rutas comparativas. Autor: Fabricio Melendez Quezada. Revisor: Andro Quispe."""
 from typing import Annotated
+from uuid import uuid4
 from fastapi import APIRouter, Depends, Header, Path, Query, Response
 from fastapi.responses import StreamingResponse
 
@@ -46,9 +47,12 @@ def get_comparison_uow():
     return lambda: SqlComparisonUnitOfWork(SessionLocal)
 
 
-def load(identifier, uow, runtime):
+def load(identifier, uow, runtime, actor_id):
     with uow() as tx:
-        return tx.comparisons.reconcile_stopped(identifier, supervisor_stopped=runtime.stopped(identifier))
+        tx.comparisons.require_owned(identifier, actor_id)
+    stopped = runtime.stopped(identifier)
+    with uow() as tx:
+        return tx.comparisons.reconcile_stopped(identifier, supervisor_stopped=stopped)
 
 
 @router.post("", status_code=201, response_model=ComparisonSummary)
@@ -61,7 +65,7 @@ def start(request: RunRequestV1, response: Response, key: Key,
         if previous.problem.order_ids != tuple(sorted(request.order_ids)):
             raise RunError("STATE_CONFLICT", "La clave de solicitud ya corresponde a otro lote.")
         response.headers["Location"] = f"/api/optimization/comparisons/{previous.comparison_id}"
-        return comparison_response(load(previous.comparison_id, uow, runtime))
+        return comparison_response(load(previous.comparison_id, uow, runtime, user.user_id))
     try:
         admission.check_available(user.user_id, comparison=True)
         previous = AcceptComparison(uow).execute(request.order_ids, user.user_id, key, preflight_only=True)
@@ -70,23 +74,28 @@ def start(request: RunRequestV1, response: Response, key: Key,
         raise
     if previous is not None:
         response.headers["Location"] = f"/api/optimization/comparisons/{previous.comparison_id}"
-        return comparison_response(load(previous.comparison_id, uow, runtime))
+        return comparison_response(load(previous.comparison_id, uow, runtime, user.user_id))
     lease, job, accepted = admission.acquire_comparison(user.user_id), None, None
+    token, claim, tracked = uuid4().hex, None, False
     try:
         job = runtime.reserve()
-        accepted = AcceptComparison(uow).execute(request.order_ids, user.user_id, key)
+        accepted = AcceptComparison(uow).execute(request.order_ids, user.user_id, key, lease_token=token)
+        with uow() as tx:
+            tracked, claim = tx.worker_jobs.lookup_v1_claim(accepted.comparison_id, token)
         wire = comparison_response(accepted)
-        if accepted.terminal:
+        if accepted.terminal or tracked and claim is None:
             runtime.abort(job)
             lease.release()
         else:
-            runtime.start(job, accepted, uow, lease)
+            options = {"claim": claim} if claim is not None else {}
+            runtime.start(job, accepted, uow, lease, **options)
     except BaseException:
         if job is None or job.thread is None or not job.thread.is_alive():
             try:
-                if accepted is not None:
+                if accepted is not None and (not tracked or claim is not None):
                     with uow() as tx:
-                        tx.comparisons.reconcile_stopped(accepted.comparison_id, supervisor_stopped=True)
+                        options = {"claim": claim} if claim is not None else {}
+                        tx.comparisons.reconcile_stopped(accepted.comparison_id, supervisor_stopped=True, **options)
             finally:
                 if job is not None:
                     runtime.abort(job)
@@ -104,19 +113,24 @@ def request_status(key: Annotated[str, Path(min_length=8, max_length=64, pattern
         current = tx.comparisons.find_by_key(user.user_id, key)
     if current is None:
         raise RunError("NOT_FOUND", "No se encontró la solicitud comparativa.")
-    return comparison_response(load(current.comparison_id, uow, runtime))
+    return comparison_response(load(current.comparison_id, uow, runtime, user.user_id))
 
 
 @router.get("/{comparison_id}", response_model=ComparisonSummary)
-def get_comparison(comparison_id: Id, user=Depends(run_permission("optimization.view")),
+def get_comparison(comparison_id: Id, response: Response, user=Depends(run_permission("optimization.view")),
                    uow=Depends(get_comparison_uow), runtime=Depends(get_comparison_runtime)):
-    return comparison_response(load(comparison_id, uow, runtime))
+    current = load(comparison_id, uow, runtime, user.user_id)
+    if not current.terminal:
+        with uow() as tx:
+            if tx.worker_jobs.status(comparison_id) == "RECOVERY_BLOCKED":
+                response.headers["X-Comparison-Recovery"] = "BLOCKED"
+    return comparison_response(current)
 
 
 @router.get("/{comparison_id}/executions/{execution_id}", response_model=ExecutionResponse)
 def get_execution(comparison_id: Id, execution_id: Id, user=Depends(run_permission("optimization.view")),
                   uow=Depends(get_comparison_uow), runtime=Depends(get_comparison_runtime)):
-    current = load(comparison_id, uow, runtime)
+    current = load(comparison_id, uow, runtime, user.user_id)
     execution = next((e for e in current.executions if e.execution_id == execution_id), None)
     if execution is None:
         raise RunError("NOT_FOUND", "La ejecución no pertenece a esta comparación.")
@@ -127,6 +141,7 @@ def get_execution(comparison_id: Id, execution_id: Id, user=Depends(run_permissi
 def select_execution(comparison_id: Id, request: ComparisonSelection, user=Depends(run_permission("optimization.execute")),
                      uow=Depends(get_comparison_uow)):
     with uow() as tx:
+        tx.comparisons.require_owned(comparison_id, user.user_id)
         current = tx.comparisons.select(comparison_id, request.execution_id, request.expected_version)
     return comparison_response(current)
 
@@ -145,6 +160,7 @@ def confirm(comparison_id: Id, request: ComparisonSelection, key: Key, user=Depe
 def release(comparison_id: Id, request: ComparisonRelease, user=Depends(run_permission("optimization.execute")),
             uow=Depends(get_comparison_uow)):
     with uow() as tx:
+        tx.comparisons.require_owned(comparison_id, user.user_id)
         current = tx.comparisons.release(comparison_id, request.expected_version, user.user_id)
     return comparison_response(current)
 
@@ -152,7 +168,7 @@ def release(comparison_id: Id, request: ComparisonRelease, user=Depends(run_perm
 @router.get("/{comparison_id}/events")
 def events(comparison_id: Id, after_sequence: Annotated[int, Query(ge=0)] = 0,
            user=Depends(run_permission("optimization.view")), uow=Depends(get_comparison_uow), runtime=Depends(get_comparison_runtime)):
-    load(comparison_id, uow, runtime)
+    load(comparison_id, uow, runtime, user.user_id)
     job = runtime.get(comparison_id)
     job.check_cursor(after_sequence)
     observer = job.observe()
@@ -162,7 +178,7 @@ def events(comparison_id: Id, after_sequence: Annotated[int, Query(ge=0)] = 0,
 @router.get("/{comparison_id}/executions/{execution_id}/visual")
 def manifest(comparison_id: Id, execution_id: Id, offset: Annotated[int, Query(ge=0, le=1024)] = 0,
              user=Depends(run_permission("optimization.view")), uow=Depends(get_comparison_uow), runtime=Depends(get_comparison_runtime)):
-    load(comparison_id, uow, runtime)
+    load(comparison_id, uow, runtime, user.user_id)
     import json
     data = json.dumps(runtime.get(comparison_id).manifest(execution_id, offset), separators=(",", ":"), allow_nan=False)
     if len(data.encode()) > 256 * 1024:
@@ -176,7 +192,7 @@ def mask(comparison_id: Id, execution_id: Id, reference: Annotated[str, Path(pat
          row_count: Annotated[int | None, Query(gt=0, le=256)] = None,
          column_count: Annotated[int | None, Query(gt=0, le=1024)] = None,
          user=Depends(run_permission("optimization.view")), uow=Depends(get_comparison_uow), runtime=Depends(get_comparison_runtime)):
-    load(comparison_id, uow, runtime)
+    load(comparison_id, uow, runtime, user.user_id)
     job = runtime.get(comparison_id)
     method, session = job.session(execution_id)
     record = session.get(reference)

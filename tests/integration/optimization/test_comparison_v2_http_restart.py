@@ -17,12 +17,13 @@ from sqlalchemy import create_engine, delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import EjecucionOptimizacion, Optimizacion, OptimizationWorkerJob, Pedido, RolPermiso
+from app.models import EjecucionOptimizacion, Optimizacion, OptimizationWorkerAttempt, OptimizationWorkerJob, Pedido, RolPermiso
 from app.modules.optimization.application.comparison_acceptance_v2 import AcceptComparisonV2
+from app.modules.optimization.application.comparison_v2_contracts import ExecutionDiagnostic, ExecutionPayloadV2
 from app.modules.optimization.application.errors import RunError
 from app.modules.optimization.infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
-from app.modules.optimization.infrastructure.process_lifecycle import process_identity
-from app.modules.optimization.infrastructure.worker_jobs import enable_pilot, pilot_enabled, require_legacy_admission
+from app.modules.optimization.infrastructure.process_lifecycle import process_identity, process_scope
+from app.modules.optimization.infrastructure.worker_jobs import WorkerClaim, enable_pilot, pilot_enabled, require_legacy_admission
 from app.modules.optimization.presentation.comparison_supervision_v2 import authorize_actor
 from tests.integration.postgres_support import BACKEND, new_database, upgrade
 from .test_comparison_queue_v2 import BASE, inventory, prepare_queue_data
@@ -47,6 +48,8 @@ class Services:
                                 DATABASE_URL=engine.url.render_as_string(hide_password=False))
         self.workers = {}
         self.resume_file = path / "resume-ff"
+        self.v1_resume = path / "resume-v1"
+        self.v1_ready = path / "v1-ready"
 
     def start(self, name, args, **environment):
         log = self.stack.enter_context((self.path / f"{name}.log").open("w", encoding="utf8"))
@@ -66,12 +69,17 @@ class Services:
                 process.wait(timeout=5)
                 pytest.fail("A test-owned service required a forced shutdown")
 
-    def api(self, name):
+    def api(self, name, *, hold_v1=False):
         with socket.socket() as reservation:
             reservation.bind(("127.0.0.1", 0))
             port = reservation.getsockname()[1]
-        process = self.start(name, ["-m", "uvicorn", "main:app", "--host", "127.0.0.1",
-                                   "--port", str(port), "--workers", "1", "--no-access-log"])
+        if hold_v1:
+            command = f"from tests.e2e_cancellation_worker import run_gated_v1_api; run_gated_v1_api({port})"
+            process = self.start(name, ["-c", command], QA_RECOVERY_READY=str(self.v1_ready),
+                                 QA_RESUME_ENGINE=str(self.v1_resume))
+        else:
+            process = self.start(name, ["-m", "uvicorn", "main:app", "--host", "127.0.0.1",
+                                       "--port", str(port), "--workers", "1", "--no-access-log"])
         client = self.stack.enter_context(httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=8))
 
         def ready():
@@ -84,14 +92,22 @@ class Services:
         wait_for(ready, bool, seconds=25)
         return process, client
 
-    def worker(self, name, *, hold=None):
+    def worker(self, name, *, hold=None, method="FF"):
         if hold is None:
             args, environment = ["-m", "app.modules.optimization.worker_v2"], {}
         else:
             args = ["-c", "from tests.e2e_cancellation_worker import run_gated_worker; run_gated_worker()"]
-            environment = {"QA_HOLD_ORDER": str(hold), "QA_RESUME_ENGINE": str(self.resume_file)}
+            environment = {"QA_HOLD_ORDER": str(hold), "QA_RESUME_ENGINE": str(self.resume_file), "QA_HOLD_METHOD": method}
         process = self.start(name, args, **environment)
         self.workers[process.pid] = process
+        return process
+
+    def recovery_worker(self, name, phase):
+        ready = self.path / f"{name}-ready"
+        args = ["-c", "from tests.e2e_cancellation_worker import run_recovery_worker; run_recovery_worker()"]
+        process = self.start(name, args, QA_RECOVERY_READY=str(ready), QA_RESUME_ENGINE=str(self.path / f"{name}-resume"),
+                             QA_RECOVERY_PHASE=phase)
+        wait_for(ready.exists, bool)
         return process
 
     def read_log(self, name):
@@ -143,16 +159,16 @@ def cancellation(client, data, actor, current):
                        json={"expected_version": current["version"]})
 
 
-def activate(data):
+def activate(data, *, mixed=False):
     with data.uow() as tx:
-        return enable_pilot(tx)
+        return enable_pilot(tx, mixed=mixed)
 
 
 def test_two_apis_two_reclaimers_and_api_restart_do_not_interrupt_calculation(worker_db):
     data = worker_db
     assert activate(data) == 0
     a_server, api_a = data.services.api("api-a")
-    _, api_b = data.services.api("api-b")
+    b_server, api_b = data.services.api("api-b")
     assert api_b.get("/api/inventory/planchas", headers=data.headers["L"]).status_code == 200
     assert accept(api_b, data, "L").status_code == 403
     assert api_a.post("/api/optimization/runs", headers=data.headers["A"],
@@ -194,14 +210,18 @@ def test_two_apis_two_reclaimers_and_api_restart_do_not_interrupt_calculation(wo
             "WHERE datname = current_database() AND application_name IN ('worker-one', 'worker-two') "
             "AND state = 'idle in transaction' AND clock_timestamp() - xact_start > interval '1 second'"))
         assert open_during_calculation == 0
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as duplicated:
         with data.sessions.begin() as db:
             contender = db.get(OptimizationWorkerJob, ids[second])
             contender.state, contender.slot, contender.owner_token = "RUNNING", 1, uuid4().hex
             contender.heartbeat_at = datetime.now(timezone.utc)
+            contender.generation = 1
+    assert duplicated.value.orig.diag.constraint_name == "uq_optimization_worker_global_slot"
 
     data.services.stop(a_server)
+    data.services.stop(b_server)
     _, restarted = data.services.api("api-a-restarted")
+    _, api_b = data.services.api("api-b-restarted")
     assert queue_state(restarted, data, first, ids[first]) == "RUNNING"
     assert process_identity(engine_identity["pid"]) == engine_identity
     data.services.resume_file.touch()
@@ -274,6 +294,8 @@ def test_dead_worker_keeps_slot_and_fences_stale_token(worker_db):
     wait_for(persisted_state, lambda state: state == "RECOVERY_BLOCKED")
     assert queue_state(client, data, "O", second) == "WAITING"
     assert summary(client, data, "A", first)["terminal"] is False
+    cancel_response = cancellation(client, data, "A", summary(client, data, "A", first))
+    assert cancel_response.status_code == 202 and cancel_response.json()["cancel_state"] == "REQUESTED"
     for stale_token in (owner["token"], uuid4().hex):
         with pytest.raises(RunError) as refused:
             with data.uow() as tx:
@@ -393,3 +415,156 @@ def test_hidden_pilot_policy_rejects_legacy_admission(worker_db):
             require_legacy_admission(db)
         assert refused.value.code == "RESOURCE_UNAVAILABLE"
         assert refused.value.details["request_accepted"] is False
+
+
+def operational_attempt(data, comparison, generation):
+    with data.sessions() as db:
+        return db.get(OptimizationWorkerAttempt, (comparison, generation))
+
+
+def test_live_stale_owner_blocks_then_pre_dispatch_death_allows_one_new_generation(worker_db):
+    data = worker_db
+    activate(data)
+    _, api = data.services.api("api-generation")
+    identifier = accept(api, data, "A").json()["comparison_id"]
+    old = data.services.recovery_worker("owner-old", "BEFORE")
+    initial = operational_attempt(data, identifier, 1)
+    assert initial.owner_identity == process_identity(old.pid)
+    old.send_signal(signal.SIGSTOP)
+    try:
+        next_order = accept(api, data, "O").json()["comparison_id"]
+        data.services.worker("owner-new", hold=data.orders["A"])
+        wait_for(lambda: queue_state(api, data, "A", identifier), lambda state: state == "RECOVERY_BLOCKED")
+        assert queue_state(api, data, "O", next_order) == "WAITING"
+        assert process_identity(old.pid) == initial.owner_identity
+        assert operational_attempt(data, identifier, 2) is None
+    finally:
+        old.send_signal(signal.SIGCONT)
+    (data.services.path / "owner-old-resume").touch()
+    wait_for(lambda: data.services.read_log("owner-old"), lambda value: "V2 supervisor stopped with an error" in value)
+    assert queue_state(api, data, "A", identifier) == "RECOVERY_BLOCKED"
+    assert not summary(api, data, "A", identifier)["terminal"]
+    old.kill()
+    old.wait(timeout=5)
+    resumed = wait_running(api, data, "A", identifier)
+    first, second = [operational_attempt(data, identifier, n) for n in (1, 2)]
+    assert first.closure == "NO_DISPATCH" and first.closed_at is not None
+    for stale in (WorkerClaim(first.owner_token, 1), WorkerClaim(second.owner_token, 1)):
+        with pytest.raises(RunError) as refused:
+            with data.uow() as tx:
+                tx.comparisons_v2.record_worker(identifier, resumed["executions"][0]["execution_id"], stale, None)
+        assert refused.value.code in ("RECOVERY_BLOCKED", "STATE_CONFLICT")
+    with pytest.raises(RunError) as unbound:
+        with data.uow() as tx:
+            current = tx.comparisons_v2.get(identifier)
+            ff = current.executions[0]
+            payload = ExecutionPayloadV2(method="FF", result=None, diagnostic=ExecutionDiagnostic(
+                origin="SUPERVISOR", termination_reason="EXECUTION_FAILED", statistics={}))
+            tx.comparisons_v2.save_execution(identifier, ff.execution_id, payload, (), current.version)
+    assert unbound.value.code == "RECOVERY_BLOCKED"
+    assert accept(api, data, "A").json()["comparison_id"] == identifier
+    data.services.resume_file.touch()
+    wait_for(lambda: queue_state(api, data, "A", identifier), lambda state: state == "TERMINAL")
+    wait_for(lambda: queue_state(api, data, "O", next_order), lambda state: state == "TERMINAL")
+    assert operational_attempt(data, identifier, 2).closure == "JOINED"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_death_after_committed_join_preserves_v4_result_and_closes_without_retry(worker_db):
+    data = worker_db
+    activate(data)
+    _, api = data.services.api("api-after-result")
+    identifier = accept(api, data, "A").json()["comparison_id"]
+    owner = data.services.recovery_worker("owner-after-result", "AFTER")
+    current = summary(api, data, "A", identifier)
+    ff = current["executions"][0]
+    assert ff["complete"] and not current["terminal"]
+    with data.sessions() as db:
+        result = db.get(EjecucionOptimizacion, ff["execution_id"]).patron_resultado
+        assert result["snapshot"]["snapshot_version"] == 4
+    owner.kill()
+    owner.wait(timeout=5)
+    data.services.worker("owner-recovery")
+    wait_for(lambda: queue_state(api, data, "A", identifier), lambda state: state == "TERMINAL")
+    closed = summary(api, data, "A", identifier)
+    assert closed["supervisor_stopped"] and closed["executions"][0]["eligible"]
+    assert {job["diagnostic"]["termination_reason"] for job in closed["executions"][1:]} == {"WORKER_STOPPED"}
+    assert operational_attempt(data, identifier, 1).closure == "DURABLE_JOIN"
+    assert operational_attempt(data, identifier, 2) is None
+    with data.sessions() as db:
+        assert db.get(EjecucionOptimizacion, ff["execution_id"]).patron_resultado == result
+        assert db.get(Pedido, data.orders["A"]).estado == "OPTIMIZADO"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_mixed_policy_excludes_v1_and_v2_both_ways_and_cancels_bf(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    data.services.stack.callback(data.services.v1_resume.touch)
+    _, a = data.services.api("mixed-v1", hold_v1=True)
+    data.services.stack.callback(data.services.v1_resume.touch)
+    _, b = data.services.api("mixed-v2")
+    path = "/api/optimization/comparisons"
+
+    def v1(client, actor, key, order):
+        return client.post(path, headers={**data.headers[actor], "Idempotency-Key": key}, json={"order_ids": [order]})
+
+    result = v1(a, "A", "qa-mixed-first", data.orders["A"])
+    assert result.status_code == 201, result.text
+    v1_id = result.json()["comparison_id"]
+    wait_for(data.services.v1_ready.exists, bool)
+    assert b.get(f"{path}/{v1_id}", headers=data.headers["O"]).status_code == 404
+    assert v1(b, "A", "qa-mixed-first", data.orders["A"]).json()["comparison_id"] == v1_id
+    v2_id = accept(b, data, "O").json()["comparison_id"]
+    data.services.worker("mixed-worker-a", hold=data.orders["O"], method="BF")
+    data.services.worker("mixed-worker-b", hold=data.orders["O"], method="BF")
+    busy = v1(b, "O", "qa-other-v1", data.orders["L"])
+    assert busy.status_code == 503 and busy.json()["detail"]["code"] == "OPTIMIZER_BUSY"
+    assert queue_state(b, data, "O", v2_id) == "WAITING"
+    data.services.v1_resume.touch()
+    result = wait_for(lambda: b.get(f"{path}/{v1_id}", headers=data.headers["A"]).json(),
+                      lambda row: row.get("terminal") is True)
+    assert len(result["executions"]) == 3 and all(e["complete"] for e in result["executions"])
+    running = wait_for(lambda: summary(b, data, "O", v2_id),
+                       lambda row: row["executions"][1]["dispatch_state"] == "RUNNING")
+    busy = v1(a, "A", "qa-v2-is-active", data.orders["L"])
+    assert busy.status_code == 503 and busy.json()["detail"]["code"] == "OPTIMIZER_BUSY"
+    rejected = b.post("/api/optimization/runs", headers=data.headers["O"], json={"order_ids": [data.orders["L"]]})
+    assert rejected.status_code == 503 and rejected.json()["detail"]["code"] == "RESOURCE_UNAVAILABLE"
+    assert cancellation(a, data, "O", running).status_code == 202
+    wait_for(lambda: queue_state(b, data, "O", v2_id), lambda state: state == "TERMINAL")
+    closed = summary(b, data, "O", v2_id)
+    assert closed["cancellation_status"] == "CANCELLED" and closed["executions"][0]["complete"]
+    assert operational_attempt(data, v1_id, 1).closure == "JOINED"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_upgrade_keeps_2b1_current_and_waiting_records_without_rewriting_snapshots(isolated_postgres):
+    with new_database(isolated_postgres) as engine:
+        result = upgrade(engine, "s2conc01b100")
+        assert result.returncode == 0, result.stderr
+        data = prepare_queue_data(engine)
+        data.uow = partial(SqlComparisonPersistenceUnitOfWork, data.sessions)
+        active = accept_2a(data, "A", "pre-fencing-active").comparison_id
+        waiting = accept_2a(data, "O", "pre-fencing-waiting").comparison_id
+        token = uuid4().hex
+        with data.sessions.begin() as db:
+            row = db.get(Optimizacion, active)
+            runtime = {**row.comparison_snapshot["runtime"], "owner_scope": process_scope(),
+                       "supervisor": {"token": token, "identity": process_identity(os.getpid())}}
+            row.comparison_snapshot = {**row.comparison_snapshot, "runtime": runtime}
+            db.execute(text("INSERT INTO optimization_worker_jobs (comparison_id, state, slot, owner_token, heartbeat_at) "
+                            "VALUES (:id, 'RUNNING', 1, :token, clock_timestamp())"), {"id": active, "token": token})
+            db.execute(text("INSERT INTO optimization_worker_jobs (comparison_id, state) VALUES (:id, 'WAITING')"),
+                       {"id": waiting})
+            before = [db.get(Optimizacion, identifier).comparison_snapshot for identifier in (active, waiting)]
+        result = upgrade(engine, "head")
+        assert result.returncode == 0, result.stderr
+        with data.uow() as tx:
+            job = tx.session.get(OptimizationWorkerJob, active)
+            assert (job.generation, job.slot, job.owner_token) == (1, 1, token)
+            attempt = tx.session.get(OptimizationWorkerAttempt, (active, 1))
+            assert attempt.owner_identity == process_identity(os.getpid()) and attempt.closed_at is None
+            assert tx.session.get(OptimizationWorkerJob, waiting).generation == 0
+            assert tx.comparisons_v2.get(waiting).waiting
+            assert [tx.session.get(Optimizacion, identifier).comparison_snapshot for identifier in (active, waiting)] == before

@@ -12,3 +12,10 @@
 3. Separar el servicio de cálculo del ciclo de vida FastAPI. Reutilizar el supervisor secuencial y acreditar el cierre antes de liberar la plaza. Conservar el bloqueo ante pérdida de evidencia.
 4. Verificar dos APIs y dos reclamantes, reinicios, fallos de conexión, RBAC, rechazo legacy en el piloto y regresiones V3/V4.
 5. Repetir las tandas del CI y documentar el arranque local, el cambio de modo y la evidencia de recursos.
+
+## Fase 2B.2
+
+1. Agregar generación e historial de intentos y ensayar la migración de filas 2B.1 en PostgreSQL desechable.
+2. Proteger cada escritura operativa con el propietario y la generación. Separar la expiración del heartbeat de la evidencia de cierre.
+3. Incorporar al piloto mixto la admisión V1 en la misma transacción que la reserva y un único índice de plaza. Mantener cerrado FF en el piloto y verificar el rechazo de lecturas ajenas.
+4. Ejecutar los escenarios de procesos reales, caída antes y después de un resultado, restitución de conectividad, cancelación y concurrencia V1/V2. Ejecutar regresión V3/V4 y CI del SHA publicado.

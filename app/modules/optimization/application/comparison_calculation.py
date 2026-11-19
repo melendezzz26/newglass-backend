@@ -17,9 +17,10 @@ class CalculateComparison:
     def __init__(self, unit_of_work, runner):
         self.unit_of_work, self.runner = unit_of_work, runner
 
-    def execute(self, comparison_id, on_event=None, *, lease=None, cancel=None, defer_finish=False):
+    def execute(self, comparison_id, on_event=None, *, lease=None, cancel=None, defer_finish=False, claim=None):
         safe_to_release, claimed = True, False
         current, stream, observer_failed = None, None, False
+        options = {"claim": claim} if claim is not None else {}
         def emit(execution, kind, payload):
             nonlocal observer_failed
             if on_event is not None and not observer_failed:
@@ -34,7 +35,7 @@ class CalculateComparison:
         try:
             with self.unit_of_work() as tx:
                 current = tx.comparisons.get(comparison_id)
-                claimed = tx.comparisons.claim_supervisor(comparison_id, uuid4().hex,
+                claimed = tx.comparisons.claim_supervisor(comparison_id, claim or uuid4().hex,
                     getattr(self.runner, "supervisor_identity", None))
             if not claimed:
                 return current  # No recalcular un trabajo iniciado ni uno terminal.
@@ -49,23 +50,23 @@ class CalculateComparison:
                         try:
                             with self.unit_of_work() as tx:
                                 saved = tx.comparisons.save_result(comparison_id, execution.execution_id,
-                                    calculated.result, calculated.residuals)
+                                    calculated.result, calculated.residuals, **options)
                             emit(execution, "result_persisted", next(e for e in saved.executions
                                 if e.execution_id == execution.execution_id))
                         except Exception:
                             logger.exception("Comparison result could not be saved: comparison_id=%s execution_id=%s method=%s",
                                 comparison_id, execution.execution_id, execution.method)
                             with self.unit_of_work() as tx:
-                                failed = tx.comparisons.fail_execution(comparison_id, execution.execution_id, "RESULT_SAVE_FAILED")
+                                failed = tx.comparisons.fail_execution(comparison_id, execution.execution_id, "RESULT_SAVE_FAILED", **options)
                             emit(execution, "failed", next(e for e in failed.executions if e.execution_id == execution.execution_id))
                     elif packet["kind"] == "failed":
                         with self.unit_of_work() as tx:
-                            failed = tx.comparisons.fail_execution(comparison_id, execution.execution_id, packet["payload"]["code"])
+                            failed = tx.comparisons.fail_execution(comparison_id, execution.execution_id, packet["payload"]["code"], **options)
                         emit(execution, "failed", next(e for e in failed.executions if e.execution_id == execution.execution_id))
                     else:
                         if packet["kind"] == "ready":
                             with self.unit_of_work() as tx:
-                                tx.comparisons.record_worker(comparison_id, execution.execution_id, packet["payload"])
+                                tx.comparisons.record_worker(comparison_id, execution.execution_id, packet["payload"], **options)
                         emit(execution, packet["kind"], packet["payload"])
             finally:
                 if stream is not None:
@@ -74,8 +75,8 @@ class CalculateComparison:
                 current = tx.comparisons.get(comparison_id)
                 for execution in current.executions:
                     if execution.status == "EN_EJECUCION":
-                        tx.comparisons.fail_execution(comparison_id, execution.execution_id, "WORKER_STOPPED")
-                current = tx.comparisons.get(comparison_id) if defer_finish else tx.comparisons.finish_after_workers_stopped(comparison_id)
+                        tx.comparisons.fail_execution(comparison_id, execution.execution_id, "WORKER_STOPPED", **options)
+                current = tx.comparisons.get(comparison_id) if defer_finish else tx.comparisons.finish_after_workers_stopped(comparison_id, **options)
             if not defer_finish:
                 emit(None, "comparison_finished", current)
             return current
@@ -89,8 +90,8 @@ class CalculateComparison:
                     current = tx.comparisons.get(comparison_id)
                     for execution in current.executions:
                         if execution.status == "EN_EJECUCION":
-                            tx.comparisons.fail_execution(comparison_id, execution.execution_id, code)
-                    current = tx.comparisons.get(comparison_id) if defer_finish else tx.comparisons.finish_after_workers_stopped(comparison_id)
+                            tx.comparisons.fail_execution(comparison_id, execution.execution_id, code, **options)
+                    current = tx.comparisons.get(comparison_id) if defer_finish else tx.comparisons.finish_after_workers_stopped(comparison_id, **options)
                 if not defer_finish:
                     emit(None, "comparison_finished", current)
                 return current

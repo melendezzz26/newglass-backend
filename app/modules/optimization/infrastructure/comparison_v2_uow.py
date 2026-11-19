@@ -25,7 +25,7 @@ from .comparison_v2_snapshot import (RESULT_SNAPSHOT_V4, encode_comparison_input
                                      encode_result_v4, decode_comparison_result)
 from .confirmation_adapter import confirmed_residual_view
 from .process_lifecycle import process_scope
-from .worker_jobs import WorkerJobs
+from .worker_jobs import RecoveredClaim, WorkerJobs, owner_token
 from .run_snapshot import json_value
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,7 @@ def _utc(value):
 class SqlComparisonV2Repository:
     def __init__(self, session):
         self.session = session
+        self._verified_claims = {}  # Scope is one SQL unit of work.
         self.legacy = SqlComparisonRepository(session)
 
     def history_owned(self, actor_id, *, before_id=None, limit=20):
@@ -448,6 +449,7 @@ class SqlComparisonV2Repository:
 
     def set_dispatch_state(self, comparison_id, execution_id, state, expected_version):
         row, _ = self._writable(comparison_id, expected_version)
+        self._require_write_claim(comparison_id)
         execution = self.legacy._execution(comparison_id, execution_id)
         data = execution.patron_resultado
         if (data["dispatch_state"], state) not in (("QUEUED", "STARTING"), ("STARTING", "RUNNING")):
@@ -457,11 +459,18 @@ class SqlComparisonV2Repository:
         self.session.flush()
         return self.get(comparison_id)
 
-    def save_execution(self, comparison_id, execution_id, payload: ExecutionPayloadV2, residuals, expected_version):
+    def _require_write_claim(self, identifier, *, without_dispatch=False):
+        WorkerJobs(self.session).require_owner_if_registered(identifier, self._verified_claims.get(identifier),
+                                                            without_dispatch=without_dispatch)
+
+    def save_execution(self, comparison_id, execution_id, payload: ExecutionPayloadV2, residuals, expected_version,
+                       *, without_dispatch=False):
         row, current = self._writable(comparison_id, expected_version)
+        self._require_write_claim(comparison_id, without_dispatch=without_dispatch)
         execution = self.legacy._execution(comparison_id, execution_id)
         if (execution.estado != "EN_EJECUCION" or not isinstance(payload, ExecutionPayloadV2)
                 or payload.method != execution.metodo or payload.diagnostic is None
+                or without_dispatch and (payload.result is not None or current.runtime.get("supervisor") is not None)
                 or payload.result is not None and (payload.result.problem != current.problem
                     or execution.patron_resultado["dispatch_state"] != "RUNNING")):
             raise RunError("STATE_CONFLICT", "Resultado, motor o despacho no corresponde a la ejecución.")
@@ -501,6 +510,7 @@ class SqlComparisonV2Repository:
 
     def save_visual_references(self, comparison_id, execution_id, references, expected_version):
         row, _ = self._writable(comparison_id, expected_version)
+        self._require_write_claim(comparison_id)
         execution = self.legacy._execution(comparison_id, execution_id)
         try:
             refs = self._references(references, comparison_id, execution_id, execution.metodo)
@@ -520,8 +530,9 @@ class SqlComparisonV2Repository:
         runtime = stored.get('runtime', {})
         if (row.criterio_seleccion_version != 'CMP-v2' or row.fecha_fin is not None
                 or runtime.get('supervisor_stopped_at') is not None
-                or (runtime.get('supervisor') or {}).get('token') != token):
+                or (runtime.get('supervisor') or {}).get('token') != owner_token(token)):
             raise RunError('STATE_CONFLICT', 'La comparación ya no pertenece al supervisor activo.')
+        WorkerJobs(self.session).require_owner_if_registered(comparison_id, token)
         execution = self._execution(comparison_id, execution_id)
         if execution.estado != 'EN_EJECUCION':
             raise RunError('STATE_CONFLICT', 'La ejecución ya terminó.')
@@ -562,13 +573,12 @@ class SqlComparisonV2Repository:
             if own is None: raise RunError('NOT_FOUND', 'La ejecución no pertenece a esta comparación.')
         return row[0] is not None and row[1] is not None
 
-    def record_supervisor_stopped(self, comparison_id, stopped_at, expected_version):
+    def record_supervisor_stopped(self, comparison_id, stopped_at, expected_version, *, claim=None, closure="JOINED"):
         """Persist an internally observed fact; obtaining process proof belongs to B05."""
         row, current = self._writable(comparison_id, expected_version)
         if any(e.dispatch_state != "TERMINATED" for e in current.executions):
             raise RunError("STATE_CONFLICT", "Todavía hay ejecuciones sin resolver.")
-        owner = current.runtime.get("supervisor")
-        WorkerJobs(self.session).finish_if_registered(comparison_id, owner["token"] if owner else None)
+        WorkerJobs(self.session).finish_if_registered(comparison_id, claim, closure=closure)
         stamp = _utc(stopped_at)
         cancellation = row.comparison_snapshot.get("cancellation")
         if cancellation is not None:
@@ -595,7 +605,7 @@ class SqlComparisonV2Repository:
             or any(e.dispatch_state != "QUEUED" for e in current.executions)):
             return False
         WorkerJobs(self.session).require_owner_if_registered(comparison_id, token)
-        updated = {**runtime, "supervisor": dict(token=token, identity=identity(owner))}
+        updated = {**runtime, "supervisor": dict(token=owner_token(token), identity=identity(owner))}
         if current.queue_version == 1:
             updated["owner_scope"] = process_scope()
         runtime_metadata(updated, [e.execution_id for e in current.executions])
@@ -608,10 +618,22 @@ class SqlComparisonV2Repository:
         row = self.legacy._lock(comparison_id)
         current = self.get(comparison_id)
         owner = current.runtime.get("supervisor")
-        if owner is None or owner["token"] != token:
+        if owner is None or owner["token"] != owner_token(token):
             raise RunError("STATE_CONFLICT", "La comparación tiene otro dueño o no tiene identidad verificable.")
         WorkerJobs(self.session).require_owner_if_registered(comparison_id, token)
+        self._verified_claims[comparison_id] = token
         return row, current
+
+    def reset_proven_unstarted(self, comparison_id, claim):
+        row, current = self.require_supervisor(comparison_id, claim)
+        if (not isinstance(claim, RecoveredClaim) or current.cancellation or current.runtime["workers"]
+                or any(e.dispatch_state != "QUEUED" for e in current.executions)):
+            raise RunError("RECOVERY_BLOCKED", "La comparación ya contiene actividad del intento anterior.")
+        runtime = {**row.comparison_snapshot["runtime"], "supervisor": None}
+        runtime.pop("owner_scope", None)
+        row.comparison_snapshot = {**row.comparison_snapshot, "runtime": runtime}
+        row.comparison_version += 1
+        WorkerJobs(self.session).requeue_proven(comparison_id, claim)
 
     def record_worker(self, comparison_id, execution_id, token, worker):
         row, current = self.require_supervisor(comparison_id, token)
@@ -631,7 +653,6 @@ class SqlComparisonV2Repository:
 class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
     def __enter__(self):
         super().__enter__()
-        self.worker_jobs = WorkerJobs(self.session)
         self.comparisons_v2 = SqlComparisonV2Repository(self.session)
         from .comparison_confirmation import SqlComparisonV2ConfirmationRepository
         self.comparison_confirmation_v2 = SqlComparisonV2ConfirmationRepository(self.session, self.comparisons_v2)
@@ -662,7 +683,8 @@ class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
             or_(Optimizacion.comparison_snapshot != JSON.NULL,
                 Optimizacion.criterio_seleccion_version.in_(("CMP-v1", "CMP-v2"))))
         if legacy_only:
-            query = query.where(Optimizacion.criterio_seleccion_version != "CMP-v2")
+            query = query.where(Optimizacion.criterio_seleccion_version != "CMP-v2",
+                ~func.coalesce(Optimizacion.comparison_snapshot["worker_tracking"].as_string() == "1", False))
         return list(self.session.scalars(query.order_by(Optimizacion.id_optimizacion)))
 
     def recover_historical(self, comparison_id):

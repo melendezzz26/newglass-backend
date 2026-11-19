@@ -16,7 +16,7 @@ class AcceptComparison:
     def __init__(self, unit_of_work, budget=DEFAULT_RUN_LOAD_BUDGET):
         self.unit_of_work, self.budget = unit_of_work, budget
 
-    def execute(self, order_ids, actor_id, idempotency_key, *, preflight_only=False):
+    def execute(self, order_ids, actor_id, idempotency_key, *, preflight_only=False, lease_token=None):
         ids = tuple(order_ids)
         if (not ids or any(type(i) is not int or not 0 < i <= 2147483647 for i in (*ids, actor_id))
                 or len(set(ids)) != len(ids) or not isinstance(idempotency_key, str)
@@ -45,6 +45,7 @@ class AcceptComparison:
                 raise RunError("INVALID_INPUT", "Las piezas, parámetros o stock exceden las condiciones válidas.") from error
             if preflight_only:
                 return None
-            result = uow.comparisons.create(problem, configuration_id, actor_id, idempotency_key, pieces)
+            options = {"lease_token": lease_token} if lease_token is not None else {}
+            result = uow.comparisons.create(problem, configuration_id, actor_id, idempotency_key, pieces, **options)
             uow.orders.transition(ids, "PENDIENTE", "EN_OPTIMIZACION")
         return result

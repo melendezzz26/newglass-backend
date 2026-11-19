@@ -19,6 +19,7 @@ from .application.errors import RunError
 from .infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
 from .infrastructure.in_process_admission import InProcessRunAdmission
 from .infrastructure.worker_jobs import enable_pilot, require_pilot
+from .infrastructure.worker_recovery import recover_abandoned_v2
 from .presentation.comparison_queue_v2 import finish_waiting, queue_limits
 from .presentation.comparison_supervision_v2 import ComparisonV2Coordinator, SupervisedJob
 
@@ -54,6 +55,8 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
             return None
         tx.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
         tx.worker_jobs.block_stale()
+        if recover_abandoned_v2(tx):
+            return None  # Commit closure evidence before the next admission/claim transaction.
         row = tx.worker_jobs.next_waiting()
         if row is None:
             return None
@@ -73,8 +76,8 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
         job = None
         try:
             job = SupervisedJob(current, runner, self.uow, lease, None)
-            tx.worker_jobs.claim(row, job.token)
-            if not tx.comparisons_v2.claim_supervisor(current.comparison_id, job.token, job.identity):
+            job.claim = tx.worker_jobs.claim(row, job.token)
+            if not tx.comparisons_v2.claim_supervisor(current.comparison_id, job.claim, job.identity):
                 raise RunError("RECOVERY_BLOCKED", "No se pudo acreditar el reclamo comercial.")
             return job
         except BaseException:
@@ -101,7 +104,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
             try:
                 with self.uow() as tx:
                     tx.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
-                    cancelled = tx.worker_jobs.heartbeat(job.comparison.comparison_id, job.token)
+                    cancelled = tx.worker_jobs.heartbeat(job.comparison.comparison_id, job.claim)
             except SnapshotConflict:
                 return  # The supervisor may be committing another result.
             except (RunError, SQLAlchemyError):
@@ -153,23 +156,25 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--enable-pilot", action="store_true", help="Enable the worker profile on a drained database and exit")
+    flags = parser.add_mutually_exclusive_group()
+    flags.add_argument("--enable-pilot", action="store_true", help="Enable the worker profile on a drained database and exit")
+    flags.add_argument("--enable-mixed", action="store_true", help="Enable distributed V1/V2 admission on a drained database")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     url = database_url()
     target = make_url(url)
     if target.get_backend_name() != "postgresql":
         parser.error("El worker requiere PostgreSQL.")
-    if args.enable_pilot and target.host not in ("127.0.0.1", "::1", "localhost"):
-        parser.error("La activación de 2B.1 requiere PostgreSQL local de loopback.")
+    if (args.enable_pilot or args.enable_mixed) and target.host not in ("127.0.0.1", "::1", "localhost"):
+        parser.error("La activación del piloto requiere PostgreSQL local de loopback.")
     options = database_engine_options(url)
     options.setdefault("connect_args", {}).setdefault("connect_timeout", 3)
     engine = create_engine(url, **{**options, "pool_size": 2, "max_overflow": 0, "pool_timeout": 2})
     uow = partial(SqlComparisonPersistenceUnitOfWork, sessionmaker(engine))
     try:
-        if args.enable_pilot:
+        if args.enable_pilot or args.enable_mixed:
             with uow() as tx:
-                adopted = enable_pilot(tx)
+                adopted = enable_pilot(tx, mixed=args.enable_mixed)
             logger.info("worker_v2_pilot_enabled adopted=%s", adopted)
             return
         stop = Event()
