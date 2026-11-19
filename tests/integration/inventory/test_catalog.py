@@ -70,9 +70,9 @@ def catalog_db(isolated_postgres):
 
 
 @pytest.fixture
-def service(catalog_db):
+def service(catalog_service_db):
     # Los casos de uso confirman savepoints; el rollback exterior aísla cada test.
-    with catalog_db.connect() as connection:
+    with catalog_service_db.connect() as connection:
         transaction = connection.begin()
         repo = SqlAlchemyInventoryRepository(
             lambda: Session(bind=connection, join_transaction_mode="create_savepoint"))
@@ -80,6 +80,16 @@ def service(catalog_db):
             yield InventoryService(repo)
         finally:
             transaction.rollback()
+
+
+@pytest.fixture(scope="module")
+def catalog_service_db(isolated_postgres):
+    # The current application uses the current schema. The historical fixture
+    # independently checks TA-013 without introducing tables from later revisions.
+    with new_database(isolated_postgres) as engine:
+        result = upgrade(engine, "head")
+        assert result.returncode == 0, result.stderr
+        yield engine
 
 
 def test_seed_has_six_types_28_pairs_and_is_idempotent(catalog_db):
