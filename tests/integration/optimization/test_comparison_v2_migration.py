@@ -11,6 +11,7 @@ from app.modules.optimization.application.comparisons import AcceptComparison
 from app.modules.optimization.application.runs import AcceptRun
 from app.modules.optimization.infrastructure.comparison_uow import SqlComparisonUnitOfWork
 from app.modules.optimization.infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
+from app.modules.optimization.infrastructure import worker_jobs
 from tests.integration.postgres_support import new_database, upgrade, schema_snapshot
 from tests.integration.test_s1_rbac_migration import downgrade
 from tests.model_contracts import current_metadata, historical_metadata
@@ -21,6 +22,12 @@ from .test_comparison_v2_persistence import frozen_input
 
 PREVIOUS = "s2cmp01a1b2c"
 REVISION = "s2cmp02d4e6f8"
+
+
+@pytest.fixture
+def pre_worker_legacy_writer(monkeypatch):
+    # These fixtures write using the legacy binary's behavior on the historical schema.
+    monkeypatch.setattr(worker_jobs, "require_legacy_admission", lambda _session: None)
 
 
 def test_empty_upgrade_changes_only_method_check_and_matches_current_orm(isolated_postgres):
@@ -54,7 +61,8 @@ def test_empty_upgrade_changes_only_method_check_and_matches_current_orm(isolate
         assert upgrade(engine, REVISION).returncode == 0
 
 
-def test_history_created_before_upgrade_preserves_ff_snapshot1_and_comparison_snapshot2(session_factory, prepared, monkeypatch):
+def test_history_created_before_upgrade_preserves_ff_snapshot1_and_comparison_snapshot2(
+        session_factory, prepared, monkeypatch, pre_worker_legacy_writer):
     engine = session_factory.kw["bind"]
     assert downgrade(engine, PREVIOUS).returncode == 0
     actor, ids, run_factory = prepared
@@ -91,7 +99,8 @@ def test_history_created_before_upgrade_preserves_ff_snapshot1_and_comparison_sn
 
 
 @pytest.mark.parametrize("incompatible", ["aggregate_v2", "new_method", "result_v3"])
-def test_downgrade_rejects_incompatible_data_before_any_schema_change(session_factory, prepared, incompatible):
+def test_downgrade_rejects_incompatible_data_before_any_schema_change(
+        session_factory, prepared, incompatible, pre_worker_legacy_writer):
     actor, ids, _ = prepared
     engine = session_factory.kw["bind"]
     assert upgrade(engine, REVISION).returncode == 0

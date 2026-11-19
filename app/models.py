@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     CHAR,
     CheckConstraint,
+    DDL,
     DateTime,
     Float,
     ForeignKey,
@@ -17,6 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     BigInteger,
+    event,
     func,
     text,
     true,
@@ -339,6 +341,40 @@ class Optimizacion(Base):
 
 
     pedido_vinculos: Mapped[list["OptimizacionPedido"]] = relationship(back_populates="optimizacion", passive_deletes="all")
+
+
+class OptimizationWorkerPolicy(Base):
+    __tablename__ = "optimization_worker_policy"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_optimization_worker_policy_singleton"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    pilot: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+
+
+event.listen(OptimizationWorkerPolicy.__table__, "after_create",
+             DDL("INSERT INTO %(fullname)s (id, pilot) VALUES (1, false)"))
+
+
+class OptimizationWorkerJob(Base):
+    __tablename__ = "optimization_worker_jobs"
+    __table_args__ = (
+        CheckConstraint("state IN ('WAITING', 'RUNNING', 'RECOVERY_BLOCKED', 'TERMINAL')",
+                        name="ck_optimization_worker_job_state"),
+        CheckConstraint("((state IN ('RUNNING', 'RECOVERY_BLOCKED')) AND slot IS NOT NULL AND slot = 1 "
+                        "AND owner_token IS NOT NULL AND heartbeat_at IS NOT NULL) OR "
+                        "(state IN ('WAITING', 'TERMINAL') AND slot IS NULL)", name="ck_optimization_worker_job_slot"),
+        CheckConstraint("(owner_token IS NULL) = (heartbeat_at IS NULL) AND "
+                        "(state <> 'WAITING' OR owner_token IS NULL)", name="ck_optimization_worker_job_owner"),
+        UniqueConstraint("slot", name="uq_optimization_worker_global_slot"),
+        Index("ix_optimization_worker_waiting", "comparison_id", postgresql_where=text("state = 'WAITING'")),
+    )
+
+    comparison_id: Mapped[int] = mapped_column(ForeignKey("optimizaciones.id_optimizacion"),
+                                               primary_key=True, autoincrement=False)
+    state: Mapped[str] = mapped_column(String(20), nullable=False)
+    slot: Mapped[int | None] = mapped_column(Integer)
+    owner_token: Mapped[str | None] = mapped_column(String(32))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OptimizacionPedido(Base):

@@ -58,6 +58,8 @@ class SqlComparisonRepository:
         return self.get(identifier) if identifier is not None else None
 
     def create(self, problem, configuration_id, actor_id, key, requested_pieces):
+        from .worker_jobs import require_legacy_admission
+        require_legacy_admission(self.session)
         config = self.session.get(Configuracion, configuration_id)
         snapshot = {"comparison_snapshot_version": 1, "input": encode_problem(problem),
             "input_sha256": problem_fingerprint(problem), "requested_pieces": json_value(requested_pieces),

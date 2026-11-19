@@ -4,8 +4,10 @@ Never imported by production modules or six production engines. The real
 SequentialProcessRunner supervises and reaps this process exactly as in service.
 """
 from dataclasses import asdict
+from functools import partial
 import json
 import os
+from pathlib import Path
 import time
 
 from app.modules.optimization.application.engine_execution import ExecutionScope
@@ -36,3 +38,33 @@ def blocked_until_cancel(scope, payload, minimums, connection, gate, started_clo
         checkpoint_cancel.wait(60)
     finally:
         connection.close()
+
+
+def gated_engine(*args):
+    from app.modules.optimization.application.engine_execution import EngineExecutionAdapter
+    from app.modules.optimization.infrastructure.sequential_worker import calculation_worker_v2
+
+    if args[0]["method"] == "FF" and int(os.environ["QA_HOLD_ORDER"]) in decode_problem(json.loads(args[1])).order_ids:
+        original = EngineExecutionAdapter.execute
+        resume = Path(os.environ["QA_RESUME_ENGINE"])
+
+        def wait_then_execute(self, *values, **kwargs):
+            while not resume.exists():
+                kwargs["checkpoint"]()
+                time.sleep(.025)
+            return original(self, *values, **kwargs)
+
+        EngineExecutionAdapter.execute = wait_then_execute
+    calculation_worker_v2(*args)
+
+
+def run_gated_worker():
+    from app.modules.optimization import worker_v2
+    from app.modules.optimization.infrastructure.sequential_runner import SequentialProcessRunner
+
+    class GatedWorker(worker_v2.SeparatedComparisonWorker):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, runner_factory=partial(SequentialProcessRunner, worker_target=gated_engine), **kwargs)
+
+    worker_v2.SeparatedComparisonWorker = GatedWorker
+    worker_v2.main()

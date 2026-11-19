@@ -116,16 +116,31 @@ def main():
         # application instance, never in the production FastAPI router.
         from fastapi import HTTPException, Request
         from main import app
-        from app.modules.optimization.presentation.comparison_supervision_v2 import get_comparison_v2_coordinator
+        from app.modules.optimization.infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
         from app.modules.optimization.infrastructure.sequential_runner import SequentialProcessRunner
+        from app.modules.optimization.presentation import comparison_supervision_v2
+        from app.modules.optimization.presentation.comparison_http_runtime_v2 import HttpComparisonJob
+        from app.modules.optimization.presentation.comparison_queue_v2 import QueuedComparisonV2Coordinator
+        from app.modules.optimization.presentation.comparison_retention import COMPARISON_RETENTION
+        from app.modules.optimization.presentation.run_routes import get_run_admission
+        from app.shared.database.session import SessionLocal
         from tests.e2e_cancellation_worker import blocked_until_cancel
         from functools import partial
+
+        # This loopback fixture still tests the 2A visual protocol. The production
+        # provider delegates calculation to the standalone service in 2B.1.
+        legacy_visual = QueuedComparisonV2Coordinator(
+            partial(SqlComparisonPersistenceUnitOfWork, SessionLocal), get_run_admission(),
+            retention=COMPARISON_RETENTION, job_factory=HttpComparisonJob,
+        )
+        app.dependency_overrides[comparison_supervision_v2.get_comparison_v2_coordinator] = lambda: legacy_visual
+        comparison_supervision_v2.get_comparison_v2_coordinator = lambda: legacy_visual
 
         @app.post("/__e2e__/comparison-worker/{mode}", include_in_schema=False)
         def comparison_worker(mode: str, request: Request):
             if request.client.host not in ("127.0.0.1", "::1") or mode not in ("blocked", "normal"):
                 raise HTTPException(status_code=404)
-            coordinator = get_comparison_v2_coordinator()
+            coordinator = legacy_visual
             with coordinator.lock:
                 if coordinator.job is not None and not coordinator.job.closed.is_set():
                     raise HTTPException(status_code=409, detail="Comparison still owns admission")

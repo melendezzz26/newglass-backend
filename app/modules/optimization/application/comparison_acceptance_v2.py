@@ -57,7 +57,7 @@ class AcceptComparisonV2:
             self._freeze(tx, ids)
         return None
 
-    def execute(self, order_ids, actor_id, key, *, queue_capacity=None):
+    def execute(self, order_ids, actor_id, key, *, queue_capacity=None, external_worker=False):
         ids = self.validate_request(order_ids,actor_id,key)
         check_selection(ids, self.budget)
         for attempt in range(3):
@@ -74,6 +74,8 @@ class AcceptComparisonV2:
                         if previous.problem.order_ids != ids:
                             raise RunError("STATE_CONFLICT", "La clave corresponde a otro lote.")
                         return previous
+                    if external_worker:
+                        tx.worker_jobs.require_pilot()
                     if queue_capacity is not None:
                         waiting = tx.comparisons_v2.waiting_count()
                         if waiting >= queue_capacity:
@@ -81,6 +83,8 @@ class AcceptComparisonV2:
                     frozen = self._freeze(tx, ids)
                     current = (tx.comparisons_v2.create(frozen, actor_id, key, managed=True) if queue_capacity is None
                                else tx.comparisons_v2.create(frozen, actor_id, key, managed=True, queued=True))
+                    if external_worker:
+                        tx.worker_jobs.enqueue(current.comparison_id)
                     tx.orders.transition(ids,"PENDIENTE","EN_OPTIMIZACION")
                 return current
             except SnapshotConflict:

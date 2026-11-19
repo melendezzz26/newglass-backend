@@ -42,70 +42,88 @@ PERMISSIONS = {"A": OPERATE | INVENTORY | {"users.manage"},
                "O": OPERATE | {"orders.view", "inventory.view"}, "L": VIEW | INVENTORY}
 
 
+def prepare_queue_data(engine):
+    sessions = sessionmaker(engine)
+    now = datetime.now(timezone.utc)
+    actors = {letter: i for i, letter in enumerate(ROLES, 1)}
+    headers = {}
+    with sessions.begin() as db:
+        existing_roles = dict(db.execute(select(Rol.nombre, Rol.id_rol)).all())
+        role_ids = {}
+        for letter, name in ROLES.items():
+            if name not in existing_roles:
+                existing_roles[name] = max(existing_roles.values(), default=0) + 1
+                db.add(Rol(id_rol=existing_roles[name], nombre=name))
+            role_ids[letter] = existing_roles[name]
+        codes = dict(db.execute(select(Permiso.codigo, Permiso.id_permiso)).all())
+        for name in sorted(set().union(*PERMISSIONS.values()) - codes.keys()):
+            codes[name] = max(codes.values(), default=0) + 1
+            db.add(Permiso(id_permiso=codes[name], codigo=name, modulo=name.split('.')[0], descripcion=name))
+        db.add_all([TipoVidrio(id_tipo_vidrio=7, nombre="QA"),
+                    Cliente(id_cliente=1, nombre_razon_social="QA", estado=True, fecha_registro=now)])
+        db.flush()
+        for letter, actor in actors.items():
+            dni = f"{actor:08}"
+            username = f"{letter}{dni}"
+            db.add(Usuario(id_usuario=actor, dni=dni, usuario=username, nombres="QA", apellidos=letter,
+                           password_hash="unused-test-fixture", estado=True, fecha_creacion=now, id_rol=role_ids[letter]))
+            db.execute(delete(RolPermiso).where(RolPermiso.id_rol == role_ids[letter]))
+            db.add_all(RolPermiso(id_rol=role_ids[letter], id_permiso=codes[name]) for name in PERMISSIONS[letter])
+            headers[letter] = {"Authorization": "Bearer " + create_access_token(actor, username, ROLES[letter])}
+        db.add(TipoVidrioEspesor(id_tipo_vidrio=7, espesor_mm=6))
+        db.flush()
+        db.add_all([Configuracion(version=1, separacion_mm=0, margen_mm=0, resolucion_raster_mm=1,
+            paso_angular_grados=5, ancho_min_retazo_mm=1, alto_min_retazo_mm=1, vigente=True,
+            id_usuario_creacion=actors['A'], fecha_creacion=now), Plancha(id_plancha=1, ancho_mm=5, alto_mm=5,
+            espesor_mm=6, cantidad=1, estado=True, fecha_registro=now, id_tipo_vidrio=7)])
+    with sessions() as db:
+        repo = SQLAlchemyOrderRepository(db)
+        piece = dict(tipo_forma="RECTANGULO", cantidad=1, dimensiones={"width_mm": 2, "height_mm": 2},
+                     geometria={"type": "RECTANGULO", "width_mm": 2, "height_mm": 2}, id_tipo_vidrio=7,
+                     espesor_mm=6, area_mm2=4)
+        orders = {letter: repo.create_order(actor, [piece], id_cliente=1) for letter, actor in actors.items()}
+    return SimpleNamespace(sessions=sessions, orders=orders, actors=actors, headers=headers, codes=codes, role_ids=role_ids)
+
+
 @pytest.fixture
-def queue_api(isolated_postgres, monkeypatch):
-    from main import app
+def queue_data(isolated_postgres):
     with new_database(isolated_postgres) as engine:
         assert engine.url.host == "127.0.0.1"
         Base.metadata.create_all(engine)
-        sessions = sessionmaker(engine)
-        now = datetime.now(timezone.utc)
-        codes = {name: i for i, name in enumerate(sorted(set().union(*PERMISSIONS.values())), 1)}
-        actors = {letter: i for i, letter in enumerate(ROLES, 1)}
-        headers = {}
-        with sessions.begin() as db:
-            db.add_all(Rol(id_rol=actors[l], nombre=role) for l, role in ROLES.items())
-            db.add_all(Permiso(id_permiso=i, codigo=name, modulo=name.split('.')[0], descripcion=name)
-                       for name, i in codes.items())
-            db.add_all([TipoVidrio(id_tipo_vidrio=7, nombre="QA"),
-                        Cliente(id_cliente=1, nombre_razon_social="QA", estado=True, fecha_registro=now)])
-            db.flush()
-            for letter, actor in actors.items():
-                dni = f"{actor:08}"
-                username = f"{letter}{dni}"
-                db.add(Usuario(id_usuario=actor, dni=dni, usuario=username, nombres="QA", apellidos=letter,
-                               password_hash="unused-test-fixture", estado=True, fecha_creacion=now, id_rol=actor))
-                db.add_all(RolPermiso(id_rol=actor, id_permiso=codes[name]) for name in PERMISSIONS[letter])
-                headers[letter] = {"Authorization": "Bearer " + create_access_token(actor, username, ROLES[letter])}
-            db.add(TipoVidrioEspesor(id_tipo_vidrio=7, espesor_mm=6))
-            db.flush()
-            db.add_all([Configuracion(version=1, separacion_mm=0, margen_mm=0, resolucion_raster_mm=1,
-                paso_angular_grados=5, ancho_min_retazo_mm=1, alto_min_retazo_mm=1, vigente=True,
-                id_usuario_creacion=actors['A'], fecha_creacion=now), Plancha(id_plancha=1, ancho_mm=5, alto_mm=5,
-                espesor_mm=6, cantidad=1, estado=True, fecha_registro=now, id_tipo_vidrio=7)])
+        yield prepare_queue_data(engine)
+
+
+@pytest.fixture
+def queue_api(queue_data, monkeypatch):
+    from main import app
+    sessions = queue_data.sessions
+
+    def new_coordinator(**options):
+        return QueuedComparisonV2Coordinator(partial(SqlComparisonPersistenceUnitOfWork, sessions),
+            InProcessRunAdmission(), job_factory=HttpComparisonJob, **options)
+
+    api = queue_data
+    api.queue = new_coordinator(max_active=0)
+
+    def session():
         with sessions() as db:
-            repo = SQLAlchemyOrderRepository(db)
-            piece = dict(tipo_forma="RECTANGULO", cantidad=1, dimensiones={"width_mm": 2, "height_mm": 2},
-                         geometria={"type": "RECTANGULO", "width_mm": 2, "height_mm": 2}, id_tipo_vidrio=7,
-                         espesor_mm=6, area_mm2=4)
-            orders = {letter: repo.create_order(actor, [piece], id_cliente=1) for letter, actor in actors.items()}
+            yield db
 
-        def new_coordinator(**options):
-            return QueuedComparisonV2Coordinator(partial(SqlComparisonPersistenceUnitOfWork, sessions),
-                InProcessRunAdmission(), job_factory=HttpComparisonJob, **options)
+    monkeypatch.setitem(app.dependency_overrides, comparison_supervision_v2.get_comparison_v2_coordinator, lambda: api.queue)
+    monkeypatch.setattr(comparison_supervision_v2, "get_comparison_v2_coordinator", lambda: api.queue)
+    monkeypatch.setitem(app.dependency_overrides, get_database_session, session)
+    monkeypatch.setitem(app.dependency_overrides, get_inventory_service,
+                        lambda: InventoryService(SqlAlchemyInventoryRepository(sessions)))
+    with ExitStack() as lifecycle:
+        api.client = lifecycle.enter_context(TestClient(app))
 
-        api = SimpleNamespace(sessions=sessions, orders=orders, actors=actors, headers=headers, codes=codes,
-                              queue=new_coordinator(max_active=0))
-
-        def session():
-            with sessions() as db:
-                yield db
-
-        monkeypatch.setitem(app.dependency_overrides, comparison_supervision_v2.get_comparison_v2_coordinator, lambda: api.queue)
-        monkeypatch.setattr(comparison_supervision_v2, "get_comparison_v2_coordinator", lambda: api.queue)
-        monkeypatch.setitem(app.dependency_overrides, get_database_session, session)
-        monkeypatch.setitem(app.dependency_overrides, get_inventory_service,
-                            lambda: InventoryService(SqlAlchemyInventoryRepository(sessions)))
-        with ExitStack() as lifecycle:
+        def restart(**options):
+            lifecycle.close()
+            api.queue = new_coordinator(**options)
             api.client = lifecycle.enter_context(TestClient(app))
 
-            def restart(**options):
-                lifecycle.close()
-                api.queue = new_coordinator(**options)
-                api.client = lifecycle.enter_context(TestClient(app))
-
-            api.restart = restart
-            yield api
+        api.restart = restart
+        yield api
 
 
 def post(api, actor, *, order=None, key="enconc-request-01"):
@@ -224,7 +242,7 @@ def test_revocation_in_queue_and_worker_failure_are_independent(queue_api):
     first = post(api, "A").json()["comparison_id"]
     second = post(api, "O").json()["comparison_id"]
     with api.sessions.begin() as db:
-        db.execute(delete(RolPermiso).where(RolPermiso.id_rol == api.actors["A"],
+        db.execute(delete(RolPermiso).where(RolPermiso.id_rol == api.role_ids["A"],
                                           RolPermiso.id_permiso == api.codes["optimization.execute"]))
     api.queue.runner_factory = partial(SequentialProcessRunner, worker_target=crash_hf)
     api.queue.max_active = 1

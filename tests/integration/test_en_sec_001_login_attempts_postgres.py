@@ -25,7 +25,7 @@ from app.modules.authentication.infrastructure.sqlalchemy_login_attempt_store im
 from tests.integration.postgres_support import BACKEND, _run, new_database, upgrade
 from tests.model_contracts import current_metadata
 
-REVISION = "s2sec01a1b2c"
+HEAD = "s2conc01b100"
 PREVIOUS = "s2cmp02d4e6f8"
 NOW = datetime(2026, 11, 18, 12, 0, tzinfo=timezone.utc)
 
@@ -42,7 +42,7 @@ def test_migration_matches_the_orm_and_downgrades_cleanly(isolated_postgres):
         result = upgrade(engine, "head")
         assert result.returncode == 0, result.stderr
         with engine.connect() as connection:
-            assert connection.scalar(sa.text("SELECT version_num FROM alembic_version")) == REVISION
+            assert connection.scalar(sa.text("SELECT version_num FROM alembic_version")) == HEAD
             inspector = sa.inspect(connection)
             assert inspector.get_pk_constraint("intentos_login")["constrained_columns"] == ["alcance", "clave"]
             assert {c["name"] for c in inspector.get_check_constraints("intentos_login")} == {

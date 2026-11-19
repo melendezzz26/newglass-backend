@@ -25,6 +25,7 @@ from .comparison_v2_snapshot import (RESULT_SNAPSHOT_V4, encode_comparison_input
                                      encode_result_v4, decode_comparison_result)
 from .confirmation_adapter import confirmed_residual_view
 from .process_lifecycle import process_scope
+from .worker_jobs import WorkerJobs
 from .run_snapshot import json_value
 
 logger = logging.getLogger(__name__)
@@ -566,6 +567,8 @@ class SqlComparisonV2Repository:
         row, current = self._writable(comparison_id, expected_version)
         if any(e.dispatch_state != "TERMINATED" for e in current.executions):
             raise RunError("STATE_CONFLICT", "Todavía hay ejecuciones sin resolver.")
+        owner = current.runtime.get("supervisor")
+        WorkerJobs(self.session).finish_if_registered(comparison_id, owner["token"] if owner else None)
         stamp = _utc(stopped_at)
         cancellation = row.comparison_snapshot.get("cancellation")
         if cancellation is not None:
@@ -591,6 +594,7 @@ class SqlComparisonV2Repository:
         if (current.terminal or runtime.get("runtime_version") != 1 or runtime["supervisor"] is not None
             or any(e.dispatch_state != "QUEUED" for e in current.executions)):
             return False
+        WorkerJobs(self.session).require_owner_if_registered(comparison_id, token)
         updated = {**runtime, "supervisor": dict(token=token, identity=identity(owner))}
         if current.queue_version == 1:
             updated["owner_scope"] = process_scope()
@@ -606,6 +610,7 @@ class SqlComparisonV2Repository:
         owner = current.runtime.get("supervisor")
         if owner is None or owner["token"] != token:
             raise RunError("STATE_CONFLICT", "La comparación tiene otro dueño o no tiene identidad verificable.")
+        WorkerJobs(self.session).require_owner_if_registered(comparison_id, token)
         return row, current
 
     def record_worker(self, comparison_id, execution_id, token, worker):
@@ -626,6 +631,7 @@ class SqlComparisonV2Repository:
 class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
     def __enter__(self):
         super().__enter__()
+        self.worker_jobs = WorkerJobs(self.session)
         self.comparisons_v2 = SqlComparisonV2Repository(self.session)
         from .comparison_confirmation import SqlComparisonV2ConfirmationRepository
         self.comparison_confirmation_v2 = SqlComparisonV2ConfirmationRepository(self.session, self.comparisons_v2)
@@ -648,14 +654,16 @@ class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
             raise RunError("CONFIG_CONFLICT", "La configuracion vigente no es valida.") from error
         return c.id_configuracion, c.version, config, c.ancho_min_retazo_mm, c.alto_min_retazo_mm
 
-    def unfinished(self):
+    def unfinished(self, *, legacy_only=False):
         # Standalone FF has a separate recovery procedure and no comparison
         # supervisor to reconcile. Keep malformed comparisons in this scan.
-        return list(self.session.scalars(select(Optimizacion.id_optimizacion).where(
+        query = select(Optimizacion.id_optimizacion).where(
             Optimizacion.estado == "EN_EJECUCION",
             or_(Optimizacion.comparison_snapshot != JSON.NULL,
                 Optimizacion.criterio_seleccion_version.in_(("CMP-v1", "CMP-v2"))))
-            .order_by(Optimizacion.id_optimizacion)))
+        if legacy_only:
+            query = query.where(Optimizacion.criterio_seleccion_version != "CMP-v2")
+        return list(self.session.scalars(query.order_by(Optimizacion.id_optimizacion)))
 
     def recover_historical(self, comparison_id):
         row = self.session.get(Optimizacion, comparison_id)

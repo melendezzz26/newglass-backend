@@ -76,6 +76,8 @@ def load_visual_owner(identifier, actor_id, uow, coordinator, execution_id=None,
 
 
 def retained_job(coordinator,identifier):
+    if getattr(coordinator, "external_worker", False):
+        raise RunError('VISUAL_DATA_UNAVAILABLE', 'El avance visual no está disponible entre procesos. Consulta los resultados persistidos.')
     with coordinator.lock:
         job=coordinator.job
         if (job is not None and job.comparison.comparison_id==identifier and hasattr(job,'sequence')
@@ -117,9 +119,10 @@ def history(before_id: Annotated[int | None, Query(gt=0, le=2147483647)] = None,
 
 
 @router.get('/{comparison_id}',response_model=ComparisonSummaryV2)
-def get_comparison(comparison_id:Id,user=Depends(run_permission('optimization.view')),
+def get_comparison(comparison_id:Id,response:Response,user=Depends(run_permission('optimization.view')),
                    uow=Depends(get_comparison_v2_uow),coordinator=Depends(get_comparison_v2_coordinator)):
-    return comparison_response_v2(load(comparison_id,user.user_id,uow,coordinator))
+    return comparison_response_v2(load(comparison_id,user.user_id,uow,coordinator,response=response,
+        allow_blocked=getattr(coordinator, "external_worker", False) is True))
 
 
 @router.get('/{comparison_id}/queue', response_model=ComparisonQueueStatusV2)
@@ -181,6 +184,9 @@ async def events(comparison_id: Id, after_sequence: Annotated[int, Query(ge=0)] 
                  user=Depends(run_permission('optimization.view')),
                  uow=Depends(get_comparison_v2_uow), coordinator=Depends(get_comparison_v2_coordinator)):
     # Existing clients may subscribe as soon as POST returns, before the first dispatch tick.
+    if getattr(coordinator, "external_worker", False) is True:
+        await run_in_threadpool(load_visual_owner, comparison_id, user.user_id, uow, coordinator)
+        retained_job(coordinator, comparison_id)
     for attempt in range(4):
         observation = await run_in_threadpool(open_events, comparison_id, user.user_id, after_sequence, uow, coordinator)
         if observation is not None:

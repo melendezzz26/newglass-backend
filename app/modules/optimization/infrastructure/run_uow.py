@@ -55,6 +55,8 @@ class SqlRunRepository:
         self.session = session
 
     def create(self, problem, configuration_id, actor_id):
+        from .worker_jobs import require_legacy_admission
+        require_legacy_admission(self.session)
         now = datetime.now(timezone.utc)
         row = Optimizacion(fecha_inicio=now, estado="EN_EJECUCION", id_pedido=problem.order_ids[0],
                            id_configuracion=configuration_id, id_usuario_ejecutor=actor_id,

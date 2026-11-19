@@ -68,6 +68,8 @@ def test_importing_models_registers_all_current_tables(database_structure):
         "metricas_ejecucion",
         "optimizaciones",
         "optimizacion_pedidos",
+        "optimization_worker_jobs",
+        "optimization_worker_policy",
         "materiales_utilizados",
         "pedidos",
         "permisos",

@@ -45,9 +45,10 @@ def test_legacy_run_survives_roundtrip_without_reinterpretation(session_factory,
 
 def test_comparative_history_blocks_downgrade_before_any_ddl(session_factory, prepared):
     actor, ids, _ = prepared
+    engine = session_factory.kw["bind"]
+    assert upgrade(engine, "head").returncode == 0
     factory = partial(SqlComparisonUnitOfWork, session_factory)
     original = AcceptComparison(factory).execute(ids, actor, "migration-test-key")
-    engine = session_factory.kw["bind"]
     with engine.connect() as c:
         original_revision = c.scalar(sa.text("SELECT version_num FROM alembic_version"))
     result = downgrade(engine, PREVIOUS)
