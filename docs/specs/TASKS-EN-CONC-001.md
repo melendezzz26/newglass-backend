@@ -26,3 +26,12 @@
 | Recuperación | Caídas reales antes de spawn y después de un join acreditado. La expiración con propietario vivo retiene la plaza. Un hijo sin join acreditado deja el trabajo bloqueado. |
 | Exclusión V1/V2 | Dos APIs y dos candidatos comprueban ambos sentidos de exclusión y un solo reclamo. FF devuelve un rechazo explícito en el piloto. |
 | Privacidad y compatibilidad | Aislamiento de propietario, regresión V3/V4, migración de pendientes y propietarios 2B.1, confirmación V4 y rollback. |
+
+## Fase 2B.2-FF
+
+| Tarea | Criterio verificable |
+|---|---|
+| Admisión y reconexión FF | Dos APIs devuelven la misma identidad al repetir la clave. Un lote distinto con la misma clave, un pedido ocupado y un solicitante sin permiso reciben rechazo. |
+| Exclusión global | Dos candidatos reclaman un solo trabajo. FF y V2 se esperan en ambos sentidos. V1 comparte la plaza. |
+| Fencing y cierre | Se prueban caída antes, durante y después del cálculo, expiración, pérdida de PostgreSQL y escrituras de un intento obsoleto. |
+| Compatibilidad | Se mantienen históricos FF, NDJSON legacy, V3/V4, privacidad y confirmación transaccional. |

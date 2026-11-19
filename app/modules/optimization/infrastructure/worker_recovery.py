@@ -4,6 +4,7 @@ import os
 
 from app.models import OptimizationWorkerAttempt
 from ..application.comparison_v2_contracts import ExecutionDiagnostic, ExecutionPayloadV2
+from ..application.dto import RunStatus
 from ..application.supervision_contracts import identity
 from .process_lifecycle import process_identity, process_scope
 from .worker_jobs import RecoveredClaim
@@ -48,7 +49,7 @@ def proven_closure(current, attempt):
 
 
 def recover_abandoned_v2(tx):
-    job = tx.worker_jobs.blocked_v2()
+    job = tx.worker_jobs.blocked("V2")
     if job is None:
         return False
     identifier = job.comparison_id
@@ -74,4 +75,31 @@ def recover_abandoned_v2(tx):
                          "OPTIMIZADO" if not cancelled and any(e.eligible for e in current.executions) else "PENDIENTE")
     tx.comparisons_v2.record_supervisor_stopped(identifier, datetime.now(timezone.utc), current.version,
                                                 claim=claim, closure=proof)
+    return True
+
+
+def recover_abandoned_ff(tx):
+    job = tx.worker_jobs.blocked("FF")
+    if job is None:
+        return False
+    identifier = job.comparison_id
+    attempt = tx.session.get(OptimizationWorkerAttempt, (identifier, job.generation))
+    if (attempt is None or attempt.owner_token != job.owner_token or attempt.closed_at is not None
+            or attempt.dispatch_at is not None or attempt.worker_identity is not None):
+        return False  # A dispatch intent with no durable join is ambiguous, even if the recorded child vanished.
+    try:
+        if attempt.owner_scope != process_scope() or not process_closed(identity(attempt.owner_identity)):
+            return False
+    except (OSError, KeyError, ValueError, TypeError):
+        return False
+    run, _, _ = tx.runs.ff_worker_input(identifier)
+    if run.status is not RunStatus.RUNNING:
+        return False
+    tx.orders.require_state(run.result.problem.order_ids, "EN_OPTIMIZACION")
+    claim = RecoveredClaim(job.owner_token, job.generation)
+    if job.generation == 1:
+        tx.worker_jobs.requeue_proven(identifier, claim)
+    else:
+        tx.runs.fail(identifier, "WORKER_STOPPED", claim=claim)
+        tx.worker_jobs.finish_if_registered(identifier, claim, closure="NO_DISPATCH")
     return True

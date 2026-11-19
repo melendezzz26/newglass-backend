@@ -37,10 +37,11 @@ def test_legacy_run_survives_roundtrip_without_reinterpretation(session_factory,
     engine = session_factory.kw["bind"]
     assert downgrade(engine, PREVIOUS).returncode == 0
     assert upgrade(engine, REVISION).returncode == 0
-    with uow() as tx:
-        assert tx.runs.get(run.optimization_id) == run
     with engine.connect() as c:
         assert c.execute(sa.text("SELECT comparison_key, comparison_snapshot, comparison_version FROM optimizaciones")).one() == (None, None, 1)
+    assert upgrade(engine, "head").returncode == 0
+    with uow() as tx:
+        assert tx.runs.get(run.optimization_id) == run
 
 
 def test_comparative_history_blocks_downgrade_before_any_ddl(session_factory, prepared):

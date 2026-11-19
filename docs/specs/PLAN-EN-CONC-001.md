@@ -19,3 +19,10 @@
 2. Proteger cada escritura operativa con el propietario y la generación. Separar la expiración del heartbeat de la evidencia de cierre.
 3. Incorporar al piloto mixto la admisión V1 en la misma transacción que la reserva y un único índice de plaza. Mantener cerrado FF en el piloto y verificar el rechazo de lecturas ajenas.
 4. Ejecutar los escenarios de procesos reales, caída antes y después de un resultado, restitución de conectividad, cancelación y concurrencia V1/V2. Ejecutar regresión V3/V4 y CI del SHA publicado.
+
+## Fase 2B.2-FF
+
+1. Agregar la identidad idempotente de FF y los campos de despacho para el intento compartido. Validar la migración desde 2B.1 y la conservación de resultados históricos.
+2. Añadir admisión JSON con reserva y cupo compartidos con V2. Mantener el contrato de stream en modo legacy y documentar la reconexión en el piloto.
+3. Reutilizar la supervisión Linux para un ámbito FF. Acreditar el cierre antes de publicar el resultado y actualizar el estado en una sola transacción. Mantener el bloqueo ante un despacho ambiguo.
+4. Verificar procesos independientes, competencia FF/V1/V2, permisos, reconexión, caída, confirmación sobre stock sintético y regresiones del CI.

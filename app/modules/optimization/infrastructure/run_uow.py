@@ -54,13 +54,16 @@ class SqlRunRepository:
     def __init__(self, session):
         self.session = session
 
-    def create(self, problem, configuration_id, actor_id):
-        from .worker_jobs import require_legacy_admission
-        require_legacy_admission(self.session)
+    def create(self, problem, configuration_id, actor_id, *, request_key=None):
+        from .worker_jobs import require_durable_ff, require_legacy_admission
+        if request_key is None:
+            require_legacy_admission(self.session)
+        else:
+            require_durable_ff(self.session)
         now = datetime.now(timezone.utc)
         row = Optimizacion(fecha_inicio=now, estado="EN_EJECUCION", id_pedido=problem.order_ids[0],
                            id_configuracion=configuration_id, id_usuario_ejecutor=actor_id,
-                           criterio_seleccion_version="S1-FF-v1")
+                           criterio_seleccion_version="S1-FF-v1", ff_request_key=request_key)
         self.session.add(row)
         self.session.flush()
         self.session.add_all([OptimizacionPedido(id_optimizacion=row.id_optimizacion, id_pedido=i) for i in problem.order_ids])
@@ -69,6 +72,9 @@ class SqlRunRepository:
         snapshot = {**encode(result), "configuration_version": config.version,
                     "residual_minimum_width_mm": str(config.ancho_min_retazo_mm),
                     "residual_minimum_height_mm": str(config.alto_min_retazo_mm)}
+        if request_key is not None:
+            from .comparison_snapshot import problem_fingerprint
+            snapshot["ff_input_sha256"] = problem_fingerprint(problem)
         self.session.add(EjecucionOptimizacion(id_optimizacion=row.id_optimizacion, metodo="FF", fecha_inicio=now,
                                               estado="EN_EJECUCION", completo=False, patron_resultado=snapshot))
         return OptimizationRun(optimization_id=row.id_optimizacion, status=RunStatus.RUNNING, result=result)
@@ -89,6 +95,10 @@ class SqlRunRepository:
                 or execution.patron_resultado.get("snapshot_version") != 1):
             raise RunError("NOT_FOUND", "La corrida histórica no tiene un resultado FF versionado.")
         result = decode(execution.patron_resultado)
+        if row.ff_request_key is not None:
+            from .comparison_snapshot import problem_fingerprint
+            if execution.patron_resultado.get("ff_input_sha256") != problem_fingerprint(result.problem):
+                raise RunError("INTERNAL_ERROR", "La entrada congelada de FF requiere revisión.")
         links = tuple(self.session.scalars(select(OptimizacionPedido.id_pedido)
                       .where(OptimizacionPedido.id_optimizacion == optimization_id).order_by(OptimizacionPedido.id_pedido)))
         expected_execution_state = {"EN_EJECUCION": "EN_EJECUCION", "COMPLETADA": "COMPLETADA",
@@ -122,6 +132,24 @@ class SqlRunRepository:
         self.require_owned(optimization_id, actor_id)
         return self.get(optimization_id)
 
+    def find_ff_request(self, actor_id, key):
+        return self.session.scalar(select(Optimizacion.id_optimizacion).where(
+            Optimizacion.id_usuario_ejecutor == actor_id, Optimizacion.ff_request_key == key))
+
+    def require_ff_owned(self, optimization_id, actor_id):
+        if self.session.scalar(select(Optimizacion.id_optimizacion).where(
+                Optimizacion.id_optimizacion == optimization_id, Optimizacion.id_usuario_ejecutor == actor_id,
+                Optimizacion.ff_request_key.is_not(None))) is None:
+            raise RunError("NOT_FOUND", "No se encontró la solicitud durable de FF.")
+
+    def ff_worker_input(self, optimization_id):
+        row = self.session.get(Optimizacion, optimization_id)
+        if row is None or row.ff_request_key is None:
+            raise RunError("RECOVERY_BLOCKED", "No se encontró la solicitud durable de FF.")
+        run = self.get(optimization_id)
+        execution = self._execution(optimization_id)
+        return run, row.id_usuario_ejecutor, execution.id_ejecucion
+
     def residual_limits(self, optimization_id):
         execution = self._execution(optimization_id)
         snapshot = execution.patron_resultado
@@ -131,17 +159,31 @@ class SqlRunRepository:
         return self.session.scalar(select(EjecucionOptimizacion).where(
             EjecucionOptimizacion.id_optimizacion == optimization_id, EjecucionOptimizacion.metodo == "FF"))
 
-    def save_result(self, optimization_id, result, residuals):
+    def _lock_write(self, optimization_id, claim, *, without_dispatch=False):
+        from .worker_jobs import WorkerJobs
+        registered = WorkerJobs(self.session).require_owner_if_registered(
+            optimization_id, claim, without_dispatch=without_dispatch, kind="FF")
         row = self.session.scalar(select(Optimizacion).where(Optimizacion.id_optimizacion == optimization_id)
                                   .with_for_update().execution_options(populate_existing=True))
         if row is None:
             raise RunError("NOT_FOUND", "No se encontró la optimización.")
+        if registered != (row.ff_request_key is not None):
+            raise RunError("RECOVERY_BLOCKED", "La solicitud y el trabajo operativo de FF difieren.")
+        return row
+
+    def save_result(self, optimization_id, result, residuals, *, claim=None):
+        row = self._lock_write(optimization_id, claim)
         if row.estado != "EN_EJECUCION":
             raise RunError("STATE_CONFLICT", "La corrida ya ha finalizado.")
         original = self.get(optimization_id)
         # Only provider candidates may change after acceptance, never requested units/config.
         if result.problem.order_ids != original.result.problem.order_ids or result.problem.config != original.result.problem.config or result.problem.units != original.result.problem.units:
             raise RunError("STATE_CONFLICT", "El resultado no corresponde al snapshot aceptado.")
+        if row.ff_request_key is not None:
+            from .worker_jobs import WorkerJobs
+            WorkerJobs(self.session).require_ff_join(optimization_id, claim)
+            if result.problem != original.result.problem:
+                raise RunError("STATE_CONFLICT", "El resultado de FF no corresponde a la entrada congelada.")
         SqlOrdersBatch(self.session).transition(result.problem.order_ids, "EN_OPTIMIZACION",
                                                 "OPTIMIZADO" if result.complete else "PENDIENTE")
         execution = self._execution(optimization_id)
@@ -175,22 +217,21 @@ class SqlRunRepository:
                                residuals=tuple(residuals))
 
 
-    def fail(self, optimization_id, code, placements=()):
+    def fail(self, optimization_id, code, placements=(), *, claim=None, without_dispatch=False):
         """Called by the stopped calculator, in a fresh transaction after rollback.
 
         The parent lock fences late failure reports from a subsequent execution.
         Never release orders independently of the durable failure record.
         """
-        row = self.session.scalar(select(Optimizacion).where(Optimizacion.id_optimizacion == optimization_id)
-                                  .with_for_update().execution_options(populate_existing=True))
-        if row is None:
-            raise RunError("NOT_FOUND", "No se encontró la optimización.")
+        row = self._lock_write(optimization_id, claim, without_dispatch=without_dispatch)
         if row.estado != "EN_EJECUCION":
             return self.get(optimization_id)  # A late disconnect cannot overwrite a committed terminal result.
         original = self.get(optimization_id)
-        stocks = {p.stock.identity: p.stock for p in placements}
-        problem = replace(original.result.problem, groups=tuple(replace(g, stock_candidates=tuple(
-            s for s in stocks.values() if s.material_key == g.key)) for g in original.result.problem.groups))
+        problem = original.result.problem
+        if row.ff_request_key is None:
+            stocks = {p.stock.identity: p.stock for p in placements}
+            problem = replace(problem, groups=tuple(replace(g, stock_candidates=tuple(
+                s for s in stocks.values() if s.material_key == g.key)) for g in problem.groups))
         result = OptimizationResult(problem=problem, placements=tuple(placements))
         self._require_unconsumed(optimization_id, original)
         SqlOrdersBatch(self.session).transition(problem.order_ids, "EN_OPTIMIZACION", "PENDIENTE")
@@ -218,6 +259,8 @@ class SqlRunRepository:
         row = self.session.scalar(select(Optimizacion).where(Optimizacion.id_optimizacion == optimization_id)
                                   .with_for_update().execution_options(populate_existing=True))
         original = self.get(optimization_id)
+        if row.ff_request_key is not None:
+            raise RunError("RECOVERY_BLOCKED", "La corrida durable requiere la reconciliación del worker.")
         if original.status not in (RunStatus.RUNNING, RunStatus.FAILED):
             return original
         self._require_unconsumed(optimization_id, original)

@@ -698,7 +698,8 @@ class SqlComparisonPersistenceUnitOfWork(SqlComparisonUnitOfWork):
         def conflict(error):
             return isinstance(error, DBAPIError) and (getattr(error.orig, "sqlstate", None) in ("40001", "40P01", "55P03")
                 or getattr(error.orig, "sqlstate", None) == "23505" and getattr(
-                    getattr(error.orig, "diag", None), "constraint_name", None) == "uq_optimizaciones_comparison_key")
+                    getattr(error.orig, "diag", None), "constraint_name", None) in
+                    ("uq_optimizaciones_comparison_key", "uq_optimizaciones_ff_request_key"))
         try:
             result = super().__exit__(exc_type, exc, traceback)
         except DBAPIError as error:

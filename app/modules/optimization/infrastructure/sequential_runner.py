@@ -116,6 +116,10 @@ class SequentialProcessRunner:
         finally:
             stream.close()
 
+    def standalone_ff(self, scope, problem, minimums, *, cancel):
+        return self.events((scope,), problem, minimums, cancel=cancel,
+                           observed=False, retain_observations=False, lifecycle=True, standalone=True)
+
     def events(self, *args, **kwargs):
         if not self._active.acquire(blocking=False):
             raise RunError("OPTIMIZER_BUSY", "Esta primitiva ya tiene una secuencia activa.")
@@ -128,16 +132,19 @@ class SequentialProcessRunner:
             if self.last_report is previous_report or self.last_report["all_workers_stopped"]:
                 self._active.release()
 
-    def _events(self, scopes, problem, minimums, *, cancel=None, observed=True, retain_observations=True, lifecycle=False):
+    def _events(self, scopes, problem, minimums, *, cancel=None, observed=True, retain_observations=True,
+                lifecycle=False, standalone=False):
         scopes = tuple(scopes)
-        if (len(scopes) != 6 or any(not isinstance(s, ExecutionScope) for s in scopes)
-            or tuple(s.method for s in scopes) != METHODS_V2 or len({s.comparison_id for s in scopes}) != 1
-            or len({s.execution_id for s in scopes}) != 6):
-            raise ValueError("Runner requires the owned ordered six-execution scope")
+        methods = ("FF",) if standalone else METHODS_V2
+        if (any(not isinstance(s, ExecutionScope) for s in scopes)
+            or tuple(s.method for s in scopes) != methods or len({s.comparison_id for s in scopes}) != 1
+            or len({s.execution_id for s in scopes}) != len(methods)):
+            raise ValueError("Runner requires the owned execution scope in method order")
         if type(observed) is not bool or type(retain_observations) is not bool or type(lifecycle) is not bool:
             raise ValueError("Observation flag must be explicit boolean")
         self.preflight()
-        budget, context = self.policy.for_problem(problem), mp.get_context("spawn")
+        budget = self.policy.budget if standalone else self.policy.for_problem(problem)
+        context = mp.get_context("spawn")
         began = time.monotonic()
         payload = canonical_json(encode_problem(problem), maximum_bytes=budget.packet_bytes)
         expected_hash = problem_fingerprint(problem)

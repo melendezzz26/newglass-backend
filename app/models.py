@@ -308,9 +308,12 @@ class Optimizacion(Base):
         ),
         Index("ix_optimizaciones_pedido_fecha", "id_pedido", "fecha_inicio"),
         UniqueConstraint("id_usuario_ejecutor", "comparison_key", name="uq_optimizaciones_comparison_key"),
+        UniqueConstraint("id_usuario_ejecutor", "ff_request_key", name="uq_optimizaciones_ff_request_key"),
         CheckConstraint("comparison_version > 0", name="ck_optimizaciones_comparison_version"),
         CheckConstraint("(comparison_key IS NULL) = (comparison_snapshot IS NULL)",
                         name="ck_optimizaciones_comparison_metadata"),
+        CheckConstraint("ff_request_key IS NULL OR (comparison_key IS NULL AND criterio_seleccion_version = 'S1-FF-v1')",
+                        name="ck_optimizaciones_ff_request"),
     )
 
     id_optimizacion: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -324,6 +327,7 @@ class Optimizacion(Base):
     id_usuario_ejecutor: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"), nullable=False)
     criterio_seleccion_version: Mapped[str] = mapped_column(String(20), nullable=False)
     comparison_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ff_request_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     comparison_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     comparison_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     id_ejecucion_seleccionada: Mapped[int | None] = mapped_column(
@@ -369,7 +373,7 @@ class OptimizationWorkerJob(Base):
                         "(state <> 'WAITING' OR owner_token IS NULL)", name="ck_optimization_worker_job_owner"),
         CheckConstraint("generation >= 0 AND (owner_token IS NULL OR generation > 0)",
                         name="ck_optimization_worker_job_generation"),
-        CheckConstraint("kind IN ('V1', 'V2') AND (kind = 'V2' OR state <> 'WAITING')",
+        CheckConstraint("kind IN ('FF', 'V1', 'V2') AND (kind <> 'V1' OR state <> 'WAITING')",
                         name="ck_optimization_worker_job_kind"),
         UniqueConstraint("slot", name="uq_optimization_worker_global_slot"),
         Index("ix_optimization_worker_waiting", "comparison_id", postgresql_where=text("state = 'WAITING'")),
@@ -390,6 +394,8 @@ class OptimizationWorkerAttempt(Base):
     __table_args__ = (
         CheckConstraint("generation > 0", name="ck_optimization_worker_attempt_generation"),
         CheckConstraint("(closed_at IS NULL) = (closure IS NULL)", name="ck_optimization_worker_attempt_closure"),
+        CheckConstraint("worker_identity IS NULL OR dispatch_at IS NOT NULL",
+                        name="ck_optimization_worker_attempt_dispatch"),
         UniqueConstraint("owner_token", name="uq_optimization_worker_attempt_owner"),
     )
 
@@ -400,6 +406,8 @@ class OptimizationWorkerAttempt(Base):
     owner_identity: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     owner_scope: Mapped[str | None] = mapped_column(String(64))
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    dispatch_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    worker_identity: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closure: Mapped[str | None] = mapped_column(String(32))
 

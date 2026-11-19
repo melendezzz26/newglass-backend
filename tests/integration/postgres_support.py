@@ -70,11 +70,19 @@ def temporary_postgres(root):
             assert stopped.returncode == 0, stopped.stderr
 
 
-def upgrade(engine, revision):
+def _migrate(engine, direction, revision):
     # URL construida por la fixture: no se acepta ninguna conexión externa.
     assert engine.url.host == "127.0.0.1" and engine.url.username == "r1_test"
     environment = {**os.environ, "DATABASE_URL": engine.url.render_as_string(hide_password=False), "PYTHONIOENCODING": "utf-8"}
-    return _run([sys.executable, "-B", "-m", "alembic", "upgrade", revision], cwd=BACKEND, env=environment)
+    return _run([sys.executable, "-B", "-m", "alembic", direction, revision], cwd=BACKEND, env=environment)
+
+
+def upgrade(engine, revision):
+    return _migrate(engine, "upgrade", revision)
+
+
+def downgrade(engine, revision):
+    return _migrate(engine, "downgrade", revision)
 
 
 @contextmanager

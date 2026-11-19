@@ -6,7 +6,15 @@ La restricción única de la plaza sigue siendo global. PostgreSQL registra la g
 
 Un supervisor obsoleto falla la comprobación de token, generación y vigencia antes de proceder con una escritura. La expiración conserva plaza y pedido en `RECOVERY_BLOCKED`. Cuando se demuestra que el supervisor salió en el mismo arranque y namespace y que lo registrado descarta un motor live, puede aplicarse una de dos recuperaciones. Si nunca se persistió intención de spawn, se permite un reintento conservando la misma comparación y clave. Si hay resultados con join acreditado, se preservan y se cierra el resto. Una intención de spawn sin identidad o join, un PID vivo, o una evidencia que no se pueda comparar conservan el bloqueo. El reintento no consume inventario.
 
-V1 adquiere la misma plaza al admitir el agregado. Sigue ejecutándose en su instancia FastAPI de origen con los límites existentes. La reconexión por una API diferente recupera el resultado persistido y aplica el mismo dueño. Ante caída ambigua de V1, la plaza permanece reservada. La cabecera `X-Comparison-Recovery: BLOCKED` señala ese estado en su lectura. La retención visual conserva su alcance local. FF independiente requiere evolución del contrato de admisión y del ciclo de vida del stream para que pueda sumarse al piloto.
+V1 adquiere la misma plaza al admitir el agregado. Sigue ejecutándose en su instancia FastAPI de origen con los límites existentes. La reconexión por una API diferente recupera el resultado persistido y aplica el mismo dueño. Ante caída ambigua de V1, la plaza permanece reservada. La cabecera `X-Comparison-Recovery: BLOCKED` señala ese estado en su lectura. La retención visual conserva su alcance local.
+
+## Extensión 2B.2-FF
+
+El modo mixto admite FF individual mediante una ruta JSON separada. La transacción de admisión registra una clave única de FF por propietario, reserva los pedidos, congela la entrada y crea un trabajo `FF` en la cola compartida con V2. Los dos tipos consumen el mismo cupo de espera y se despachan por identificador de admisión. V1 conserva su admisión inmediata y recibe `503` si la plaza está ocupada. El índice `uq_optimization_worker_global_slot` protege los tres tipos incluso entre transacciones concurrentes. El [contrato HTTP de FF durable](../contracts/optimization-ff-durable.md) detalla la reconexión.
+
+El servicio separado revalida `optimization.execute` antes de reclamar. El supervisor reutiliza el ejecutor secuencial con un único ámbito `FF` y mantiene los presupuestos base, incluido el máximo de cálculo de 120 segundos. El intento registra la intención con tiempo PostgreSQL antes de crear el hijo y registra PID y ticks de inicio antes de que pueda empezar el motor. Las escrituras requieren token, generación y heartbeat vigentes. Tras acreditar el join del árbol, la publicación del resultado, el cambio de estado del pedido, el cierre del intento y la liberación de la plaza ocurren en una sola transacción. Una caída después de esa transacción deja un resultado recuperable mediante la misma clave. Una caída posterior a la intención de despacho y anterior a la transacción de cierre conserva `RECOVERY_BLOCKED` y la reserva. La ausencia verificable del propietario en el mismo arranque y espacio de nombres, junto con la ausencia de intención de despacho, permite un reintento del mismo trabajo.
+
+La migración `s2conc01b210` incorpora la clave FF y la evidencia de despacho. Deja intactos los snapshots anteriores. La reversión del esquema está disponible únicamente mientras no exista historial de FF durable. Actualiza API y worker juntos antes de admitir FF. Un worker anterior desconoce el tipo `FF` y puede impedir el despacho de la cola. Conserva un binario compatible para el rollback operativo si ya existen solicitudes durables.
 
 ## Activación local del modo mixto
 
@@ -18,7 +26,7 @@ python -m alembic upgrade head
 python -m app.modules.optimization.worker_v2 --enable-mixed
 ```
 
-El comando rechaza el cambio si encuentra una plaza activa. Ejecutar las API y los candidatos al worker como procesos independientes. El modo `--enable-pilot` conserva la admisión exclusivamente V2. Los dos perfiles conservan una única plaza.
+Al cambiar de perfil, el comando rechaza la operación si encuentra una plaza activa. Ejecutar las API y los candidatos al worker como procesos independientes. El modo `--enable-pilot` conserva la admisión exclusivamente V2. Los dos perfiles conservan una única plaza.
 
 ## Acreditación operativa en Linux
 

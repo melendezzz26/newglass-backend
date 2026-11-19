@@ -27,7 +27,7 @@ class AcceptComparisonV2:
             raise RunError("INVALID_INPUT", "Lote o clave inválidos.")
         return tuple(sorted(ids))
 
-    def _freeze(self, tx, ids):
+    def freeze(self, tx, ids):
         config_id, version, config, width, height = tx.captured_configuration()
         if config.angular_step_deg != 5:
             raise RunError("CONFIG_CONFLICT", "Se requiere paso angular vigente de 5°.")
@@ -54,7 +54,7 @@ class AcceptComparisonV2:
                 if previous.problem.order_ids != ids:
                     raise RunError("STATE_CONFLICT", "La clave corresponde a otro lote.")
                 return previous
-            self._freeze(tx, ids)
+            self.freeze(tx, ids)
         return None
 
     def execute(self, order_ids, actor_id, key, *, queue_capacity=None, external_worker=False):
@@ -77,10 +77,10 @@ class AcceptComparisonV2:
                     if external_worker:
                         tx.worker_jobs.require_pilot()
                     if queue_capacity is not None:
-                        waiting = tx.comparisons_v2.waiting_count()
+                        waiting = (tx.worker_jobs.waiting_count() if external_worker else tx.comparisons_v2.waiting_count())
                         if waiting >= queue_capacity:
                             raise OptimizerBusy("queued_comparisons", queue_capacity, waiting)
-                    frozen = self._freeze(tx, ids)
+                    frozen = self.freeze(tx, ids)
                     current = (tx.comparisons_v2.create(frozen, actor_id, key, managed=True) if queue_capacity is None
                                else tx.comparisons_v2.create(frozen, actor_id, key, managed=True, queued=True))
                     if external_worker:
