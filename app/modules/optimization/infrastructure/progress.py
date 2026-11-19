@@ -23,6 +23,12 @@ class ProgressJournal:
     def __init__(self, session):
         self.session = session
 
+    def ensure_engine_started(self, job_id, execution_id):
+        # Called under the job lock. An uncertain commit can be retried without a second milestone.
+        active_execution = self.session.scalar(select(Stream.active_execution_id).where(Stream.job_id == job_id))
+        if active_execution != execution_id:
+            self.append(job_id, "ENGINE_STARTED", execution_id=execution_id)
+
     def append(self, job_id, kind, *, execution_id=None, reason=None):
         # The calling transition has already locked or created the job and validated any worker claim.
         keep, _ = progress_retention()

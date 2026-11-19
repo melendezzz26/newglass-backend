@@ -92,13 +92,17 @@ class Services:
         wait_for(ready, bool, seconds=25)
         return process, client
 
-    def worker(self, name, *, hold=None, method="FF"):
+    def worker(self, name, *, hold=None, method="FF", pause_ff_started_event=False):
         if hold is None:
             args, environment = ["-m", "app.modules.optimization.worker_v2"], {}
         else:
             args = ["-c", "from tests.e2e_cancellation_worker import run_gated_worker; run_gated_worker()"]
             environment = {"QA_HOLD_ORDER": str(hold), "QA_RESUME_ENGINE": str(self.resume_file), "QA_HOLD_METHOD": method}
+            if pause_ff_started_event:
+                environment.update(QA_PAUSE_FF_STARTED_EVENT="1", QA_RECOVERY_READY=str(self.path / f"{name}-ready"))
         process = self.start(name, args, **environment)
+        if pause_ff_started_event:
+            self.stack.callback(self.resume_file.touch)
         self.workers[process.pid] = process
         return process
 
@@ -840,8 +844,8 @@ def test_ff_transient_postgres_outage_waits_for_join_before_releasing_the_slot(w
     _, api = data.services.api("ff-outage-api")
     identifier = accept_ff(api, data, "A").json()["id_optimizacion"]
     pending = accept(api, data, "O").json()["comparison_id"]
-    process = data.services.worker("ff-outage-owner", hold=data.orders["A"])
-    wait_for(lambda: ff_dispatched(data, identifier), bool)
+    process = data.services.worker("ff-outage-owner", hold=data.orders["A"], pause_ff_started_event=True)
+    wait_for((data.services.path / "ff-outage-owner-ready").exists, bool)
     admin = create_engine(data.cluster, isolation_level="AUTOCOMMIT")
     database = data.engine.url.database
     try:
@@ -854,6 +858,9 @@ def test_ff_transient_postgres_outage_waits_for_join_before_releasing_the_slot(w
                                 {"database": database})
                 wait_for(lambda: data.services.read_log("ff-outage-owner"),
                          lambda log: "worker_v2_deferred reason=OperationalError" in log, seconds=6)
+                data.services.resume_file.touch()
+                wait_for(lambda: data.services.read_log("ff-outage-owner"),
+                         lambda log: "operation=_persist_started" in log, seconds=3)
                 assert process.poll() is None
             finally:
                 control.exec_driver_sql(f'ALTER DATABASE "{database}" WITH ALLOW_CONNECTIONS true')
@@ -865,6 +872,8 @@ def test_ff_transient_postgres_outage_waits_for_join_before_releasing_the_slot(w
     assert attempt.closure == "JOINED" and attempt.closed_at <= operational_attempt(data, pending, 1).started_at
     result = api.get(f"{RUNS}/{identifier}", headers=data.headers["A"]).json()
     assert result["estado"] == "FALLIDA" and operational_attempt(data, identifier, 2) is None
+    progress = api.get(f"{FF}/{identifier}/progress", headers=data.headers["A"]).json()
+    assert [event["kind"] for event in progress["events"]] == ["WAITING", "RUNNING", "ENGINE_STARTED", "ENGINE_FINISHED", "TERMINAL"]
     assert inventory(data) == (1, 0, 0)
 
 
