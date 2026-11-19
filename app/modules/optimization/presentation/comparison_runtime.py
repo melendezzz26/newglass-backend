@@ -256,13 +256,16 @@ class ComparisonRuntime:
             if self.job is job:
                 self.job = None
 
-    def start(self, job, comparison, uow, lease):
+    def start(self, job, comparison, uow, lease, *, claim=None):
         job.bind(comparison)
         job.lease = lease
         job.uow = uow
+        job.claim = claim
+        options = {"claim": claim} if claim is not None else {}
         def work():
             try:
-                CalculateComparison(uow, job.runner).execute(comparison.comparison_id, job.accept, cancel=job.cancel,defer_finish=True)
+                CalculateComparison(uow, job.runner).execute(comparison.comparison_id, job.accept,
+                    cancel=job.cancel, defer_finish=True, **options)
             except WorkersNotStopped:
                 job.unsafe = True
                 logger.exception("Comparison termination requires reconciliation")
@@ -270,6 +273,15 @@ class ComparisonRuntime:
                 job.unsafe = True
                 logger.exception("Comparison supervisor requires persisted-state reconciliation")
         def reap():
+            if claim is not None:
+                while job.thread.is_alive():
+                    try:
+                        with uow() as tx:
+                            tx.worker_jobs.heartbeat(comparison.comparison_id, claim)
+                    except Exception:
+                        job.cancel.set()
+                        logger.warning("V1 owner could not renew its global claim")
+                    job.thread.join(.25)
             job.thread.join()
             self.stopped(comparison.comparison_id)
         job.thread = Thread(target=work, name=f"comparison-supervisor-{comparison.comparison_id}", daemon=True)
@@ -294,6 +306,9 @@ class ComparisonRuntime:
         if job.finished:
             return True
         report = job.runner.last_report or {}
+        claim = getattr(job, "claim", None)
+        if claim is not None and report.get("all_workers_stopped") is not True:
+            return False
         if report and not report.get("all_workers_stopped"):
             job.unsafe = True
             return False  # Dead PIDs alone do not prove readers/monitor have joined.
@@ -310,7 +325,8 @@ class ComparisonRuntime:
             with self.lock:
                 if job.finished: return True
                 with job.uow() as tx:
-                    closed = tx.comparisons.reconcile_stopped(comparison_id,supervisor_stopped=True)
+                    options = {"claim": claim} if claim is not None else {}
+                    closed = tx.comparisons.reconcile_stopped(comparison_id,supervisor_stopped=True,**options)
                 job.accept(ComparisonSignal(comparison_id=comparison_id,execution_id=None,
                     method=None,kind="comparison_finished",payload=closed))
                 job.finish()

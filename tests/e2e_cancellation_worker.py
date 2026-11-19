@@ -3,6 +3,7 @@
 Never imported by production modules or six production engines. The real
 SequentialProcessRunner supervises and reaps this process exactly as in service.
 """
+from contextlib import closing
 from dataclasses import asdict
 from functools import partial
 import json
@@ -44,7 +45,8 @@ def gated_engine(*args):
     from app.modules.optimization.application.engine_execution import EngineExecutionAdapter
     from app.modules.optimization.infrastructure.sequential_worker import calculation_worker_v2
 
-    if args[0]["method"] == "FF" and int(os.environ["QA_HOLD_ORDER"]) in decode_problem(json.loads(args[1])).order_ids:
+    if (args[0]["method"] == os.environ.get("QA_HOLD_METHOD", "FF")
+            and int(os.environ["QA_HOLD_ORDER"]) in decode_problem(json.loads(args[1])).order_ids):
         original = EngineExecutionAdapter.execute
         resume = Path(os.environ["QA_RESUME_ENGINE"])
 
@@ -68,3 +70,49 @@ def run_gated_worker():
 
     worker_v2.SeparatedComparisonWorker = GatedWorker
     worker_v2.main()
+
+
+def recovery_barrier():
+    Path(os.environ["QA_RECOVERY_READY"]).touch()
+    while not Path(os.environ["QA_RESUME_ENGINE"]).exists():
+        time.sleep(.025)
+
+
+def run_recovery_worker():
+    from app.modules.optimization import worker_v2
+    from app.modules.optimization.infrastructure.sequential_runner import SequentialProcessRunner
+
+    class GatedRunner(SequentialProcessRunner):
+        def events(self, *args, **kwargs):
+            with closing(super().events(*args, **kwargs)) as events:
+                for event in events:
+                    yield event
+                    if os.environ["QA_RECOVERY_PHASE"] == "AFTER" and event["kind"] == "result":
+                        recovery_barrier()  # The result write and descendant join already occurred.
+
+    class GatedWorker(worker_v2.SeparatedComparisonWorker):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, runner_factory=GatedRunner, **kwargs)
+
+        def _launch(self, *args, **kwargs):
+            if os.environ["QA_RECOVERY_PHASE"] == "BEFORE":
+                recovery_barrier()  # Claim committed. No spawn intent yet.
+            return super()._launch(*args, **kwargs)
+
+    worker_v2.SeparatedComparisonWorker = GatedWorker
+    worker_v2.main()
+
+
+def run_gated_v1_api(port):
+    import uvicorn
+    from main import app
+    from app.modules.optimization.infrastructure.comparison_runner import ComparisonProcessRunner
+    from app.modules.optimization.presentation.comparison_routes import get_comparison_runtime
+
+    class GatedComparisonRunner(ComparisonProcessRunner):
+        def calculate(self, *args, **kwargs):
+            recovery_barrier()
+            yield from super().calculate(*args, **kwargs)
+
+    get_comparison_runtime().runner_factory = GatedComparisonRunner
+    uvicorn.run(app, host="127.0.0.1", port=port, access_log=False)

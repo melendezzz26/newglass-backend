@@ -57,21 +57,26 @@ class SqlComparisonRepository:
             Optimizacion.id_usuario_ejecutor == actor_id, Optimizacion.comparison_key == key))
         return self.get(identifier) if identifier is not None else None
 
-    def create(self, problem, configuration_id, actor_id, key, requested_pieces):
-        from .worker_jobs import require_legacy_admission
-        require_legacy_admission(self.session)
+    def create(self, problem, configuration_id, actor_id, key, requested_pieces, *, lease_token=None):
+        from .worker_jobs import WorkerJobs, require_legacy_admission
+        distributed = (require_legacy_admission(self.session, v1=True) if lease_token is not None
+                       else require_legacy_admission(self.session))
         config = self.session.get(Configuracion, configuration_id)
         snapshot = {"comparison_snapshot_version": 1, "input": encode_problem(problem),
             "input_sha256": problem_fingerprint(problem), "requested_pieces": json_value(requested_pieces),
             "configuration_version": config.version,
             "minimum_width_mm": str(config.ancho_min_retazo_mm),
             "minimum_height_mm": str(config.alto_min_retazo_mm)}
+        if distributed:
+            snapshot["worker_tracking"] = 1
         canonical_json(snapshot)  # También acota la solicitud original enriquecida.
         row = Optimizacion(fecha_inicio=now(), estado="EN_EJECUCION", id_pedido=problem.order_ids[0],
             id_configuracion=configuration_id, id_usuario_ejecutor=actor_id, criterio_seleccion_version="CMP-v1",
             comparison_key=key, comparison_snapshot=snapshot, comparison_version=1)
         self.session.add(row)
         self.session.flush()
+        if distributed:
+            WorkerJobs(self.session).reserve_v1(row.id_optimizacion, lease_token)
         self.session.add_all([OptimizacionPedido(id_optimizacion=row.id_optimizacion, id_pedido=i)
                               for i in problem.order_ids])
         self.session.add_all([EjecucionOptimizacion(id_optimizacion=row.id_optimizacion, metodo=method,
@@ -148,6 +153,13 @@ class SqlComparisonRepository:
         except (ValueError, TypeError, KeyError, ArithmeticError) as error:
             raise RunError("INTERNAL_ERROR", "La trazabilidad de la comparación requiere revisión.") from error
 
+    def require_owned(self, identifier, actor_id):
+        owned = self.session.scalar(select(Optimizacion.id_optimizacion).where(
+            Optimizacion.id_optimizacion == identifier, Optimizacion.id_usuario_ejecutor == actor_id,
+            Optimizacion.comparison_snapshot.is_not(None)))
+        if owned is None:
+            raise RunError("NOT_FOUND", "No se encontró la comparación.")
+
     def _lock(self, comparison_id):
         row = self.session.scalar(select(Optimizacion).where(Optimizacion.id_optimizacion == comparison_id)
             .with_for_update().execution_options(populate_existing=True))
@@ -163,19 +175,27 @@ class SqlComparisonRepository:
             raise RunError("NOT_FOUND", "La ejecución no pertenece a la comparación.")
         return row
 
+    def _require_tracked_owner(self, row, claim):
+        if row.comparison_snapshot.get("worker_tracking") == 1:
+            from .worker_jobs import WorkerJobs
+            WorkerJobs(self.session).require_owner_if_registered(row.id_optimizacion, claim, required=True)
+
     def claim_supervisor(self, comparison_id, token, supervisor_identity=None):
+        from .worker_jobs import owner_token
         row = self._lock(comparison_id)
         if row.estado != "EN_EJECUCION" or row.comparison_snapshot.get("supervisor_token") is not None:
             return False
         if any(e.status != "EN_EJECUCION" for e in self.get(comparison_id).executions):
             return False
-        row.comparison_snapshot = {**row.comparison_snapshot, "supervisor_token": token,
+        self._require_tracked_owner(row, token)
+        row.comparison_snapshot = {**row.comparison_snapshot, "supervisor_token": owner_token(token),
                                    "supervisor_identity": supervisor_identity}
         row.comparison_version += 1
         return True
 
-    def record_worker(self, comparison_id, execution_id, identity):
+    def record_worker(self, comparison_id, execution_id, identity, *, claim=None):
         row = self._lock(comparison_id)
+        self._require_tracked_owner(row, claim)
         self._execution(comparison_id, execution_id)
         if row.estado != "EN_EJECUCION" or not row.comparison_snapshot.get("supervisor_token"):
             raise RunError("STATE_CONFLICT", "La comparación no tiene un supervisor activo.")
@@ -186,12 +206,16 @@ class SqlComparisonRepository:
             **row.comparison_snapshot.get("worker_processes", {}), str(execution_id): {
                 "pid": identity["pid"], "start_ticks": identity["start_ticks"]}}}
 
-    def reconcile_stopped(self, comparison_id, *, supervisor_stopped=False):
+    def reconcile_stopped(self, comparison_id, *, supervisor_stopped=False, claim=None):
         """Prueba interna de terminación; nunca aceptar esta afirmación desde HTTP."""
         row = self._lock(comparison_id)
         current = self.get(comparison_id)
         if current.terminal:
             return current
+        if row.comparison_snapshot.get("worker_tracking") == 1:
+            if not supervisor_stopped or claim is None:
+                return current  # A remote web process cannot establish process-tree closure.
+            self._require_tracked_owner(row, claim)
         if not supervisor_stopped:
             from .process_lifecycle import process_identity
             owner = row.comparison_snapshot.get("supervisor_identity")
@@ -204,11 +228,12 @@ class SqlComparisonRepository:
             # El resto verifica al padre e instala PDEATHSIG antes de calcular.
         for execution in current.executions:
             if execution.status == "EN_EJECUCION":
-                self.fail_execution(comparison_id, execution.execution_id, "WORKER_STOPPED")
-        return self.finish_after_workers_stopped(comparison_id)
+                self.fail_execution(comparison_id, execution.execution_id, "WORKER_STOPPED", claim=claim)
+        return self.finish_after_workers_stopped(comparison_id, claim=claim)
 
-    def save_result(self, comparison_id, execution_id, result, residuals):
+    def save_result(self, comparison_id, execution_id, result, residuals, *, claim=None):
         row = self._lock(comparison_id)
+        self._require_tracked_owner(row, claim)
         current = self.get(comparison_id)
         execution = self._execution(comparison_id, execution_id)
         if current.workers_stopped or execution.estado != "EN_EJECUCION":
@@ -240,8 +265,9 @@ class SqlComparisonRepository:
         self.session.flush()
         return self.get(comparison_id)
 
-    def fail_execution(self, comparison_id, execution_id, code):
+    def fail_execution(self, comparison_id, execution_id, code, *, claim=None):
         row = self._lock(comparison_id)
+        self._require_tracked_owner(row, claim)
         execution = self._execution(comparison_id, execution_id)
         if row.estado != "EN_EJECUCION" or execution.estado != "EN_EJECUCION":
             return self.get(comparison_id)
@@ -253,7 +279,7 @@ class SqlComparisonRepository:
         self.session.flush()
         return self.get(comparison_id)
 
-    def finish_after_workers_stopped(self, comparison_id):
+    def finish_after_workers_stopped(self, comparison_id, *, claim=None):
         """Solo tras join de los tres procesos; nunca desde una desconexión HTTP."""
         row = self._lock(comparison_id)
         current = self.get(comparison_id)
@@ -261,6 +287,10 @@ class SqlComparisonRepository:
             return current
         if any(e.status == "EN_EJECUCION" for e in current.executions):
             raise RunError("STATE_CONFLICT", "Todavía hay ejecuciones sin resolver.")
+        if row.comparison_snapshot.get("worker_tracking") == 1:
+            from .worker_jobs import WorkerJobs
+            self._require_tracked_owner(row, claim)
+            WorkerJobs(self.session).finish_if_registered(comparison_id, claim)
         eligible = any(e.eligible for e in current.executions)
         SqlOrdersBatch(self.session).transition(current.problem.order_ids, "EN_OPTIMIZACION",
                                                 "OPTIMIZADO" if eligible else "PENDIENTE")
@@ -304,6 +334,8 @@ class SqlComparisonRepository:
 class SqlComparisonUnitOfWork(SqlRunUnitOfWork):
     def __enter__(self):
         super().__enter__()
+        from .worker_jobs import WorkerJobs
+        self.worker_jobs = WorkerJobs(self.session)
         self.orders = SqlComparisonOrders(self.session)
         self.comparisons = SqlComparisonRepository(self.session)
         self.stock = SqlComparisonStock(self.session)

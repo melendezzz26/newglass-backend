@@ -112,6 +112,16 @@ class SqlRunRepository:
                                confirmed=confirmation is not None, residuals=residuals)
 
 
+    def require_owned(self, optimization_id, actor_id):
+        owner = self.session.scalar(select(Optimizacion.id_usuario_ejecutor).where(
+            Optimizacion.id_optimizacion == optimization_id, Optimizacion.comparison_snapshot.is_(None)))
+        if owner != actor_id:
+            raise RunError("NOT_FOUND", "No se encontró la optimización.")
+
+    def get_owned(self, optimization_id, actor_id):
+        self.require_owned(optimization_id, actor_id)
+        return self.get(optimization_id)
+
     def residual_limits(self, optimization_id):
         execution = self._execution(optimization_id)
         snapshot = execution.patron_resultado

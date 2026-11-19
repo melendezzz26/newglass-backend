@@ -30,7 +30,8 @@ def finish_waiting(tx, current, reason, *, statistics=None):
     identifier = current.comparison_id
     for execution in current.executions:
         payload = ExecutionPayloadV2(method=execution.method, result=None, diagnostic=diagnostic)
-        current = tx.comparisons_v2.save_execution(identifier, execution.execution_id, payload, (), current.version)
+        current = tx.comparisons_v2.save_execution(identifier, execution.execution_id, payload, (), current.version,
+                                                   without_dispatch=True)
     tx.orders.transition(current.problem.order_ids, "EN_OPTIMIZACION", "PENDIENTE")
     return tx.comparisons_v2.record_supervisor_stopped(identifier, datetime.now(timezone.utc), current.version)
 
@@ -66,7 +67,7 @@ class SeparatedComparisonApi(ComparisonV2Coordinator):
             current = tx.comparisons_v2.get_owned(identifier, actor_id)
             waiting = current.waiting
             if (not waiting and not current.terminal and current.cancellation is None
-                    and tx.worker_jobs.status(identifier) != "RUNNING"):
+                    and tx.worker_jobs.status(identifier) not in ("RUNNING", "RECOVERY_BLOCKED")):
                 raise RunError("RECOVERY_BLOCKED", "No se puede acreditar el propietario activo para cancelar.")
             current = tx.comparisons_v2.request_cancellation(identifier, actor_id, key, expected_version)
             return finish_waiting(tx, current, "CANCELLED") if waiting else current

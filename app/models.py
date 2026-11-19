@@ -345,10 +345,12 @@ class Optimizacion(Base):
 
 class OptimizationWorkerPolicy(Base):
     __tablename__ = "optimization_worker_policy"
-    __table_args__ = (CheckConstraint("id = 1", name="ck_optimization_worker_policy_singleton"),)
+    __table_args__ = (CheckConstraint("id = 1", name="ck_optimization_worker_policy_singleton"),
+                      CheckConstraint("NOT mixed OR pilot", name="ck_optimization_worker_policy_mixed"))
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     pilot: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    mixed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
 
 event.listen(OptimizationWorkerPolicy.__table__, "after_create",
@@ -365,6 +367,10 @@ class OptimizationWorkerJob(Base):
                         "(state IN ('WAITING', 'TERMINAL') AND slot IS NULL)", name="ck_optimization_worker_job_slot"),
         CheckConstraint("(owner_token IS NULL) = (heartbeat_at IS NULL) AND "
                         "(state <> 'WAITING' OR owner_token IS NULL)", name="ck_optimization_worker_job_owner"),
+        CheckConstraint("generation >= 0 AND (owner_token IS NULL OR generation > 0)",
+                        name="ck_optimization_worker_job_generation"),
+        CheckConstraint("kind IN ('V1', 'V2') AND (kind = 'V2' OR state <> 'WAITING')",
+                        name="ck_optimization_worker_job_kind"),
         UniqueConstraint("slot", name="uq_optimization_worker_global_slot"),
         Index("ix_optimization_worker_waiting", "comparison_id", postgresql_where=text("state = 'WAITING'")),
     )
@@ -375,6 +381,27 @@ class OptimizationWorkerJob(Base):
     slot: Mapped[int | None] = mapped_column(Integer)
     owner_token: Mapped[str | None] = mapped_column(String(32))
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    generation: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    kind: Mapped[str] = mapped_column(String(2), nullable=False, server_default="V2")
+
+
+class OptimizationWorkerAttempt(Base):
+    __tablename__ = "optimization_worker_attempts"
+    __table_args__ = (
+        CheckConstraint("generation > 0", name="ck_optimization_worker_attempt_generation"),
+        CheckConstraint("(closed_at IS NULL) = (closure IS NULL)", name="ck_optimization_worker_attempt_closure"),
+        UniqueConstraint("owner_token", name="uq_optimization_worker_attempt_owner"),
+    )
+
+    comparison_id: Mapped[int] = mapped_column(ForeignKey("optimization_worker_jobs.comparison_id"),
+                                               primary_key=True, autoincrement=False)
+    generation: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    owner_token: Mapped[str] = mapped_column(String(32), nullable=False)
+    owner_identity: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    owner_scope: Mapped[str | None] = mapped_column(String(64))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closure: Mapped[str | None] = mapped_column(String(32))
 
 
 class OptimizacionPedido(Base):

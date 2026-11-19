@@ -41,6 +41,7 @@ class SupervisedJob:
     def __init__(self, comparison, runner, uow, lease, sink):
         self.comparison, self.runner, self.uow, self.lease = comparison,runner,uow,lease
         self.token, self.identity = uuid4().hex, process_identity(os.getpid())
+        self.claim = self.token
         self.cancel, self.closed = Event(), Event()
         self.thread = self.reaper = None
         self.unsafe, self.error_type, self.sink = False,None,sink
@@ -75,7 +76,7 @@ class SupervisedJob:
                             execution_id=signal.execution_id,method=signal.method,mask_ref=ref) for ref in session.records)
                         with self.uow() as tx:
                             tx.comparisons_v2.save_supervised_visual_references(
-                                signal.comparison_id,signal.execution_id,references,self.token)
+                                signal.comparison_id,signal.execution_id,references,self.claim)
                     if data["fact"].get("orientation") is not None:
                         data["fact"]["orientation"] = dict(rotation_deg=str(fact.orientation.rotation_deg),
                             geometry=json_value(fact.orientation.geometry),mask_ref=piece.reference if piece else None)
@@ -178,7 +179,7 @@ class ComparisonV2Coordinator:
         def work():
             job.mark("supervisor_started")
             try:
-                CalculateComparisonV2(self.uow, job.runner).execute(identifier, job.token,
+                CalculateComparisonV2(self.uow, job.runner).execute(identifier, job.claim,
                     cancel=job.cancel, observer=job.accept if observe else None)
             except Exception as error:
                 job.error_type = type(error).__name__
@@ -264,7 +265,7 @@ class ComparisonV2Coordinator:
                 job.unsafe=True; return False
             try:
                 with self.uow() as tx:
-                    _, current=tx.comparisons_v2.require_supervisor(job.comparison.comparison_id,job.token)
+                    _, current=tx.comparisons_v2.require_supervisor(job.comparison.comparison_id,job.claim)
                 known=current.runtime['workers']
                 for execution_id, worker in known.items():
                     if worker is None:
@@ -276,14 +277,14 @@ class ComparisonV2Coordinator:
                             if actual is None or process_identity(actual['pid'])==actual:
                                 raise WorkersNotStopped("Unregistered spawn remains ambiguous")
                             with self.uow() as tx:
-                                tx.comparisons_v2.record_worker(current.comparison_id,int(execution_id),job.token,actual)
+                                tx.comparisons_v2.record_worker(current.comparison_id,int(execution_id),job.claim,actual)
                     elif process_identity(worker['pid'])==dict(worker): raise WorkersNotStopped("Worker is still alive")
                 job.mark("processes_verified")
-                fail_pending(self.uow,current.comparison_id,job.token,
+                fail_pending(self.uow,current.comparison_id,job.claim,
                     "RESULT_SAVE_FAILED" if job.error_type else
                     "CANCELLED" if current.cancellation is not None and job.cancel.is_set() else "WORKER_STOPPED")
                 with self.uow() as tx:
-                    _, current=tx.comparisons_v2.require_supervisor(current.comparison_id,job.token)
+                    _, current=tx.comparisons_v2.require_supervisor(current.comparison_id,job.claim)
                     if not current.terminal:
                         cancelled = current.cancellation is not None and any(
                             e.diagnostic is not None and e.diagnostic.termination_reason == "CANCELLED"
@@ -291,8 +292,10 @@ class ComparisonV2Coordinator:
                         tx.orders.transition(current.problem.order_ids,"EN_OPTIMIZACION",
                             "PENDIENTE" if cancelled else
                             "OPTIMIZADO" if any(e.eligible for e in current.executions) else "PENDIENTE")
+                        from ..infrastructure.worker_jobs import WorkerClaim
+                        options = {"claim": job.claim} if isinstance(job.claim, WorkerClaim) else {}
                         current=tx.comparisons_v2.record_supervisor_stopped(current.comparison_id,
-                            datetime.now(timezone.utc),current.version)
+                            datetime.now(timezone.utc),current.version,**options)
                 job.comparison=current; job.mark("safe_close_committed")
                 for session in job.sessions.values(): session.finish()
                 job.safe_to_retire=True

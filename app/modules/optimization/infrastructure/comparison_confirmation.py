@@ -34,6 +34,8 @@ class SqlComparisonConfirmationRepository(SqlConfirmationRepository):
         self.comparisons = comparisons
 
     def confirmation_view(self, row, actor_id):
+        if row.id_usuario_ejecutor != actor_id:
+            raise RunError("NOT_FOUND", "No se encontró la comparación.")
         return self.comparisons.get(row.id_optimizacion)
 
     def residual_policy(self, execution, stored):
