@@ -10,6 +10,7 @@ from app.models import Optimizacion, OptimizationWorkerAttempt as Attempt
 from app.models import OptimizationWorkerJob as Job, OptimizationWorkerPolicy as Policy
 from ..application.admission import OptimizerBusy
 from ..application.errors import RunError
+from ..application.supervision_contracts import identity
 from .process_lifecycle import process_identity, process_scope
 
 HEARTBEAT_LIMIT = timedelta(seconds=10)
@@ -65,6 +66,12 @@ def require_pilot(session, *, protect_admission=False):
                        details={"request_accepted": False})
 
 
+def require_durable_ff(session):
+    if not execution_policy(session, protect_admission=True).mixed:
+        raise RunError("RESOURCE_UNAVAILABLE", "FF durable requiere el piloto mixto.",
+                       details={"request_accepted": False})
+
+
 class WorkerJobs:
     def __init__(self, session):
         self.session = session
@@ -72,8 +79,14 @@ class WorkerJobs:
     def require_pilot(self):
         require_pilot(self.session, protect_admission=True)
 
-    def enqueue(self, comparison_id):
-        self.session.add(Job(comparison_id=comparison_id, state="WAITING"))
+    def require_durable_ff(self):
+        require_durable_ff(self.session)
+
+    def enqueue(self, comparison_id, *, kind="V2"):
+        self.session.add(Job(comparison_id=comparison_id, state="WAITING", kind=kind))
+
+    def waiting_count(self):
+        return self.session.scalar(select(func.count()).select_from(Job).where(Job.state == "WAITING"))
 
     def _registered(self, identifier, *, lock=False):
         query = select(Job).where(Job.comparison_id == identifier)
@@ -97,14 +110,18 @@ class WorkerJobs:
             raise RunError("RECOVERY_BLOCKED", "El intento activo no tiene una trazabilidad válida.")
         return attempt
 
-    def require_owner_if_registered(self, identifier, claim, *, required=False, without_dispatch=False):
+    def require_owner_if_registered(self, identifier, claim, *, required=False, without_dispatch=False, kind=None):
         entry = self._registered(identifier, lock=True)
         if entry is not None:
+            if kind is not None and entry[0].kind != kind:
+                raise RunError("RECOVERY_BLOCKED", "El tipo de trabajo operativo no coincide.")
             if without_dispatch and claim is None and entry[0].state == "WAITING":
-                return
+                return True
             self._assert_owner(*entry, claim, recovery=isinstance(claim, RecoveredClaim))
+            return True
         elif required or isinstance(claim, WorkerClaim):
             raise RunError("RECOVERY_BLOCKED", "El trabajo operativo no está disponible.")
+        return False
 
     def status(self, identifier):
         entry = self._registered(identifier)
@@ -180,8 +197,39 @@ class WorkerJobs:
         job, timestamp = entry
         self._assert_owner(job, timestamp, claim)
         job.heartbeat_at = timestamp
+        if job.kind == "FF":
+            return False  # Standalone FF has no public cancellation command.
         return self.session.scalar(select(Optimizacion.comparison_snapshot["cancellation"]["status"].as_string())
             .where(Optimizacion.id_optimizacion == identifier)) == "REQUESTED"
+
+    def record_ff_dispatch(self, identifier, claim, *, process=None):
+        entry = self._registered(identifier, lock=True)
+        if entry is None or entry[0].kind != "FF":
+            raise RunError("RECOVERY_BLOCKED", "No se encontró el intento operativo de FF.")
+        job, timestamp = entry
+        attempt = self._assert_owner(job, timestamp, claim)
+        if process is None and attempt.dispatch_at is None:
+            attempt.dispatch_at = timestamp
+        elif process is not None and attempt.dispatch_at is not None and attempt.worker_identity is None:
+            attempt.worker_identity = identity(process)
+        else:
+            raise RunError("RECOVERY_BLOCKED", "La traza de despacho de FF no coincide.")
+
+    def require_ff_join(self, identifier, claim):
+        entry = self._registered(identifier, lock=True)
+        if entry is None or entry[0].kind != "FF":
+            raise RunError("RECOVERY_BLOCKED", "No se encontró el intento operativo de FF.")
+        attempt = self._assert_owner(*entry, claim)
+        if attempt.dispatch_at is None or attempt.worker_identity is None:
+            raise RunError("RECOVERY_BLOCKED", "FF carece de identidad de proceso acreditada.")
+
+    def ff_closed_for_confirmation(self, identifier):
+        return self.session.scalar(select(select(Job.comparison_id).join(Attempt,
+            (Attempt.comparison_id == Job.comparison_id) & (Attempt.generation == Job.generation)
+            & (Attempt.owner_token == Job.owner_token)).where(Job.comparison_id == identifier,
+            Job.kind == "FF", Job.state == "TERMINAL", Attempt.closed_at.is_not(None),
+            Attempt.closure == "JOINED", Attempt.dispatch_at.is_not(None),
+            Attempt.worker_identity.is_not(None)).exists()))
 
     def finish_if_registered(self, identifier, claim, *, closure="JOINED"):
         entry = self._registered(identifier, lock=True)
@@ -193,8 +241,8 @@ class WorkerJobs:
             attempt.closed_at, attempt.closure = timestamp, closure
         job.state, job.slot = "TERMINAL", None
 
-    def blocked_v2(self):
-        return self.session.scalar(select(Job).where(Job.slot == 1, Job.kind == "V2",
+    def blocked(self, kind):
+        return self.session.scalar(select(Job).where(Job.slot == 1, Job.kind == kind,
             Job.state == "RECOVERY_BLOCKED").with_for_update(skip_locked=True))
 
     def requeue_proven(self, identifier, claim):

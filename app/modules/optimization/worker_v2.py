@@ -6,6 +6,7 @@ import signal
 from functools import partial
 from threading import Event
 from time import monotonic, sleep
+from uuid import uuid4
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -15,11 +16,14 @@ from sqlalchemy.orm import sessionmaker
 from app.shared.config import database_engine_options, database_url
 from .application.admission import OptimizerBusy
 from .application.comparison_acceptance_v2 import SnapshotConflict
+from .application.dto import RunStatus
+from .application.engine_execution import ExecutionScope
 from .application.errors import RunError
 from .infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
+from .infrastructure.durable_ff_worker import DurableFFWork
 from .infrastructure.in_process_admission import InProcessRunAdmission
 from .infrastructure.worker_jobs import enable_pilot, require_pilot
-from .infrastructure.worker_recovery import recover_abandoned_v2
+from .infrastructure.worker_recovery import recover_abandoned_ff, recover_abandoned_v2
 from .presentation.comparison_queue_v2 import finish_waiting, queue_limits
 from .presentation.comparison_supervision_v2 import ComparisonV2Coordinator, SupervisedJob
 
@@ -45,7 +49,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                 claimed = self._claim_in_transaction(tx)
             return claimed
         except BaseException:
-            if claimed is not None:
+            if isinstance(claimed, SupervisedJob):
                 claimed.lease.release()
                 claimed.dispose()
             raise
@@ -55,11 +59,13 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
             return None
         tx.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
         tx.worker_jobs.block_stale()
-        if recover_abandoned_v2(tx):
+        if recover_abandoned_v2(tx) or recover_abandoned_ff(tx):
             return None  # Commit closure evidence before the next admission/claim transaction.
         row = tx.worker_jobs.next_waiting()
         if row is None:
             return None
+        if row.kind == "FF":
+            return self._claim_ff(tx, row)
         current = tx.comparisons_v2.get(row.comparison_id)
         if not current.waiting:
             raise RunError("RECOVERY_BLOCKED", "El registro operativo y la comparación difieren.")
@@ -86,12 +92,36 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                 job.dispose()
             raise
 
+    def _claim_ff(self, tx, row):
+        tx.worker_jobs.require_durable_ff()
+        identifier = row.comparison_id
+        run, actor_id, execution_id = tx.runs.ff_worker_input(identifier)
+        if run.status is not RunStatus.RUNNING:
+            raise RunError("RECOVERY_BLOCKED", "El registro operativo y la corrida FF difieren.")
+        try:
+            self.authorize(tx, actor_id)
+        except Exception as error:
+            if getattr(error, "code", None) != "FORBIDDEN" and getattr(error, "status_code", None) != 403:
+                raise
+            tx.runs.fail(identifier, "PERMISSION_REVOKED", without_dispatch=True)
+            tx.worker_jobs.finish_if_registered(identifier, None)
+            return None
+        tx.orders.require_state(run.result.problem.order_ids, "EN_OPTIMIZACION")
+        runner = self.runner_factory()
+        runner.preflight()
+        claim = tx.worker_jobs.claim(row, uuid4().hex)
+        scope = ExecutionScope(comparison_id=identifier, execution_id=execution_id, method="FF")
+        return DurableFFWork(scope, run.result.problem, tx.runs.residual_limits(identifier), claim, runner)
+
     def _start_claimed(self):
         job = self._claim()
         if job is None:
             return
         job.started_wall, job.started_cpu = monotonic(), cpu_ms()
         self.job = job
+        if isinstance(job, DurableFFWork):
+            self._launch_ff(job)
+            return
         try:
             self._launch(job, observe=False)
         except BaseException:
@@ -99,12 +129,17 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
             self._close(job)
             raise
 
+    def _launch_ff(self, job):
+        job.start(self.uow)
+
     def _observe_claim(self, job):
+        standalone = isinstance(job, DurableFFWork)
+        identifier = job.identifier if standalone else job.comparison.comparison_id
         if job.thread is not None and job.thread.is_alive():
             try:
                 with self.uow() as tx:
                     tx.session.execute(text("SET LOCAL lock_timeout = '250ms'"))
-                    cancelled = tx.worker_jobs.heartbeat(job.comparison.comparison_id, job.claim)
+                    cancelled = tx.worker_jobs.heartbeat(identifier, job.claim)
             except SnapshotConflict:
                 return  # The supervisor may be committing another result.
             except (RunError, SQLAlchemyError):
@@ -112,12 +147,14 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                 raise
             if cancelled:
                 job.cancel.set()
-        elif self._close(job):
+        elif standalone or self._close(job):
             report = job.runner.last_report or {}
-            logger.info("worker_v2_closed comparison_id=%s wall_ms=%s cpu_ms=%s peak_rss_bytes=%s pool_limit=%s",
-                        job.comparison.comparison_id, round((monotonic() - job.started_wall) * 1000),
+            label = "worker_ff_returned id" if standalone else "worker_v2_closed comparison_id"
+            logger.info("%s=%s wall_ms=%s cpu_ms=%s peak_rss_bytes=%s pool_limit=%s",
+                        label, identifier, round((monotonic() - job.started_wall) * 1000),
                         cpu_ms() - job.started_cpu, report.get("maximum_aggregate_rss"), self.pool.size())
-            job.dispose()
+            if not standalone:
+                job.dispose()
             self.job = None
 
     def serve(self, stop):
@@ -151,14 +188,19 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                 else:
                     stop.wait(.25)
         finally:
-            self.shutdown()
+            if isinstance(self.job, DurableFFWork):
+                self.job.cancel.set()
+                if self.job.thread is not None and self.job.thread.ident is not None:
+                    self.job.thread.join(timeout=15)
+            else:
+                self.shutdown()
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     flags = parser.add_mutually_exclusive_group()
     flags.add_argument("--enable-pilot", action="store_true", help="Enable the worker profile on a drained database and exit")
-    flags.add_argument("--enable-mixed", action="store_true", help="Enable distributed V1/V2 admission on a drained database")
+    flags.add_argument("--enable-mixed", action="store_true", help="Enable distributed FF/V1/V2 admission on a drained database")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     url = database_url()

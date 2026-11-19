@@ -99,6 +99,17 @@ def run_recovery_worker():
                 recovery_barrier()  # Claim committed. No spawn intent yet.
             return super()._launch(*args, **kwargs)
 
+        def _launch_ff(self, job):
+            if os.environ["QA_RECOVERY_PHASE"] == "FF_BEFORE":
+                recovery_barrier()
+            return super()._launch_ff(job)
+
+        def _observe_claim(self, job):
+            if (os.environ["QA_RECOVERY_PHASE"] == "FF_AFTER" and job.thread is not None
+                    and not job.thread.is_alive() and job.runner.last_report["all_workers_stopped"]):
+                recovery_barrier()
+            return super()._observe_claim(job)
+
     worker_v2.SeparatedComparisonWorker = GatedWorker
     worker_v2.main()
 

@@ -81,6 +81,10 @@ class SqlConfirmationRepository:
         if (row.estado != "COMPLETADA" or execution.estado != "COMPLETADA" or not execution.completo
                 or row.id_ejecucion_seleccionada != execution.id_ejecucion):
             raise RunError("NOT_CONFIRMABLE", "No hay una ejecución FF completa seleccionada para confirmar.")
+        if row.ff_request_key is not None:
+            from .worker_jobs import WorkerJobs
+            if not WorkerJobs(self.session).ff_closed_for_confirmation(optimization_id):
+                raise RunError("NOT_CONFIRMABLE", "No se acreditó el cierre de la ejecución FF.")
         try:
             run = self.runs.get(optimization_id)
             snapshot = execution.patron_resultado

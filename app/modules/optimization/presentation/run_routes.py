@@ -1,8 +1,8 @@
 """T1 run routes; legacy HU-015 routes keep their original error representation."""
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, Query, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Query, Response
 from sqlalchemy.exc import DBAPIError
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
@@ -11,7 +11,7 @@ from fastapi.routing import APIRoute
 from ..application.runs import AcceptRun
 from ..infrastructure.in_process_admission import InProcessRunAdmission
 from ..application.errors import RunError
-from .run_schemas import RunRequestV1, RunResponseV1, ConfirmResponseV1
+from .run_schemas import ContractV1, RunRequestV1, RunResponseV1, ConfirmResponseV1
 from ..application.confirmation import ConfirmRun
 from .confirmation_serialization import confirmation_response
 from .run_serialization import run_response
@@ -104,6 +104,47 @@ def get_stream_profile(request: Request):
 
 
 router = APIRouter(prefix="/runs", route_class=RunRoute)
+
+
+class DurableRunStatus(ContractV1):
+    id_optimizacion: int
+    state: Literal["WAITING", "RUNNING", "TERMINAL", "RECOVERY_BLOCKED"]
+    result_url: str | None
+
+
+def get_durable_run_uow():
+    from app.shared.database.session import SessionLocal
+    from ..infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
+    return lambda: SqlComparisonPersistenceUnitOfWork(SessionLocal)
+
+
+def durable_run_status(identifier, state):
+    return DurableRunStatus(id_optimizacion=identifier, state=state,
+        result_url=f"/api/optimization/runs/{identifier}" if state == "TERMINAL" else None)
+
+
+@router.post("/durable", status_code=202, response_model=DurableRunStatus)
+def start_durable_run(request: RunRequestV1, response: Response,
+        key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")],
+        user=Depends(run_permission("optimization.execute")), uow=Depends(get_durable_run_uow)):
+    from ..application.durable_run import AcceptDurableRun
+    from .comparison_queue_v2 import queue_limits
+    from .comparison_supervision_v2 import authorize_actor
+    identifier, state = AcceptDurableRun(uow, authorize_actor, queue_capacity=queue_limits()["queue_capacity"]).execute(
+        request.order_ids, user.user_id, key)
+    response.headers["Location"] = f"/api/optimization/runs/durable/{identifier}"
+    response.headers["Cache-Control"] = "no-store"
+    return durable_run_status(identifier, state)
+
+
+@router.get("/durable/{id_optimizacion}", response_model=DurableRunStatus)
+def get_durable_run(id_optimizacion: Annotated[int, Path(gt=0, le=2147483647)], response: Response,
+        user=Depends(run_permission("optimization.view")), uow=Depends(get_durable_run_uow)):
+    with uow() as tx:
+        tx.runs.require_ff_owned(id_optimizacion, user.user_id)
+        state = tx.worker_jobs.status(id_optimizacion) or "RECOVERY_BLOCKED"
+    response.headers["Cache-Control"] = "no-store"
+    return durable_run_status(id_optimizacion, state)
 
 
 @router.post("", status_code=201, response_class=StreamingResponse,

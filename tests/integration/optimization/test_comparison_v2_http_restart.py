@@ -25,7 +25,7 @@ from app.modules.optimization.infrastructure.comparison_v2_uow import SqlCompari
 from app.modules.optimization.infrastructure.process_lifecycle import process_identity, process_scope
 from app.modules.optimization.infrastructure.worker_jobs import WorkerClaim, enable_pilot, pilot_enabled, require_legacy_admission
 from app.modules.optimization.presentation.comparison_supervision_v2 import authorize_actor
-from tests.integration.postgres_support import BACKEND, new_database, upgrade
+from tests.integration.postgres_support import BACKEND, downgrade, new_database, upgrade
 from .test_comparison_queue_v2 import BASE, inventory, prepare_queue_data
 
 
@@ -541,7 +541,7 @@ def test_mixed_policy_excludes_v1_and_v2_both_ways_and_cancels_bf(worker_db):
 
 def test_upgrade_keeps_2b1_current_and_waiting_records_without_rewriting_snapshots(isolated_postgres):
     with new_database(isolated_postgres) as engine:
-        result = upgrade(engine, "s2conc01b100")
+        result = upgrade(engine, "head")
         assert result.returncode == 0, result.stderr
         data = prepare_queue_data(engine)
         data.uow = partial(SqlComparisonPersistenceUnitOfWork, data.sessions)
@@ -553,11 +553,15 @@ def test_upgrade_keeps_2b1_current_and_waiting_records_without_rewriting_snapsho
             runtime = {**row.comparison_snapshot["runtime"], "owner_scope": process_scope(),
                        "supervisor": {"token": token, "identity": process_identity(os.getpid())}}
             row.comparison_snapshot = {**row.comparison_snapshot, "runtime": runtime}
+            db.flush()
+            before = [db.get(Optimizacion, identifier).comparison_snapshot for identifier in (active, waiting)]
+        reverted = downgrade(engine, "s2conc01b100")
+        assert reverted.returncode == 0, reverted.stderr
+        with data.sessions.begin() as db:
             db.execute(text("INSERT INTO optimization_worker_jobs (comparison_id, state, slot, owner_token, heartbeat_at) "
                             "VALUES (:id, 'RUNNING', 1, :token, clock_timestamp())"), {"id": active, "token": token})
             db.execute(text("INSERT INTO optimization_worker_jobs (comparison_id, state) VALUES (:id, 'WAITING')"),
                        {"id": waiting})
-            before = [db.get(Optimizacion, identifier).comparison_snapshot for identifier in (active, waiting)]
         result = upgrade(engine, "head")
         assert result.returncode == 0, result.stderr
         with data.uow() as tx:
@@ -568,3 +572,317 @@ def test_upgrade_keeps_2b1_current_and_waiting_records_without_rewriting_snapsho
             assert tx.session.get(OptimizationWorkerJob, waiting).generation == 0
             assert tx.comparisons_v2.get(waiting).waiting
             assert [tx.session.get(Optimizacion, identifier).comparison_snapshot for identifier in (active, waiting)] == before
+
+
+RUNS = "/api/optimization/runs"
+FF = f"{RUNS}/durable"
+V1 = "/api/optimization/comparisons"
+
+
+def accept_ff(client, data, actor, *, order=None, key="qa-durable-ff"):
+    return client.post(FF, headers={**data.headers[actor], "Idempotency-Key": key},
+                       json={"order_ids": [order or data.orders[actor]]})
+
+
+def ff_state(client, data, actor, identifier):
+    response = client.get(f"{FF}/{identifier}", headers=data.headers[actor])
+    assert response.status_code == 200, response.text
+    return response.json()["state"]
+
+
+def ff_dispatched(data, identifier):
+    attempt = operational_attempt(data, identifier, 1)
+    return attempt if attempt and attempt.worker_identity else None
+
+
+def test_durable_ff_owns_the_shared_slot_across_api_restart_and_concurrent_confirmation(worker_db, monkeypatch):
+    data = worker_db
+    activate(data, mixed=True)
+    api_a, a = data.services.api("ff-api-a")
+    api_b, b = data.services.api("ff-api-b")
+    assert a.post(FF, headers=data.headers["A"], json={"order_ids": [data.orders["A"]]}).status_code == 422
+    assert accept_ff(b, data, "L").status_code == 403
+    assert b.get("/api/inventory/planchas", headers=data.headers["L"]).status_code == 200
+    with ThreadPoolExecutor(2) as requests:
+        results = list(requests.map(lambda api: accept_ff(api, data, "A"), (a, b)))
+    assert all(response.status_code == 202 for response in results), [r.text for r in results]
+    first = results[0].json()["id_optimizacion"]
+    assert all(response.headers["Location"] == f"{FF}/{first}" for response in results)
+    assert accept_ff(a, data, "A", order=data.orders["L"]).status_code == 409
+    assert accept_ff(b, data, "O", order=data.orders["A"]).status_code == 409
+    assert b.get(f"{FF}/{first}", headers=data.headers["O"]).status_code == 404
+    assert b.post(f"{RUNS}/{first}/confirm", headers=data.headers["L"]).status_code == 403
+    for name in ("ff-worker-a", "ff-worker-b"):
+        data.services.worker(name, hold=data.orders["A"])
+    owner = wait_for(lambda: ff_dispatched(data, first), bool)
+    second = accept(b, data, "O").json()["comparison_id"]
+    assert owned_get(a, data, "A", second, "/queue").status_code == 404
+    assert queue_state(b, data, "O", second) == "WAITING"
+    assert a.post(V1, headers={**data.headers["A"], "Idempotency-Key": "qa-ff-blocks-v1"},
+                  json={"order_ids": [data.orders["L"]]}).status_code == 503
+    assert a.post(f"{RUNS}/{first}/confirm", headers=data.headers["A"]).status_code == 422
+    for process in (api_a, api_b):
+        data.services.stop(process)
+    _, a = data.services.api("ff-api-a-restarted")
+    _, b = data.services.api("ff-api-b-restarted")
+    assert accept_ff(b, data, "A").json() == dict(id_optimizacion=first, state="RUNNING", result_url=None)
+    assert ff_state(a, data, "A", first) == "RUNNING"
+    assert queue_state(b, data, "O", second) == "WAITING"
+    with data.sessions() as db:
+        assert db.scalars(select(OptimizationWorkerJob.comparison_id).where(OptimizationWorkerJob.slot == 1)).all() == [first]
+        assert db.get(OptimizationWorkerAttempt, (first, 1)).owner_token == owner.owner_token
+    data.services.resume_file.touch()
+    wait_for(lambda: ff_state(b, data, "A", first), lambda state: state == "TERMINAL")
+    result = b.get(f"{RUNS}/{first}", headers=data.headers["A"])
+    assert result.status_code == 200 and result.json()["completo"], result.text
+    assert accept_ff(a, data, "A").json()["result_url"] == f"{RUNS}/{first}"
+    wait_for(lambda: queue_state(a, data, "O", second), lambda state: state == "TERMINAL")
+    comparison = summary(a, data, "O", second)
+    assert len(comparison["executions"]) == 6 and all(row["complete"] for row in comparison["executions"])
+    ff_attempt = operational_attempt(data, first, 1)
+    assert ff_attempt.closure == "JOINED" and ff_attempt.closed_at <= operational_attempt(data, second, 1).started_at
+    assert operational_attempt(data, first, 2) is None
+    assert inventory(data) == (1, 0, 0)
+    print(next(line for name in ("ff-worker-a", "ff-worker-b")
+               for line in data.services.read_log(name).splitlines() if f"worker_ff_returned id={first} " in line))
+
+    from app.modules.optimization.application.confirmation import ConfirmRun
+    from app.modules.optimization.infrastructure.confirmation_adapter import SqlConfirmationRepository
+
+    def interrupt_confirmation(*args):
+        raise RuntimeError("Test interruption after stock consumption")
+
+    with monkeypatch.context() as fault:
+        fault.setattr(SqlConfirmationRepository, "mark_confirmed", interrupt_confirmation)
+        with pytest.raises(RuntimeError, match="Test interruption"):
+            ConfirmRun(data.uow).execute(first, data.actors["A"])
+    assert inventory(data) == (1, 0, 0)
+
+    selection = a.put(f"{BASE}/{second}/selection", headers=data.headers["O"],
+        json={"execution_id": comparison["executions"][0]["execution_id"], "expected_version": comparison["version"]})
+    assert selection.status_code == 200, selection.text
+    selected = selection.json()
+    with ThreadPoolExecutor(2) as requests:
+        confirm_ff = requests.submit(a.post, f"{RUNS}/{first}/confirm", headers=data.headers["A"])
+        confirm_v2 = requests.submit(b.post, f"{BASE}/{second}/confirm",
+            headers={**data.headers["O"], "Idempotency-Key": "qa-ff-v2-confirm"},
+            json={"execution_id": selected["selected_execution_id"], "expected_version": selected["version"]})
+        responses = [confirm_ff.result(), confirm_v2.result()]
+    assert sorted(r.status_code for r in responses) == [200, 409], [r.text for r in responses]
+    assert inventory(data) == (0, 1, 1)
+    if responses[0].status_code == 200:
+        repeat = b.post(f"{RUNS}/{first}/confirm", headers=data.headers["A"])
+        assert repeat.status_code == 409 and repeat.json()["detail"]["code"] == "ALREADY_CONFIRMED"
+    else:
+        repeat = a.post(f"{BASE}/{second}/confirm",
+            headers={**data.headers["O"], "Idempotency-Key": "qa-ff-v2-confirm"},
+            json={"execution_id": selected["selected_execution_id"], "expected_version": selected["version"]})
+        assert repeat.status_code == 200 and repeat.json() == responses[1].json()
+    assert inventory(data) == (0, 1, 1)
+
+
+def test_ff_waits_during_v2_and_uses_opportunity_after_verified_close(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    _, a = data.services.api("reverse-api-a")
+    _, b = data.services.api("reverse-api-b")
+    first = accept(a, data, "A").json()["comparison_id"]
+    data.services.worker("reverse-worker", hold=data.orders["A"])
+    wait_running(a, data, "A", first)
+    response = accept_ff(b, data, "O")
+    assert response.status_code == 202, response.text
+    second = response.json()["id_optimizacion"]
+    assert ff_state(a, data, "O", second) == "WAITING"
+    assert a.get(f"{RUNS}/{second}", headers=data.headers["A"]).status_code == 404
+    assert operational_attempt(data, second, 1) is None
+    data.services.resume_file.touch()
+    wait_for(lambda: ff_state(b, data, "O", second), lambda state: state == "TERMINAL")
+    assert operational_attempt(data, first, 1).closed_at <= operational_attempt(data, second, 1).started_at
+    assert b.get(f"{RUNS}/{second}", headers=data.headers["O"]).json()["completo"]
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_waits_during_v1_and_checks_permissions_at_claim(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    data.services.stack.callback(data.services.v1_resume.touch)
+    _, a = data.services.api("ff-v1-active", hold_v1=True)
+    _, b = data.services.api("ff-v1-client")
+    result = a.post(V1, headers={**data.headers["A"], "Idempotency-Key": "qa-v1-blocks-ff"},
+                    json={"order_ids": [data.orders["A"]]})
+    assert result.status_code == 201, result.text
+    wait_for(data.services.v1_ready.exists, bool)
+    second = accept_ff(b, data, "O").json()["id_optimizacion"]
+    data.services.worker("ff-v1-worker")
+    assert ff_state(a, data, "O", second) == "WAITING"
+    with data.sessions.begin() as db:
+        db.execute(delete(RolPermiso).where(RolPermiso.id_rol == data.role_ids["O"],
+                                           RolPermiso.id_permiso == data.codes["optimization.execute"]))
+    assert accept_ff(b, data, "O").status_code == 403
+    data.services.v1_resume.touch()
+    wait_for(lambda: ff_state(a, data, "O", second), lambda state: state == "TERMINAL")
+    assert operational_attempt(data, second, 1) is None
+    with data.sessions() as db:
+        assert db.get(Pedido, data.orders["O"]).estado == "PENDIENTE"
+        assert db.scalar(select(EjecucionOptimizacion).where(EjecucionOptimizacion.id_optimizacion == second)
+                         ).patron_resultado["failure_code"] == "PERMISSION_REVOKED"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_recovers_once_before_dispatch_and_fences_old_generation(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    _, api = data.services.api("ff-generation-api")
+    identifier = accept_ff(api, data, "A").json()["id_optimizacion"]
+    old = data.services.recovery_worker("ff-owner-old", "FF_BEFORE")
+    initial = operational_attempt(data, identifier, 1)
+    assert initial.owner_identity == process_identity(old.pid) and initial.dispatch_at is None
+    old.send_signal(signal.SIGSTOP)
+    try:
+        with data.sessions.begin() as db:
+            db.execute(text("UPDATE optimization_worker_jobs SET heartbeat_at = clock_timestamp() - interval '11 seconds' "
+                            "WHERE comparison_id = :id"), {"id": identifier})
+        data.services.worker("ff-owner-new", hold=data.orders["A"])
+        next_id = accept(api, data, "O").json()["comparison_id"]
+        wait_for(lambda: ff_state(api, data, "A", identifier), lambda state: state == "RECOVERY_BLOCKED")
+        assert queue_state(api, data, "O", next_id) == "WAITING"
+        assert operational_attempt(data, identifier, 2) is None
+    finally:
+        old.send_signal(signal.SIGCONT)
+    (data.services.path / "ff-owner-old-resume").touch()
+    wait_for(lambda: data.services.read_log("ff-owner-old"), lambda log: "worker_ff_deferred" in log)
+    assert ff_state(api, data, "A", identifier) == "RECOVERY_BLOCKED"
+    old.kill()
+    old.wait(timeout=5)
+    second = wait_for(lambda: operational_attempt(data, identifier, 2), lambda attempt: attempt and attempt.worker_identity)
+    assert operational_attempt(data, identifier, 1).closure == "NO_DISPATCH"
+    for claim in (None, WorkerClaim(initial.owner_token, 1), WorkerClaim(second.owner_token, 1)):
+        with pytest.raises(RunError) as denied:
+            with data.uow() as tx:
+                tx.runs.fail(identifier, "OBSOLETE", claim=claim)
+        assert denied.value.code == "RECOVERY_BLOCKED"
+        with pytest.raises(RunError) as denied:
+            with data.uow() as tx:
+                result = tx.runs.get(identifier).result
+                tx.runs.save_result(identifier, result, (), claim=claim)
+        assert denied.value.code == "RECOVERY_BLOCKED"
+    data.services.resume_file.touch()
+    wait_for(lambda: ff_state(api, data, "A", identifier), lambda state: state == "TERMINAL")
+    wait_for(lambda: queue_state(api, data, "O", next_id), lambda state: state == "TERMINAL")
+    assert accept_ff(api, data, "A").json()["id_optimizacion"] == identifier
+    assert operational_attempt(data, identifier, 2).closure == "JOINED"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_crash_after_dispatch_keeps_order_and_slot_blocked(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    _, api = data.services.api("ff-crash-api")
+    identifier = accept_ff(api, data, "A").json()["id_optimizacion"]
+    pending = accept(api, data, "O").json()["comparison_id"]
+    owner = data.services.worker("ff-crash-owner", hold=data.orders["A"])
+    attempt = wait_for(lambda: ff_dispatched(data, identifier), bool)
+    assert process_identity(attempt.worker_identity["pid"]) == attempt.worker_identity
+    owner.kill()
+    owner.wait(timeout=5)
+    with data.sessions.begin() as db:
+        db.execute(text("UPDATE optimization_worker_jobs SET heartbeat_at = clock_timestamp() - interval '11 seconds' "
+                        "WHERE comparison_id = :id"), {"id": identifier})
+    data.services.worker("ff-crash-candidate")
+
+    def blocked_job():
+        with data.sessions() as db:
+            row = db.get(OptimizationWorkerJob, identifier)
+            return row if row.state == "RECOVERY_BLOCKED" else None
+
+    blocked = wait_for(blocked_job, bool)
+    assert (blocked.slot, blocked.generation) == (1, 1)
+    assert accept_ff(api, data, "A").json()["state"] == "RECOVERY_BLOCKED"
+    assert queue_state(api, data, "O", pending) == "WAITING"
+    assert operational_attempt(data, identifier, 2) is None
+    with pytest.raises(RunError) as denied:
+        with data.uow() as tx:
+            tx.runs.recover_stopped(identifier)
+    assert denied.value.code == "RECOVERY_BLOCKED"
+    with data.sessions() as db:
+        assert db.get(Pedido, data.orders["A"]).estado == "EN_OPTIMIZACION"
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_worker_death_after_atomic_result_preserves_result_and_frees_slot(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    _, api = data.services.api("ff-after-api")
+    identifier = accept_ff(api, data, "A").json()["id_optimizacion"]
+    owner = data.services.recovery_worker("ff-after-owner", "FF_AFTER")
+    assert ff_state(api, data, "A", identifier) == "TERMINAL"
+    before = api.get(f"{RUNS}/{identifier}", headers=data.headers["A"]).json()
+    assert before["completo"] and operational_attempt(data, identifier, 1).closure == "JOINED"
+    owner.kill()
+    owner.wait(timeout=5)
+    second = accept(api, data, "O").json()["comparison_id"]
+    data.services.worker("ff-after-candidate")
+    wait_for(lambda: queue_state(api, data, "O", second), lambda state: state == "TERMINAL")
+    assert api.get(f"{RUNS}/{identifier}", headers=data.headers["A"]).json() == before
+    assert operational_attempt(data, identifier, 2) is None
+    reversed_revision = downgrade(data.engine, "s2conc01b200")
+    assert reversed_revision.returncode != 0 and "Durable FF history must be retained" in reversed_revision.stderr
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_transient_postgres_outage_waits_for_join_before_releasing_the_slot(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    _, api = data.services.api("ff-outage-api")
+    identifier = accept_ff(api, data, "A").json()["id_optimizacion"]
+    pending = accept(api, data, "O").json()["comparison_id"]
+    process = data.services.worker("ff-outage-owner", hold=data.orders["A"])
+    wait_for(lambda: ff_dispatched(data, identifier), bool)
+    admin = create_engine(data.cluster, isolation_level="AUTOCOMMIT")
+    database = data.engine.url.database
+    try:
+        with admin.connect() as control:
+            assert database.startswith("r1_") and database[3:].isalnum()
+            control.exec_driver_sql(f'ALTER DATABASE "{database}" WITH ALLOW_CONNECTIONS false')
+            try:
+                control.execute(text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                                     "WHERE datname = :database AND application_name = 'ff-outage-owner'"),
+                                {"database": database})
+                wait_for(lambda: data.services.read_log("ff-outage-owner"),
+                         lambda log: "worker_v2_deferred reason=OperationalError" in log, seconds=6)
+                assert process.poll() is None
+            finally:
+                control.exec_driver_sql(f'ALTER DATABASE "{database}" WITH ALLOW_CONNECTIONS true')
+    finally:
+        admin.dispose()
+    wait_for(lambda: ff_state(api, data, "A", identifier), lambda state: state == "TERMINAL")
+    wait_for(lambda: queue_state(api, data, "O", pending), lambda state: state == "TERMINAL")
+    attempt = operational_attempt(data, identifier, 1)
+    assert attempt.closure == "JOINED" and attempt.closed_at <= operational_attempt(data, pending, 1).started_at
+    result = api.get(f"{RUNS}/{identifier}", headers=data.headers["A"]).json()
+    assert result["estado"] == "FALLIDA" and operational_attempt(data, identifier, 2) is None
+    assert inventory(data) == (1, 0, 0)
+
+
+def test_ff_and_v2_share_the_last_waiting_place(worker_db):
+    data = worker_db
+    activate(data, mixed=True)
+    data.services.environment["NEWGLASS_COMPARISON_QUEUE_CAPACITY"] = "1"
+    _, a = data.services.api("ff-bounded-api-a")
+    _, b = data.services.api("ff-bounded-api-b")
+    with ThreadPoolExecutor(2) as requests:
+        ff = requests.submit(accept_ff, a, data, "A")
+        v2 = requests.submit(accept, b, data, "O")
+        responses = (ff.result(), v2.result())
+    assert tuple(r.status_code for r in responses) in ((202, 503), (503, 201)), [r.text for r in responses]
+    rejected = next(r for r in responses if r.status_code == 503)
+    assert rejected.json()["detail"]["request_accepted"] is False
+    if responses[0].status_code == 202:
+        assert accept_ff(b, data, "A").json() == responses[0].json()
+    else:
+        assert accept(a, data, "O").json()["comparison_id"] == responses[1].json()["comparison_id"]
+    with data.uow() as tx:
+        assert tx.worker_jobs.waiting_count() == 1 and not tx.worker_jobs.occupied()
+        loser = "A" if rejected is responses[0] else "O"
+        assert tx.session.get(Pedido, data.orders[loser]).estado == "PENDIENTE"
+    assert inventory(data) == (1, 0, 0)
