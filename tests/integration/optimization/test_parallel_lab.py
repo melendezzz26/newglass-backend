@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Configuracion, MovimientoInventario, OptimizationWorkerJob, OptimizationWorkerSlot, Plancha
@@ -384,6 +384,52 @@ def test_blocked_slot_never_reused_while_the_other_keeps_working(worker_db, tmp_
         print(f"parallel_recovery blocked_slot={slot} surviving_reclaim_ms={(time.monotonic() - started)*1000:.1f}")
         wait_for(lambda: queue_state(api, data, "A", c), lambda state: state == "TERMINAL", seconds=120)
         assert queue_state(api, data, "A", ids[0]) == "RECOVERY_BLOCKED"
+
+
+@LAB
+def test_postgres_interruption_of_one_worker_preserves_the_other_attempt(worker_db, tmp_path):
+    data = worker_db
+    activate(data)
+    orders = orders_for(data, 20)
+    _, api = data.services.api("parallel-outage-api")
+    a = accept(api, data, "A", order=orders[0], key="qa-lab-outage-a").json()["comparison_id"]
+    b = accept(api, data, "O", order=orders[1], key="qa-lab-outage-o").json()["comparison_id"]
+    with isolated_slice(data, 2) as (_, start):
+        start(1, tmp_path, holds=orders[:2])
+        wait_for(lambda: motor(tmp_path, orders[0]), bool, seconds=40)
+        start(2, tmp_path, holds=orders[:2])
+        wait_for(lambda: motor(tmp_path, orders[1]), bool, seconds=40)
+        owner = operational_attempt(data, b, 1).owner_token
+        admin = create_engine(data.cluster, isolation_level="AUTOCOMMIT")
+        database = data.engine.url.database
+        assert database.startswith("r1_") and database[3:].isalnum()
+        try:
+            with admin.connect() as control:
+                control.exec_driver_sql(f'ALTER DATABASE "{database}" WITH ALLOW_CONNECTIONS false')
+                try:
+                    interrupted = control.execute(text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        "WHERE datname=:db AND application_name='lab-worker-1'"), {"db": database}).scalars().all()
+                    assert any(interrupted)
+                    wait_for(lambda: data.services.read_log("lab-worker-1"),
+                             lambda log: "worker_v2_deferred reason=OperationalError" in log, seconds=5)
+                finally:
+                    control.exec_driver_sql(f'ALTER DATABASE "{database}" WITH ALLOW_CONNECTIONS true')
+        finally:
+            admin.dispose()
+        restored = time.monotonic()
+        ending = wait_for(lambda: queue_state(api, data, "A", a),
+                          lambda state: state in ("TERMINAL", "RECOVERY_BLOCKED"), seconds=30)
+        assert progress(api, data, "O", b)["state"] == "RUNNING"
+        assert operational_attempt(data, b, 1).owner_token == owner
+        assert operational_attempt(data, a, 2) is None
+        (tmp_path / f"resume-{orders[1]}").touch()
+        wait_for(lambda: queue_state(api, data, "O", b), lambda state: state == "TERMINAL", seconds=90)
+        assert all(item["complete"] for item in summary(api, data, "O", b)["executions"])
+        with data.sessions() as db:
+            assert db.get(Plancha, 1).cantidad == 4
+            assert db.scalar(select(func.count()).select_from(MovimientoInventario)) == 0
+        print(f"parallel_postgres_outage affected_state={ending} other_owner_unchanged=true "
+              f"restore_to_other_close_ms={(time.monotonic()-restored)*1000:.1f}")
 
 
 @LAB
