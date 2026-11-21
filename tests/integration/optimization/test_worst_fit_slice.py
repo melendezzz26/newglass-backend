@@ -8,7 +8,7 @@ from decimal import Decimal as D
 
 import pytest
 from sqlalchemy import CheckConstraint, JSON, MetaData, create_engine, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ExcludeConstraint, JSONB
 from sqlalchemy.orm import sessionmaker
 
 from app.models import Base, Cliente, Pedido, Plancha, Retazo, Rol, TipoVidrio, TipoVidrioEspesor, Usuario
@@ -33,7 +33,7 @@ def sqlite_slice():
     for table in Base.metadata.tables.values():
         cloned = table.to_metadata(metadata)
         for constraint in list(cloned.constraints):
-            if isinstance(constraint, CheckConstraint):
+            if isinstance(constraint, (CheckConstraint, ExcludeConstraint)):
                 cloned.constraints.discard(constraint)
         for column in cloned.columns:
             if isinstance(column.type, JSONB):
