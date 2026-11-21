@@ -23,7 +23,7 @@ from sqlalchemy import (
     text,
     true,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ExcludeConstraint, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.database import Base
@@ -361,12 +361,25 @@ event.listen(OptimizationWorkerPolicy.__table__, "after_create",
              DDL("INSERT INTO %(fullname)s (id, pilot) VALUES (1, false)"))
 
 
+class OptimizationWorkerSlot(Base):
+    __tablename__ = "optimization_worker_slots"
+    __table_args__ = (CheckConstraint("(id = 1 AND lab IS NULL) OR (id = 2 AND lab IS NOT NULL AND jsonb_typeof(lab) = 'object')",
+                                      name="ck_optimization_worker_slot_config"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    lab: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+
+
+event.listen(OptimizationWorkerSlot.__table__, "after_create", DDL("INSERT INTO %(fullname)s (id) VALUES (1)"))
+
+
 class OptimizationWorkerJob(Base):
     __tablename__ = "optimization_worker_jobs"
     __table_args__ = (
         CheckConstraint("state IN ('WAITING', 'RUNNING', 'RECOVERY_BLOCKED', 'TERMINAL')",
                         name="ck_optimization_worker_job_state"),
-        CheckConstraint("((state IN ('RUNNING', 'RECOVERY_BLOCKED')) AND slot IS NOT NULL AND slot = 1 "
+        CheckConstraint("((state IN ('RUNNING', 'RECOVERY_BLOCKED')) AND slot IS NOT NULL AND slot IN (1, 2) "
+                        "AND (slot = 1 OR kind = 'V2') "
                         "AND owner_token IS NOT NULL AND heartbeat_at IS NOT NULL) OR "
                         "(state IN ('WAITING', 'TERMINAL') AND slot IS NULL)", name="ck_optimization_worker_job_slot"),
         CheckConstraint("(owner_token IS NULL) = (heartbeat_at IS NULL) AND "
@@ -376,13 +389,16 @@ class OptimizationWorkerJob(Base):
         CheckConstraint("kind IN ('FF', 'V1', 'V2') AND (kind <> 'V1' OR state <> 'WAITING')",
                         name="ck_optimization_worker_job_kind"),
         UniqueConstraint("slot", name="uq_optimization_worker_global_slot"),
+        ExcludeConstraint((text("(CASE WHEN slot IS NULL THEN NULL ELSE int4range(slot, "
+                           "CASE WHEN kind = 'V2' THEN slot + 1 ELSE 3 END) END)"), "&&"),
+                          name="ex_optimization_worker_exclusive_legacy", using="gist"),
         Index("ix_optimization_worker_waiting", "comparison_id", postgresql_where=text("state = 'WAITING'")),
     )
 
     comparison_id: Mapped[int] = mapped_column(ForeignKey("optimizaciones.id_optimizacion"),
                                                primary_key=True, autoincrement=False)
     state: Mapped[str] = mapped_column(String(20), nullable=False)
-    slot: Mapped[int | None] = mapped_column(Integer)
+    slot: Mapped[int | None] = mapped_column(ForeignKey("optimization_worker_slots.id", name="fk_optimization_worker_enabled_slot"))
     owner_token: Mapped[str | None] = mapped_column(String(32))
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     generation: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")

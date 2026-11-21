@@ -71,6 +71,7 @@ def test_importing_models_registers_all_current_tables(database_structure):
         "optimization_worker_jobs",
         "optimization_worker_policy",
         "optimization_worker_attempts",
+        "optimization_worker_slots",
         "optimization_progress_streams",
         "optimization_progress_events",
         "optimization_stock_protections",

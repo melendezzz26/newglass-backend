@@ -1,4 +1,4 @@
-"""Durable ownership for the single comparison slot in the worker pilot."""
+"""Durable ownership of the optimization slots."""
 from dataclasses import dataclass
 from datetime import timedelta
 import os
@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.models import Optimizacion, OptimizationWorkerAttempt as Attempt
 from app.models import OptimizationWorkerJob as Job, OptimizationWorkerPolicy as Policy
+from app.models import OptimizationWorkerSlot as Slot
 from ..application.admission import OptimizerBusy
 from ..application.errors import RunError
 from ..application.supervision_contracts import identity
@@ -152,15 +153,30 @@ class WorkerJobs:
             Optimizacion.estado == "EN_EJECUCION", ~registered).order_by(Optimizacion.id_optimizacion)).all()
 
     def occupied(self):
-        return self.session.scalar(select(select(Job.comparison_id).where(Job.slot == 1).exists()))
+        return self.session.scalar(select(select(Job.comparison_id).where(Job.slot.is_not(None)).exists()))
 
-    def next_waiting(self):
-        if self.occupied():
+    def slots(self, *, lock=False):
+        query = select(Slot).order_by(Slot.id)
+        if lock:
+            query = query.with_for_update(read=True)
+        slots = self.session.scalars(query).all()
+        if [slot.id for slot in slots] not in ([1], [1, 2]):
+            raise RunError("RESOURCE_UNAVAILABLE", "No se pudo acreditar la capacidad global del worker.")
+        return slots
+
+    def next_waiting(self, lab=None):
+        slots = self.slots(lock=True)
+        if len(slots) == 2 and slots[1].lab != lab:
+            raise RunError("LAB_SCOPE_MISMATCH", "El worker no pertenece al entorno paralelo acreditado.")
+        active = dict(self.session.execute(select(Job.slot, Job.kind).where(Job.slot.is_not(None))).all())
+        if len(active) == len(slots) or any(kind != "V2" for kind in active.values()):
             return None
         waiting = self.session.scalar(select(Job).where(Job.state == "WAITING")
             .order_by(Job.comparison_id).limit(1).with_for_update(skip_locked=True))
         # Historic open work is ambiguous until reviewed. Never replace its owner.
-        return waiting if waiting is not None and not self.untracked_open() else None
+        if waiting is None or (waiting.kind != "V2" and active) or self.untracked_open():
+            return None
+        return waiting, next(slot.id for slot in slots if slot.id not in active)
 
     def _record_attempt(self, identifier, claim, timestamp):
         identity = process_identity(os.getpid())
@@ -169,11 +185,11 @@ class WorkerJobs:
         self.session.add(Attempt(comparison_id=identifier, generation=claim.generation, owner_token=claim.token,
                                  owner_identity=identity, owner_scope=process_scope(), started_at=timestamp))
 
-    def claim(self, job, token):
+    def claim(self, job, token, slot):
         if job.state != "WAITING":
             raise RunError("STATE_CONFLICT", "El trabajo ya fue reclamado.")
         timestamp = self.session.scalar(select(func.clock_timestamp()))
-        job.state, job.slot, job.owner_token, job.heartbeat_at = "RUNNING", 1, token, timestamp
+        job.state, job.slot, job.owner_token, job.heartbeat_at = "RUNNING", slot, token, timestamp
         job.generation += 1
         claim = WorkerClaim(token, job.generation)
         self._record_attempt(job.comparison_id, claim, timestamp)
@@ -188,9 +204,10 @@ class WorkerJobs:
         timestamp = self.session.scalar(select(func.clock_timestamp()))
         inserted = self.session.scalar(insert(Job).values(comparison_id=identifier, kind="V1", state="RUNNING",
             generation=1, slot=1, owner_token=token, heartbeat_at=timestamp)
-            .on_conflict_do_nothing(constraint="uq_optimization_worker_global_slot").returning(Job.comparison_id))
+            .on_conflict_do_nothing().returning(Job.comparison_id))
         if inserted is None:
-            error = OptimizerBusy("active_runs", 1, 1)
+            active = self.session.scalar(select(func.count()).select_from(Job).where(Job.slot.is_not(None)))
+            error = OptimizerBusy("active_runs", 1, max(1, active))
             error.details = {**error.details, "request_accepted": False}
             raise error
         self._record_attempt(identifier, WorkerClaim(token, 1), timestamp)
@@ -257,8 +274,8 @@ class WorkerJobs:
             self.progress.append(identifier, "TERMINAL")
 
     def blocked(self, kind):
-        return self.session.scalar(select(Job).where(Job.slot == 1, Job.kind == kind,
-            Job.state == "RECOVERY_BLOCKED").with_for_update(skip_locked=True))
+        return self.session.scalars(select(Job).where(Job.slot.is_not(None), Job.kind == kind,
+            Job.state == "RECOVERY_BLOCKED").order_by(Job.slot).with_for_update(skip_locked=True)).all()
 
     def requeue_proven(self, identifier, claim):
         job, timestamp = self._registered(identifier, lock=True)
@@ -266,6 +283,25 @@ class WorkerJobs:
         attempt.closed_at, attempt.closure = timestamp, "NO_DISPATCH"
         job.state, job.slot, job.owner_token, job.heartbeat_at = "WAITING", None, None, None
         self.progress.append(identifier, "WAITING")
+
+
+def configure_lab_capacity(tx, profile):
+    """Change capacity only after every worker has accredited its closure."""
+    tx.comparisons_v2.lock_queue()
+    policy = tx.session.scalar(select(Policy).where(Policy.id == 1).with_for_update())
+    if policy is None or not policy.pilot:
+        raise RunError("RESOURCE_UNAVAILABLE", "Activa primero el perfil de worker separado.")
+    slots = tx.worker_jobs.slots()
+    second = slots[-1] if len(slots) == 2 else None
+    if tx.worker_jobs.occupied() or tx.worker_jobs.untracked_open():
+        raise RunError("RECOVERY_BLOCKED", "Acredita el cierre de todos los cálculos antes de cambiar la capacidad.")
+    if profile is None:
+        if second is not None:
+            tx.session.delete(second)
+    elif second is None:
+        tx.session.add(Slot(id=2, lab=profile))
+    else:
+        second.lab = profile
 
 
 def enable_pilot(tx, *, mixed=False):

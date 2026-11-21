@@ -1,5 +1,6 @@
 """Standalone Linux service for the opt-in V2 worker pilot."""
 import argparse
+from contextlib import nullcontext
 import logging
 import resource
 import signal
@@ -22,7 +23,8 @@ from .application.errors import RunError
 from .infrastructure.comparison_v2_uow import SqlComparisonPersistenceUnitOfWork
 from .infrastructure.durable_ff_worker import DurableFFWork
 from .infrastructure.in_process_admission import InProcessRunAdmission
-from .infrastructure.worker_jobs import enable_pilot, require_pilot
+from .infrastructure.parallel_lab import ParallelLab
+from .infrastructure.worker_jobs import configure_lab_capacity, enable_pilot, require_pilot
 from .infrastructure.worker_recovery import recover_abandoned_ff, recover_abandoned_v2
 from .presentation.comparison_queue_v2 import finish_waiting, queue_limits
 from .presentation.comparison_supervision_v2 import ComparisonV2Coordinator, SupervisedJob
@@ -36,14 +38,16 @@ def cpu_ms():
 
 
 class SeparatedComparisonWorker(ComparisonV2Coordinator):
-    def __init__(self, unit_of_work, *, pool, max_active=1, **kwargs):
+    def __init__(self, unit_of_work, *, pool, max_active=1, lab=None, **kwargs):
         super().__init__(unit_of_work, InProcessRunAdmission(), **kwargs)
         if max_active not in (0, 1):
             raise ValueError("Worker capacity must be 0 or 1")
-        self.max_active, self.pool = max_active, pool
+        self.max_active, self.pool, self.lab = max_active, pool, lab
 
     def _claim(self):
         claimed = None
+        if self.lab is not None:
+            self.lab.check(admission=True)
         try:
             with self.uow() as tx:
                 claimed = self._claim_in_transaction(tx)
@@ -61,11 +65,12 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
         tx.worker_jobs.block_stale()
         if recover_abandoned_v2(tx) or recover_abandoned_ff(tx):
             return None  # Commit closure evidence before the next admission/claim transaction.
-        row = tx.worker_jobs.next_waiting()
-        if row is None:
+        waiting = tx.worker_jobs.next_waiting(self.lab.profile if self.lab is not None else None)
+        if waiting is None:
             return None
+        row, slot = waiting
         if row.kind == "FF":
-            return self._claim_ff(tx, row)
+            return self._claim_ff(tx, row, slot)
         current = tx.comparisons_v2.get(row.comparison_id)
         if not current.waiting:
             raise RunError("RECOVERY_BLOCKED", "El registro operativo y la comparación difieren.")
@@ -82,7 +87,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
         job = None
         try:
             job = SupervisedJob(current, runner, self.uow, lease, None)
-            job.claim = tx.worker_jobs.claim(row, job.token)
+            job.claim = tx.worker_jobs.claim(row, job.token, slot)
             if not tx.comparisons_v2.claim_supervisor(current.comparison_id, job.claim, job.identity):
                 raise RunError("RECOVERY_BLOCKED", "No se pudo acreditar el reclamo comercial.")
             return job
@@ -92,7 +97,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                 job.dispose()
             raise
 
-    def _claim_ff(self, tx, row):
+    def _claim_ff(self, tx, row, slot):
         tx.worker_jobs.require_durable_ff()
         identifier = row.comparison_id
         run, actor_id, execution_id = tx.runs.ff_worker_input(identifier)
@@ -109,7 +114,7 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
         tx.orders.require_state(run.result.problem.order_ids, "EN_OPTIMIZACION")
         runner = self.runner_factory()
         runner.preflight()
-        claim = tx.worker_jobs.claim(row, uuid4().hex)
+        claim = tx.worker_jobs.claim(row, uuid4().hex, slot)
         scope = ExecutionScope(comparison_id=identifier, execution_id=execution_id, method="FF")
         return DurableFFWork(scope, run.result.problem, tx.runs.residual_limits(identifier), claim, runner)
 
@@ -160,9 +165,14 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
     def serve(self, stop):
         with self.uow() as tx:
             require_pilot(tx.session)
+            slots = tx.worker_jobs.slots()
+            if len(slots) == 2 and (self.lab is None or self.lab.profile != slots[1].lab):
+                raise RunError("LAB_SCOPE_MISMATCH", "El worker no está inscrito en el entorno paralelo acreditado.")
         logger.info("worker_v2_ready max_active=%s pool_limit=%s", self.max_active, self.pool.size())
         stopping_at = None
         maintenance_at = monotonic() + 15
+        sample_at = monotonic()
+        healthy = True
         try:
             while True:
                 if stop.is_set():
@@ -174,6 +184,17 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                     if monotonic() >= stopping_at:
                         break
                 try:
+                    if self.lab is not None and monotonic() >= sample_at:
+                        sample_at = monotonic() + 1
+                        try:
+                            sample = self.lab.check()
+                            healthy = True
+                            logger.info("parallel_host_resources %s", sample)
+                        except RunError:
+                            healthy = False
+                            if self.job is not None:
+                                self.job.cancel.set()
+                            logger.warning("parallel_host_resource_stop")
                     if monotonic() >= maintenance_at:
                         maintenance_at = monotonic() + 15
                         with self.uow() as tx:
@@ -182,13 +203,15 @@ class SeparatedComparisonWorker(ComparisonV2Coordinator):
                             tx.worker_jobs.progress.purge_expired()
                     if self.job is not None:
                         self._observe_claim(self.job)
-                    elif self.max_active:
+                    elif self.max_active and healthy:
                         self._start_claimed()
                 except (OptimizerBusy, SnapshotConflict):
                     pass
                 except (RunError, SQLAlchemyError) as error:
                     reason = error.code if isinstance(error, RunError) else type(error).__name__
                     logger.warning("worker_v2_deferred reason=%s", reason)
+                    if reason == "LAB_SCOPE_MISMATCH":
+                        break
                 if stop.is_set():
                     # Pulse ownership during orderly cancellation until a verified close.
                     sleep(.25)
@@ -208,14 +231,22 @@ def main():
     flags = parser.add_mutually_exclusive_group()
     flags.add_argument("--enable-pilot", action="store_true", help="Enable the worker profile on a drained database and exit")
     flags.add_argument("--enable-mixed", action="store_true", help="Enable distributed FF/V1/V2 admission on a drained database")
+    flags.add_argument("--lab-capacity", type=int, choices=(1, 2), help="Configure global slots on drained local PostgreSQL")
+    flags.add_argument("--lab-worker", type=int, choices=(1, 2), help="Run one enrolled Linux laboratory candidate")
+    parser.add_argument("--lab-slice", help="Name of the dedicated cgroup v2 slice for both laboratory candidates")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     url = database_url()
     target = make_url(url)
     if target.get_backend_name() != "postgresql":
         parser.error("El worker requiere PostgreSQL.")
-    if (args.enable_pilot or args.enable_mixed) and target.host not in ("127.0.0.1", "::1", "localhost"):
+    if (args.enable_pilot or args.enable_mixed or args.lab_capacity or args.lab_worker) and target.host not in (
+            "127.0.0.1", "::1", "localhost"):
         parser.error("La activación del piloto requiere PostgreSQL local de loopback.")
+    needs_lab = args.lab_capacity == 2 or args.lab_worker is not None
+    if needs_lab != bool(args.lab_slice):
+        parser.error("Indica la slice de laboratorio para inscribir un worker o habilitar dos plazas.")
+    lab = ParallelLab.discover(args.lab_slice) if needs_lab else None
     options = database_engine_options(url)
     options.setdefault("connect_args", {}).setdefault("connect_timeout", 3)
     engine = create_engine(url, **{**options, "pool_size": 2, "max_overflow": 0, "pool_timeout": 2})
@@ -226,10 +257,18 @@ def main():
                 adopted = enable_pilot(tx, mixed=args.enable_mixed)
             logger.info("worker_v2_pilot_enabled adopted=%s", adopted)
             return
+        if args.lab_capacity is not None:
+            with uow() as tx:
+                configure_lab_capacity(tx, lab.profile if lab is not None else None)
+            logger.info("worker_lab_capacity=%s", args.lab_capacity)
+            return
         stop = Event()
         for signum in (signal.SIGINT, signal.SIGTERM):
             signal.signal(signum, lambda *_: stop.set())
-        SeparatedComparisonWorker(uow, pool=engine.pool, max_active=queue_limits()["max_active"]).serve(stop)
+        runner_options = {"lab": lab} if lab is not None else {}
+        with (lab.lane(args.lab_worker) if lab is not None else nullcontext()):
+            SeparatedComparisonWorker(uow, pool=engine.pool, max_active=queue_limits()["max_active"],
+                                      **runner_options).serve(stop)
     finally:
         engine.dispose()
 
