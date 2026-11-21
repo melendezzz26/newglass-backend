@@ -48,29 +48,42 @@ class DurableFFWork:
                             # The intent commits before Process.start, and the child waits at its gate.
                             tx.worker_jobs.record_ff_dispatch(self.identifier, self.claim,
                                                               process=data.get("identity"))
+                    elif kind == "started":
+                        self._retry_write(uow, self._persist_started)
             if terminal is None or not self.runner.last_report["all_workers_stopped"]:
                 raise WorkersNotStopped("FF process closure remains unverified")
-            self._persist_closed(uow, terminal)
+            self._retry_write(uow, self._persist_closed, terminal)
         except Exception as error:
             # No cleanup guess or unconditional slot release after a failed write.
             logger.error("worker_ff_deferred run_id=%s reason=%s", self.identifier, type(error).__name__)
 
-    def _persist_closed(self, uow, terminal):
+    def _persist_started(self, tx):
+        tx.worker_jobs.require_owner_if_registered(self.identifier, self.claim, required=True, kind="FF")
+        tx.worker_jobs.progress.ensure_engine_started(self.identifier, self.scope.execution_id)
+
+    def _persist_closed(self, tx, terminal):
+        if terminal.payload.result is None:
+            tx.runs.fail(self.identifier, terminal.payload.diagnostic.termination_reason, claim=self.claim)
+        else:
+            tx.runs.save_result(self.identifier, terminal.payload.result, terminal.residuals, claim=self.claim)
+        if terminal.engine_started:
+            tx.worker_jobs.progress.append(self.identifier, "ENGINE_FINISHED",
+                execution_id=self.scope.execution_id, reason=terminal.payload.diagnostic.termination_reason)
+        # Publish the business result, order state, and closure in a single commit.
+        tx.worker_jobs.finish_if_registered(self.identifier, self.claim)
+
+    def _retry_write(self, uow, persist, *args):
         # Retry a transient connection/transaction error with the existing claim only.
         deadline = monotonic() + 3
         while True:
             try:
                 with uow() as tx:
-                    if terminal.payload.result is None:
-                        tx.runs.fail(self.identifier, terminal.payload.diagnostic.termination_reason, claim=self.claim)
-                    else:
-                        tx.runs.save_result(self.identifier, terminal.payload.result, terminal.residuals, claim=self.claim)
-                    # Publish the business result, order state, and closure in a single commit.
-                    tx.worker_jobs.finish_if_registered(self.identifier, self.claim)
+                    persist(tx, *args)
                 return
             except (OperationalError, SnapshotConflict):
                 if monotonic() >= deadline:
                     raise
+                logger.info("worker_ff_retry_write run_id=%s operation=%s", self.identifier, persist.__name__)
                 sleep(.25)
 
     def start(self, uow):

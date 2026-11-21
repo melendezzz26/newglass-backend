@@ -76,7 +76,7 @@ class SqlComparisonRepository:
         self.session.add(row)
         self.session.flush()
         if distributed:
-            WorkerJobs(self.session).reserve_v1(row.id_optimizacion, lease_token)
+            WorkerJobs(self.session).reserve_v1(row.id_optimizacion, lease_token, problem)
         self.session.add_all([OptimizacionPedido(id_optimizacion=row.id_optimizacion, id_pedido=i)
                               for i in problem.order_ids])
         self.session.add_all([EjecucionOptimizacion(id_optimizacion=row.id_optimizacion, metodo=method,

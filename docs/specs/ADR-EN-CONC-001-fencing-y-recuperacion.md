@@ -16,6 +16,10 @@ El servicio separado revalida `optimization.execute` antes de reclamar. El super
 
 La migración `s2conc01b210` incorpora la clave FF y la evidencia de despacho. Deja intactos los snapshots anteriores. La reversión del esquema está disponible únicamente mientras no exista historial de FF durable. Actualiza API y worker juntos antes de admitir FF. Un worker anterior desconoce el tipo `FF` y puede impedir el despacho de la cola. Conserva un binario compatible para el rollback operativo si ya existen solicitudes durables.
 
+## Progreso y stock en 2B.3
+
+El journal tiene un contador por trabajo y filas pequeñas con referencias al motor. Las escrituras usan la transacción de admisión, despacho, resultado, cancelación o recuperación. Las consultas usan un cursor finito para que una conexión del navegador no retenga una sesión PostgreSQL mientras espera. Un snapshot comercial y la plaza operativa siguen siendo la fuente de estado aunque se hayan eliminado los eventos. La expiración de heartbeat conserva las protecciones de inventario con `RECOVERY_BLOCKED` hasta un cierre verificable. La migración reconstruye referencias de stock para los trabajos abiertos de FF, V1 y V2 que ocupan un registro operativo y conserva el historial publicado. [Reconexión y configuración](../contracts/optimization-distributed-progress.md)
+
 ## Activación local del modo mixto
 
 Usar exclusivamente el PostgreSQL desechable de loopback en esta fase. Detener primero binarios anteriores y verificar el cierre de cálculos activos. Reutilizar el entorno WSL2 descrito en el ADR de separación. Con las variables locales del piloto:

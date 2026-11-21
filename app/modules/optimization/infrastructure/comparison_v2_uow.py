@@ -339,6 +339,9 @@ class SqlComparisonV2Repository:
             "status": "REQUESTED"}}
         row.comparison_version += 1
         self.session.flush()
+        jobs = WorkerJobs(self.session)
+        if jobs.status(identifier) is not None:
+            jobs.progress.append(identifier, "CANCELLATION_REQUESTED")
         return self.get(identifier)
 
     def release(self, identifier, actor_id, expected_version):
@@ -449,7 +452,7 @@ class SqlComparisonV2Repository:
 
     def set_dispatch_state(self, comparison_id, execution_id, state, expected_version):
         row, _ = self._writable(comparison_id, expected_version)
-        self._require_write_claim(comparison_id)
+        registered = self._require_write_claim(comparison_id)
         execution = self.legacy._execution(comparison_id, execution_id)
         data = execution.patron_resultado
         if (data["dispatch_state"], state) not in (("QUEUED", "STARTING"), ("STARTING", "RUNNING")):
@@ -457,16 +460,18 @@ class SqlComparisonV2Repository:
         execution.patron_resultado = {**data, "dispatch_state": state}
         row.comparison_version += 1
         self.session.flush()
+        if registered and state == "RUNNING":
+            WorkerJobs(self.session).progress.append(comparison_id, "ENGINE_STARTED", execution_id=execution_id)
         return self.get(comparison_id)
 
     def _require_write_claim(self, identifier, *, without_dispatch=False):
-        WorkerJobs(self.session).require_owner_if_registered(identifier, self._verified_claims.get(identifier),
-                                                            without_dispatch=without_dispatch)
+        return WorkerJobs(self.session).require_owner_if_registered(identifier, self._verified_claims.get(identifier),
+                                                                   without_dispatch=without_dispatch)
 
     def save_execution(self, comparison_id, execution_id, payload: ExecutionPayloadV2, residuals, expected_version,
                        *, without_dispatch=False):
         row, current = self._writable(comparison_id, expected_version)
-        self._require_write_claim(comparison_id, without_dispatch=without_dispatch)
+        registered = self._require_write_claim(comparison_id, without_dispatch=without_dispatch)
         execution = self.legacy._execution(comparison_id, execution_id)
         if (execution.estado != "EN_EJECUCION" or not isinstance(payload, ExecutionPayloadV2)
                 or payload.method != execution.metodo or payload.diagnostic is None
@@ -490,6 +495,9 @@ class SqlComparisonV2Repository:
         if payload.result is not None:
             self._result_rows(execution_id, payload.result)
         self.session.flush()
+        if registered and previous.dispatch_state == "RUNNING":
+            WorkerJobs(self.session).progress.append(comparison_id, "ENGINE_FINISHED", execution_id=execution_id,
+                                                    reason=payload.diagnostic.termination_reason)
         return self.get(comparison_id)
 
     def _result_rows(self, execution_id, result):

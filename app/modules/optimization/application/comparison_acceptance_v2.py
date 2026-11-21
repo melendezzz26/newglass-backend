@@ -84,7 +84,7 @@ class AcceptComparisonV2:
                     current = (tx.comparisons_v2.create(frozen, actor_id, key, managed=True) if queue_capacity is None
                                else tx.comparisons_v2.create(frozen, actor_id, key, managed=True, queued=True))
                     if external_worker:
-                        tx.worker_jobs.enqueue(current.comparison_id)
+                        tx.worker_jobs.enqueue(current.comparison_id, frozen.problem)
                     tx.orders.transition(ids,"PENDIENTE","EN_OPTIMIZACION")
                 return current
             except SnapshotConflict:

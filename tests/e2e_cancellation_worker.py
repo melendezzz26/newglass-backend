@@ -64,9 +64,17 @@ def run_gated_worker():
     from app.modules.optimization import worker_v2
     from app.modules.optimization.infrastructure.sequential_runner import SequentialProcessRunner
 
+    class GatedRunner(SequentialProcessRunner):
+        def standalone_ff(self, *args, **kwargs):
+            with closing(super().standalone_ff(*args, **kwargs)) as events:
+                for event in events:
+                    if os.environ.get("QA_PAUSE_FF_STARTED_EVENT") and event["kind"] == "started":
+                        recovery_barrier()
+                    yield event
+
     class GatedWorker(worker_v2.SeparatedComparisonWorker):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, runner_factory=partial(SequentialProcessRunner, worker_target=gated_engine), **kwargs)
+            super().__init__(*args, runner_factory=partial(GatedRunner, worker_target=gated_engine), **kwargs)
 
     worker_v2.SeparatedComparisonWorker = GatedWorker
     worker_v2.main()

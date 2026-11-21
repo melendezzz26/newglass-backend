@@ -32,7 +32,7 @@ class AcceptDurableRun:
                         raise error
                     frozen = snapshot.freeze(tx, ids)
                     run = tx.runs.create(frozen.problem, frozen.configuration_id, actor_id, request_key=key)
-                    tx.worker_jobs.enqueue(run.optimization_id, kind="FF")
+                    tx.worker_jobs.enqueue(run.optimization_id, frozen.problem, kind="FF")
                     tx.orders.transition(ids, "PENDIENTE", "EN_OPTIMIZACION")
                     return run.optimization_id, "WAITING"
             except SnapshotConflict:
