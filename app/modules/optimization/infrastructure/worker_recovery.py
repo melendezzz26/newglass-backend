@@ -49,9 +49,10 @@ def proven_closure(current, attempt):
 
 
 def recover_abandoned_v2(tx):
-    job = tx.worker_jobs.blocked("V2")
-    if job is None:
-        return False
+    return any(_recover_v2(tx, job) for job in tx.worker_jobs.blocked("V2"))
+
+
+def _recover_v2(tx, job):
     identifier = job.comparison_id
     current = tx.comparisons_v2.get(identifier)
     attempt = tx.session.get(OptimizationWorkerAttempt, (identifier, job.generation))
@@ -79,9 +80,10 @@ def recover_abandoned_v2(tx):
 
 
 def recover_abandoned_ff(tx):
-    job = tx.worker_jobs.blocked("FF")
-    if job is None:
-        return False
+    return any(_recover_ff(tx, job) for job in tx.worker_jobs.blocked("FF"))
+
+
+def _recover_ff(tx, job):
     identifier = job.comparison_id
     attempt = tx.session.get(OptimizationWorkerAttempt, (identifier, job.generation))
     if (attempt is None or attempt.owner_token != job.owner_token or attempt.closed_at is not None

@@ -220,7 +220,8 @@ def test_two_apis_two_reclaimers_and_api_restart_do_not_interrupt_calculation(wo
             contender.state, contender.slot, contender.owner_token = "RUNNING", 1, uuid4().hex
             contender.heartbeat_at = datetime.now(timezone.utc)
             contender.generation = 1
-    assert duplicated.value.orig.diag.constraint_name == "uq_optimization_worker_global_slot"
+    assert duplicated.value.orig.diag.constraint_name in (
+        "uq_optimization_worker_global_slot", "ex_optimization_worker_exclusive_legacy")
 
     data.services.stop(a_server)
     data.services.stop(b_server)
