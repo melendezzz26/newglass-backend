@@ -389,8 +389,8 @@ class OptimizationWorkerJob(Base):
         CheckConstraint("kind IN ('FF', 'V1', 'V2') AND (kind <> 'V1' OR state <> 'WAITING')",
                         name="ck_optimization_worker_job_kind"),
         UniqueConstraint("slot", name="uq_optimization_worker_global_slot"),
-        ExcludeConstraint((text("CASE WHEN slot IS NULL THEN NULL ELSE int4range(slot, "
-                           "CASE WHEN kind = 'V2' THEN slot + 1 ELSE 3 END) END"), "&&"),
+        ExcludeConstraint((text("(CASE WHEN slot IS NULL THEN NULL ELSE int4range(slot, "
+                           "CASE WHEN kind = 'V2' THEN slot + 1 ELSE 3 END) END)"), "&&"),
                           name="ex_optimization_worker_exclusive_legacy", using="gist"),
         Index("ix_optimization_worker_waiting", "comparison_id", postgresql_where=text("state = 'WAITING'")),
     )
