@@ -1,0 +1,13 @@
+01. Estado y alcance: Informe_Backend_Seis_Motores_Escalabilidad_NewGlass.md
+02. Casos discriminantes: tests/unit/optimization/test_six_engines_scale_contract.py
+03. Inventario y testigo: experiments/sprint2_quality/scale_cases.py
+04. Resultados por ejecución: results/scale_raw_results.csv
+05. Tiempo por motor: results/G1_time.png
+06. Memoria de proceso: results/G2_rss.png
+07. CPU de proceso: results/G3_cpu.png
+08. Merma: results/G4_waste.png
+09. Completitud por carga: results/G8_capacity.png
+10. Admisión por proceso: tests/integration/optimization/test_scale_multiprocess_admission.py
+11. Protocolo y limitaciones: experiments/sprint2_quality/scale_protocol.md
+
+Pendiente: medición de tiempo, CPU y RSS de uno frente a dos trabajos y gráfico G7.
