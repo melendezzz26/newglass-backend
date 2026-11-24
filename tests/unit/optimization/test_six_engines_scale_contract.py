@@ -15,6 +15,10 @@ from experiments.sprint2_quality.validate import validate
 from experiments.optimization.loader import build_problem
 from tests.unit.optimization.test_first_fit import config, problem, stock
 from tests.unit.optimization.test_preparation import piece
+from tests.unit.optimization.test_worst_fit import candidate
+from app.modules.optimization.domain.worst_fit import WorstFitSelector
+from app.modules.optimization.domain.best_residual_fit import BestResidualFitSelector
+from app.modules.optimization.domain.hole_filling import HoleFillingOptimizer
 
 
 def execute(method, sample):
@@ -50,8 +54,26 @@ def test_beam_explores_alternatives_and_differs_from_ff_on_existing_cp01():
     assert ff.payload.result.complete and beam.payload.result.complete
     assert beam.payload.diagnostic.statistics['expansions'] > len(sample.units)
     assert beam.payload.result.placements != ff.payload.result.placements
+    repeat = execute('M6-BS', sample)
+    assert repeat.payload.result.placements == beam.payload.result.placements
     for execution in (ff, beam):
         assert validate(execution.payload.result, execution.residuals, (D(1), D(1)))['valid']
+
+
+def test_hf_real_pocket_statistics_and_final_decision():
+    from tests.unit.optimization.test_hole_filling import product_problem, assert_pocket_connected_component_is_interior
+    from app.modules.optimization.domain.first_fit import FirstFitOptimizer
+    sample = product_problem()
+    optimizer = HoleFillingOptimizer()
+    result = optimizer.optimize(sample)
+    baseline = FirstFitOptimizer().optimize(sample)
+    stats = optimizer.stats
+    assert stats.pocket_candidates > 0 and stats.anchors_checked > 0 and stats.accepted_pocket > 0
+    assert not stats.coverage_fallback and not stats.sheet_fallback
+    assert result.complete and result.placements != baseline.placements
+    target = next(p for p in result.placements if p.piece.piece_id == 4)
+    assert_pocket_connected_component_is_interior(result, target)
+    print('HF_STATS', stats)
 
 
 @pytest.mark.parametrize('mutation', ['overlap', 'separation', 'margin', 'outside', 'angle', 'area'])
@@ -105,6 +127,39 @@ def test_result_contract_rejects_duplicate_and_unknown_source():
     unknown = replace(second, stock=stock(99, width=6, height=4))
     with pytest.raises(ValueError, match='stock must belong'):
         replace(result, placements=(first, unknown))
+
+
+@pytest.mark.parametrize('field', ['placed_units', 'total_units'])
+def test_validator_rejects_inconsistent_declared_counts(field):
+    execution = execute('FF', problem([piece(width=2, height=2, quantity=2)], [stock(width=6, height=4)]))
+    result = execution.payload.result
+    class CorruptCounts:
+        def __getattr__(self, name):
+            return getattr(result, name) + 1 if name == field else getattr(result, name)
+    with pytest.raises(AssertionError):
+        validate(CorruptCounts(), execution.residuals, (D(1), D(1)))
+
+
+def test_wf_selector_compares_two_used_feasible_sources():
+    small = candidate(stock(1, width=4, height=4), row=0, column=1, used_at=(0, 0))
+    large = candidate(stock(2, width=6, height=4), row=0, column=1, used_at=(0, 0), stock_rank=1)
+    assert small.layout.check(small.orientation.mask, small.row, small.column).is_valid
+    assert large.layout.check(large.orientation.mask, large.row, large.column).is_valid
+    assert small.remaining_free_cells_after_placement < large.remaining_free_cells_after_placement
+    assert WorstFitSelector().select(iter((small, large))) == large
+
+
+def test_m5_selector_compares_residual_rectangle_on_two_used_sources():
+    small = candidate(stock(1, width=4, height=4), row=0, column=1, used_at=(0, 0))
+    # A second earlier placement makes this real used layout more fragmented.
+    small = replace(small, layout=small.layout.place(small.orientation.mask, 2, 2))
+    large = candidate(stock(2, width=6, height=4), row=0, column=1, used_at=(0, 0), stock_rank=1)
+    selector = BestResidualFitSelector()
+    assert small.layout.check(small.orientation.mask, small.row, small.column).is_valid
+    assert large.layout.check(large.orientation.mask, large.row, large.column).is_valid
+    assert selector._residual_score(large)[0] < selector._residual_score(small)[0]
+    assert selector._residual_score(large)[1] < selector._residual_score(small)[1]
+    assert selector.select(iter((small, large))) == large
 
 
 @pytest.mark.parametrize('field,value', [('glass_type_id', 2), ('thickness_mm', D(8))])

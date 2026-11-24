@@ -1,4 +1,4 @@
-"""Export the versioned partial Markdown report and measured charts to Word."""
+"""Export the versioned Markdown report and measured charts to Word."""
 import argparse
 from pathlib import Path
 
@@ -14,7 +14,7 @@ def main():
     document = Document()
     document.styles['Normal'].font.size = Pt(10)
     document.add_heading('NewGlass: backend y seis motores', 0)
-    document.add_paragraph('Informe de avance — estado parcial')
+    document.add_paragraph('Informe técnico — resultados y límites observados')
     document.add_page_break()
     for line in args.report.read_text(encoding='utf-8').splitlines():
         if line.startswith('# '):
@@ -33,10 +33,12 @@ def main():
                ('G4_waste.png', 'Merma A menos P menos R para las cargas sintéticas.'),
                ('G5_coverage.png', 'Cobertura mediana por motor y escala.'),
                ('G6_status.png', 'Número de resultados por estado y carga.'),
+               ('G7_concurrencia_recursos.png', 'Un servidor frente a dos: tiempo, CPU y RSS de procesos locales. Una observación por escenario.'),
                ('G8_capacity.png', 'Proporción completa observada en el fixture evaluado.')]
     document.add_heading('Gráficos medidos', level=1)
     for name, caption in figures:
-        document.add_picture(str(args.report.parent / 'results' / name), width=Inches(6.2))
+        folder = 'concurrency' if name.startswith('G7_') else 'results'
+        document.add_picture(str(args.report.parent / folder / name), width=Inches(6.2))
         document.add_paragraph(caption)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     document.save(args.output)
