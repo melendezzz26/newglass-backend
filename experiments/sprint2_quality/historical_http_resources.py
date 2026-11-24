@@ -1,4 +1,8 @@
-"""Real loopback Uvicorn servers and an owned PostgreSQL; no confirmations."""
+"""Historical HTTP harness for backend b0aeac7; not current CI tests.
+
+The current default API uses a separated worker and different queue semantics.
+Reproduce the original measurement only at the recorded historical revision.
+"""
 from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
@@ -17,7 +21,7 @@ from sqlalchemy import func, select
 from app.models import MovimientoInventario, Plancha
 from app.modules.orders.infrastructure.repositories import SQLAlchemyOrderRepository
 from app.shared.security import create_access_token
-from .test_runs import prepared  # noqa: F401
+from tests.integration.optimization.test_runs import prepared  # noqa: F401
 
 BASE = '/api/optimization/comparisons-v2'
 

@@ -1,7 +1,17 @@
 # Informe técnico: backend y seis motores de NewGlass
 
-La rama depende temporalmente del PR #7. Este informe conserva la batería de
-escala original y agrega observaciones de concurrencia con servidores reales.
+El PR #7 fue integrado en `main` mediante `843caf492a3ed3eca93727fa2c91d1ec0c3dfbfa`.
+**Las cifras y observaciones de este informe son históricas:** la escala se
+midió con `5d4321171d350c03213505929ad9eefee39489fc` y la concurrencia con
+`b0aeac74d7e4643628df844f761a68778d15d9cc`, antes de integrar cambios productivos
+posteriores. No se repitieron ni se atribuyen al nuevo `main`.
+
+El nuevo `main` incorpora una política corregida de residuales, cambios en M5 y
+opciones de coordinación durable mediante PostgreSQL, con un piloto controlado
+de dos plazas. Por ello, los valores de merma y recuperables y las observaciones
+de admisión y cancelación del modo anterior no describen necesariamente el
+comportamiento de todos los modos actuales. El rebase cambia las identidades de
+los commits de esta rama, pero no modifica los SHA originales de medición.
 
 ## 1. Resumen ejecutivo
 
@@ -11,17 +21,17 @@ tiempo para 100, 200 y 300 unidades; en 50 empató con WF a la resolución del
 cronómetro. M6-BS fue más lento y tuvo mayor RSS del proceso en las medianas
 observadas. Esto no establece un ganador para pedidos comerciales diversos.
 
-Dos servidores HTTP independientes admitieron trabajos contra el mismo PostgreSQL
-temporal. En un solo servidor, una segunda comparación fue rechazada por la
-admisión. Se midieron los árboles de procesos locales; no se comprobó el
-funcionamiento completo en dos dynos reales.
+En la versión medida, dos servidores HTTP independientes admitieron trabajos
+contra el mismo PostgreSQL temporal. En un solo servidor, una segunda comparación
+fue rechazada por la admisión. Se midieron los árboles de procesos locales; no se
+comprobó el funcionamiento completo en dos dynos reales.
 
 ## 2. Objetivo y alcance
 
 Se evaluaron FF, BF, WF, HF, M5 y M6-BS sin alterar sus heurísticas y sin usar
 producción. Se reutilizaron el protocolo y oráculo del PR #7; no se repitieron
-sus 270 mediciones. Esta rama sale de `test/S2-andro-calidad-algoritmos` y
-depende del PR #7, abierto al comprobarlo el 24 de noviembre de 2026.
+sus 270 mediciones. La rama se reconstruyó después sobre el `main` que integró
+ese PR, sin volver a ejecutar las mediciones históricas.
 
 ## 3. Arquitectura y contrato
 
@@ -156,10 +166,11 @@ pruebas, no a todos los posibles fallos distribuidos.
 ## 10. Heroku, Supabase y límites
 
 El Procfile versionado inicia un worker Uvicorn por dyno. No se verificaron
-número ni plan de dynos actuales. La admisión, locks y supervisor en memoria son
-locales por proceso; PostgreSQL comparte snapshots, advisory locks y bloqueos
-transaccionales de confirmación, pero no sustituye admisión distribuida. No se
-demostró soporte funcional de dos dynos. El pool documentado es 5 conexiones
+número ni plan de dynos actuales. En la versión histórica medida, la admisión,
+locks y supervisor en memoria eran locales por proceso. El `main` posterior
+incluye además una cola y plazas coordinadas por PostgreSQL en modos piloto;
+su configuración desplegada y el soporte funcional de dos dynos no se verificaron.
+La evidencia histórica no es una prueba de esos modos nuevos. El pool documentado es 5 conexiones
 por proceso, sin overflow predeterminado: dos procesos podrían reservar hasta
 10, sujeto a configuración efectiva. El máximo configurado es
 `procesos × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`, sin contar otros clientes. El
@@ -170,8 +181,9 @@ No se ejecutó Locust ni se dispuso de resultados de Fabricio para incorporarlos
 
 ## 11. Defectos y limitaciones
 
-No se corrigieron defectos de producción. La admisión local es una limitación
-arquitectónica demostrada, no una prueba de corrupción. El generador anterior
+No se corrigieron defectos de producción. La admisión local en la versión
+histórica es una limitación demostrada para ese modo, no una prueba de corrupción.
+El generador anterior
 de carga limita stock a 50 por material y no garantiza una plancha por unidad
 en escalas grandes; el nuevo testigo elimina esa incertidumbre para este fixture.
 La carga homogénea con raster de 10 mm, las cinco muestras y la contención del
@@ -190,10 +202,10 @@ ownership, recuperación, cancelación, idempotencia y confirmación transaccion
 
 ## 13. En palabras simples
 
-Todos los motores acomodaron los cuadrados de esta prueba. El motor de búsqueda
-M6 probó alternativas y tardó más. Dos procesos pueden empezar trabajos a la
-vez porque cada uno lleva su propia cuenta; eso aún no demuestra que ejecutar
-dos dynos sea seguro para todo el sistema.
+Todos los motores acomodaron los cuadrados de esta prueba histórica. El motor
+M6 probó alternativas y tardó más. En la versión evaluada, cada servidor llevaba
+su propia cuenta; después se añadieron modos con coordinación por base de datos.
+Ninguno de estos resultados demuestra que dos dynos sean seguros en producción.
 
 ## Anexos
 

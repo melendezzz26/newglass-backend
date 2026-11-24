@@ -25,6 +25,17 @@ conexión a producción ni confirmación de cortes.
   recuperación verifica cancelación desde otro servidor e interrupción controlada
   del dueño. La validación final no sobrescribió las mediciones guardadas.
 
+Tras integrar el PR #7 y los cambios posteriores de `main`, el harness HTTP
+histórico se conserva como `experiments/sprint2_quality/historical_http_resources.py`.
+Sus expectativas describen el backend anterior; no se ejecutan como tests de
+la API durable actual. Para reproducir la medición original se debe usar el SHA
+histórico indicado en el manifiesto, sin atribuirla al nuevo `main`.
+
+Comprobación focal posterior al rebase: **95 passed** en motores, geometría,
+contrato de escala, admisión y contrato V2; **1 passed** en smoke HTTP V2 con
+PostgreSQL temporal (una advertencia de deprecación de Starlette/TestClient).
+No se repitió la batería de medición ni el experimento de concurrencia.
+
 La prueba anterior de dos coordinadores no era HTTP. La continuación añade HTTP
 y muestreo del árbol de cada servidor; se conserva una sola medición por
 escenario, con las limitaciones descritas en el informe. No sumar suites que se

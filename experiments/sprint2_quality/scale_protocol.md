@@ -1,7 +1,9 @@
 # Sprint 2 - backend and six engines: scale protocol
 
-This branch temporarily depends on PR #7. It extends its experiments; it does
-not repeat the prior 270 measurements. Production algorithms are unchanged.
+PR #7 is merged. This branch extends its experiments and does not repeat the
+prior 270 measurements. The recorded scale measurements used backend 5d43211;
+the new base contains later production changes to residual metrics and M5, so
+the historical results must not be attributed to the new base.
 
 `LOAD-050`, `LOAD-100`, `LOAD-200`, and `LOAD-300` contain physical piece
 units, not orders. The frozen generator `scale_cases.py` creates 100 x 100 mm
