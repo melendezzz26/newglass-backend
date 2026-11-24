@@ -1,0 +1,530 @@
+{
+  "cross_cancel": {
+    "status": 503,
+    "body": {
+      "detail": {
+        "code": "RECOVERY_BLOCKED",
+        "message": "No se puede identificar un supervisor activo y seguro para cancelar."
+      }
+    }
+  },
+  "after_cross_cancel_owner": {
+    "status": 200,
+    "body": {
+      "profile": "comparison-v2",
+      "schema_version": 2,
+      "comparison_id": 1,
+      "version": 43,
+      "status": "COMPLETADA",
+      "input_sha256": "5bf6694d751fe0649e0aa46081483a06756057187ab770bc846aba4b4552c9de",
+      "order_ids": [
+        1
+      ],
+      "configuration": {
+        "resolucion_raster_mm": "1.000",
+        "margen_mm": "0.00",
+        "separacion_mm": "0.00",
+        "paso_angular_grados": "5.00"
+      },
+      "configuration_id": 1,
+      "configuration_version": 1,
+      "requested_pieces": [
+        {
+          "area_mm2": "4.00",
+          "cantidad": 2,
+          "dimensiones": {
+            "height_mm": 2,
+            "width_mm": 2
+          },
+          "espesor_mm": "6.0",
+          "geometria": {
+            "height_mm": 2,
+            "type": "RECTANGULO",
+            "width_mm": 2
+          },
+          "id_pedido": 1,
+          "id_pieza": 1,
+          "id_tipo_vidrio": 7,
+          "material_nombre": "Material de prueba 7",
+          "tipo_forma": "RECTANGULO"
+        }
+      ],
+      "executions": [
+        {
+          "execution_id": 1,
+          "method": "FF",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 1
+          },
+          "computation_time_ms": 1,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 151265280,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 109559808,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 24993792,
+              "runtime_worker_peak_virtual_bytes": 35360768
+            }
+          }
+        },
+        {
+          "execution_id": 2,
+          "method": "BF",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 1
+          },
+          "computation_time_ms": 1,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 151576576,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 110067712,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 24866816,
+              "runtime_worker_peak_virtual_bytes": 35360768
+            }
+          }
+        },
+        {
+          "execution_id": 3,
+          "method": "WF",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 1
+          },
+          "computation_time_ms": 1,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 151838720,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 110276608,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 24825856,
+              "runtime_worker_peak_virtual_bytes": 35360768
+            }
+          }
+        },
+        {
+          "execution_id": 4,
+          "method": "HF",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 4
+          },
+          "computation_time_ms": 4,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "accepted_pocket": 0,
+              "activation_attempts": 1,
+              "anchors_checked": 0,
+              "boundary_rows": 0,
+              "budget_exhausted": 0,
+              "check_rows": 0,
+              "coverage_fallback": 0,
+              "fallback_used": 2,
+              "max_region_anchors_observed": 0,
+              "max_region_checks_observed": 0,
+              "orientations_inspected": 2,
+              "placement_checks": 0,
+              "pocket_candidates": 0,
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 152170496,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 110641152,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 24829952,
+              "runtime_worker_peak_virtual_bytes": 35360768,
+              "seed_probes": 0,
+              "sheet_fallback": 0
+            }
+          }
+        },
+        {
+          "execution_id": 5,
+          "method": "M5",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 1
+          },
+          "computation_time_ms": 1,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 152584192,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 110886912,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 24965120,
+              "runtime_worker_peak_virtual_bytes": 35360768
+            }
+          }
+        },
+        {
+          "execution_id": 6,
+          "method": "M6-BS",
+          "status": "COMPLETADA",
+          "dispatch_state": "TERMINATED",
+          "outcome": "COMPLETE",
+          "result_available": true,
+          "complete": true,
+          "eligible": true,
+          "placed_units": 2,
+          "total_units": 2,
+          "metrics": {
+            "aprovechamiento_pct": "100.000",
+            "merma_mm2": "0.0000",
+            "planchas_nuevas_usadas": 1,
+            "retazo_recuperable_mm2": "0",
+            "area_material_total_mm2": "8.0000",
+            "area_piezas_colocadas_mm2": "8.00",
+            "tiempo_computacional_ms": 13
+          },
+          "computation_time_ms": 13,
+          "diagnostic": {
+            "origin": "ENGINE",
+            "termination_reason": "COMPLETED",
+            "statistics": {
+              "alternatives_pruned": 0,
+              "bounded_candidates": 1,
+              "candidate_limit": 12,
+              "completed_levels": 2,
+              "expansions": 3,
+              "geometry_probes": 10,
+              "max_frontier": 2,
+              "parents": 2,
+              "positions_per_orientation": 1,
+              "runtime_aggregate_limit_bytes": 1073741824,
+              "runtime_aggregate_peak_rss_bytes": 153128960,
+              "runtime_dispatched": 1,
+              "runtime_engine_started": 1,
+              "runtime_limit_aggregate_rss": 0,
+              "runtime_limit_supervisor_rss": 0,
+              "runtime_not_started_global": 0,
+              "runtime_supervisor_limit_bytes": 251658240,
+              "runtime_supervisor_peak_rss_bytes": 111108096,
+              "runtime_worker_address_limit_bytes": 268435456,
+              "runtime_worker_allocation_failed": 0,
+              "runtime_worker_peak_rss_bytes": 25247744,
+              "runtime_worker_peak_virtual_bytes": 35360768,
+              "state_bytes_bound": 264470,
+              "state_bytes_peak": 264470
+            }
+          }
+        }
+      ],
+      "selected_execution_id": null,
+      "terminal": true,
+      "incomplete": false,
+      "released": false,
+      "confirmed": false,
+      "selection_allowed": true,
+      "confirmable": false,
+      "confirmation": null,
+      "methods": [
+        "FF",
+        "BF",
+        "WF",
+        "HF",
+        "M5",
+        "M6-BS"
+      ],
+      "supervisor_stopped": true,
+      "cancellation_status": "NONE"
+    }
+  },
+  "controlled_stop": {
+    "comparison_id": 2,
+    "initial_snapshot": "ae08e0b808aa66b9a40cf0bce2e8a36729223f4eab98fa993c4ba49c61d2e0f9",
+    "observations": [
+      {
+        "status": 200,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 2,
+          "version": 9,
+          "status": "FALLIDA",
+          "input_sha256": "ae08e0b808aa66b9a40cf0bce2e8a36729223f4eab98fa993c4ba49c61d2e0f9",
+          "order_ids": [
+            3
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 3,
+              "id_pieza": 3,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 7,
+              "method": "FF",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            },
+            {
+              "execution_id": 8,
+              "method": "BF",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            },
+            {
+              "execution_id": 9,
+              "method": "WF",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            },
+            {
+              "execution_id": 10,
+              "method": "HF",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            },
+            {
+              "execution_id": 11,
+              "method": "M5",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            },
+            {
+              "execution_id": 12,
+              "method": "M6-BS",
+              "status": "FALLIDA",
+              "dispatch_state": "TERMINATED",
+              "outcome": "FAILED",
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": {
+                "origin": "SUPERVISOR",
+                "termination_reason": "WORKER_STOPPED",
+                "statistics": {}
+              }
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": true,
+          "incomplete": true,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": true,
+          "cancellation_status": "NONE"
+        }
+      }
+    ]
+  },
+  "inventory_unchanged": true
+}

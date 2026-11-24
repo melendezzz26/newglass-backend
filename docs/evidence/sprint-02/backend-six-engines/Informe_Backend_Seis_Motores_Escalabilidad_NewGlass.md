@@ -1,7 +1,7 @@
-# Informe de avance: backend y seis motores de NewGlass
+# Informe técnico: backend y seis motores de NewGlass
 
-Estado: **PARCIAL**. La rama depende temporalmente del PR #7. Este informe
-conserva los resultados obtenidos y señala las mediciones aún pendientes.
+La rama depende temporalmente del PR #7. Este informe conserva la batería de
+escala original y agrega observaciones de concurrencia con servidores reales.
 
 ## 1. Resumen ejecutivo
 
@@ -11,10 +11,10 @@ tiempo para 100, 200 y 300 unidades; en 50 empató con WF a la resolución del
 cronómetro. M6-BS fue más lento y tuvo mayor RSS del proceso en las medianas
 observadas. Esto no establece un ganador para pedidos comerciales diversos.
 
-Dos coordinadores en procesos diferentes admitieron simultáneamente trabajos
-contra el mismo PostgreSQL temporal. En un solo proceso, una segunda comparación
-fue rechazada por la admisión. No se midieron CPU y RAM de esos escenarios de
-concurrencia ni se comprobó el funcionamiento completo en dos dynos.
+Dos servidores HTTP independientes admitieron trabajos contra el mismo PostgreSQL
+temporal. En un solo servidor, una segunda comparación fue rechazada por la
+admisión. Se midieron los árboles de procesos locales; no se comprobó el
+funcionamiento completo en dos dynos reales.
 
 ## 2. Objetivo y alcance
 
@@ -33,18 +33,20 @@ En tablas, `TIMEOUT` y `RESOURCE_LIMIT` son categorías de informe.
 
 ## 4. Los seis motores y casos discriminantes
 
-| Motor | Decisión observada en pruebas |
-|---|---|
-| FF | En fuentes 10×10 y 6×10 con pieza 5×5 elige la primera. |
-| BF | En el mismo caso elige la fuente 6×10 con menor capacidad libre posterior. |
-| WF | En el caso existente con dos fuentes 4×4 ya usadas, elige la fuente que deja más capacidad libre; FF elige la primera. |
-| HF | El caso integrado existente coloca una pieza circular en un bolsillo interior y conserva la variante frente a FF; ambas soluciones completan. |
-| M5 | En las dos fuentes usadas del caso integrado elige el residual rectangular de 4 celdas frente al de 3; FF toma la primera. |
-| M6-BS | En el CP-01 existente explora más alternativas que piezas y obtiene una disposición distinta de FF; ambos completan. |
+| Motor | Caso discriminante | Decisión demostrada | Resultado |
+|---|---|---|---|
+| FF | 10×10 y 6×10; pieza 5×5 | Elige la primera fuente factible. | PASS |
+| BF | Mismas fuentes y pieza | Elige 6×10, con menor capacidad libre posterior. | PASS |
+| WF | Dos fuentes usadas y factibles | Escoge mayor capacidad libre; el caso integrado también difiere de FF. | PASS |
+| HF | Bolsillo interior alcanzable | Coloca una pieza circular y conserva la variante frente a FF. | PASS |
+| M5 | Dos fuentes usadas y factibles | Escoge mayor rectángulo recuperable y menor fragmentación del caso focal. | PASS |
+| M6-BS | CP-01 | Explora alternativas y difiere de FF; repetición idéntica. | PASS |
 
 Las pruebas de selector y de caso alcanzable ya existentes para WF, HF y M5 se
-reutilizan. No se afirma optimalidad general. El caso M6 reutiliza un caso
-previo: no se hizo la búsqueda sistemática solicitada del primer contraejemplo.
+reutilizan. En HF se observaron 8 candidatos de bolsillo, 4243 anclas y una
+aceptación; no hubo descarte por cobertura ni planchas. Se agotó el presupuesto
+de búsqueda local y el fallback se activó en otras decisiones. No se afirma
+optimalidad general. M6 reutiliza CP-01, ya suficientemente discriminante.
 
 ## 5. Validación geométrica
 
@@ -55,9 +57,19 @@ separación, margen, fuera de fuente, paso angular, orientación y área; el mod
 rechaza pieza duplicada, fuente ajena y material o espesor incompatible. Se
 comprobó un caso válido exactamente en margen y separación.
 
-Quedan pendientes un caso independiente de conteo inconsistente y la revisión
-específica de giro prohibido según el contrato de entrada. El oráculo comparte
-el rasterizador y no constituye una prueba continua independiente.
+| Validación | Positivo | Negativo | Resultado |
+|---|---|---|---|
+| Contención | disposición válida | fuera de fuente | PASS |
+| Solapamiento y separación | separación exacta | solape y separación insuficiente | PASS |
+| Margen | margen exacto | margen insuficiente | PASS |
+| Rotación y paso | orientación rígida válida | geometría inconsistente y paso inválido | PASS |
+| Vidrio y espesor | compatibles | incompatibles | PASS |
+| Identidad y fuente | identidades de entrada | duplicada y fuente ajena | PASS |
+| Conteos y área | conteos y áreas coherentes | total, colocadas y área alterados | PASS |
+
+El contrato usa paso angular y geometría orientada, no una bandera inventada por
+pieza. El oráculo comparte el rasterizador y no constituye una prueba continua
+independiente.
 
 ## 6. Metodología
 
@@ -109,15 +121,37 @@ de consumo del algoritmo. Mínimos y máximos están en `scale_summary.csv`.
 
 ## 9. Uno y dos trabajos
 
-La prueba integrada de un trabajo comprobó seis ejecuciones, snapshot común,
-persistencia y ausencia de consumo de inventario. En un mismo coordinador, una
-segunda solicitud fue rechazada con `OPTIMIZER_BUSY`: `active_runs` para otro
-usuario y `active_runs_per_user` para el mismo. Con dos procesos y PostgreSQL
-temporal compartido, dos coordinadores admitieron trabajos con pedidos distintos,
-IDs distintos y seis ejecuciones persistidas cada uno; no hubo movimientos ni
-consumo de planchas. Los coordinadores son reales, pero la prueba no levanta dos
-servidores HTTP. Falta medir tiempo, CPU y RSS de C1/C2/C3 y verificar recuperación
-y cancelación entre procesos. Por ello no se presenta un gráfico G7 cuantitativo.
+La prueba usa Uvicorn real en loopback, PostgreSQL 16 temporal, pedidos
+sintéticos y una comparación V2 de seis motores por trabajo. Sin confirmaciones.
+
+| Escenario | Resultado HTTP | Tiempo conjunto | CPU muestreada | RSS agregado pico |
+|---|---|---:|---:|---:|
+| R1: un servidor, un trabajo | 201; completo | 6087 ms | 3.62 s | 145.1 MiB |
+| R2a: dos usuarios, un servidor | 201 y 503 `active_runs` | 5936 ms | 3.53 s | 146.4 MiB |
+| R2b: mismo usuario, un servidor | 201 y 503 `active_runs_per_user` | 6392 ms | 3.88 s | 147.0 MiB |
+| R3: dos servidores, dos trabajos | dos 201; ambos completos | 4901 ms | 7.21 s | 292.4 MiB |
+
+En R3 las CPU usuario/sistema por árbol fueron 2.90/0.69 s y 2.95/0.67 s;
+los RSS pico individuales fueron 147.4 y 145.1 MiB, máximos que pueden ocurrir
+en instantes distintos. Los tiempos individuales observados por sondeo fueron
+4899 y 4829 ms desde el comienzo conjunto. Las respuestas rechazadas incluyen
+`request_accepted=false`. Los snapshots persistidos fueron consultables por el
+otro servidor y no se consumió inventario.
+
+El muestreo Linux de `/proc` ocurre cada 20 ms sobre servidor y descendientes,
+incluido el worker; excluye PostgreSQL y el cliente de prueba. CPU de procesos
+breves puede quedar subestimada; la suma RSS puede contar memoria compartida y
+perder picos entre muestras. El tiempo incluye solicitudes, sondeo y cierre; los
+tiempos individuales son instantes de observación, no timestamps exactos del
+motor. Hay una sola observación por escenario: no son estimaciones robustas de
+rendimiento ni justifican concluir que dos servidores son más rápidos.
+
+En una prueba separada, la cancelación desde B de un trabajo propiedad de A
+devolvió `503 RECOVERY_BLOCKED`; A terminó normalmente sin cancelación. Tras
+detener controladamente A durante otro trabajo, B consultó una ejecución terminal
+`FALLIDA`, con supervisor detenido, motivo `WORKER_STOPPED` y el mismo hash de
+entrada. La recuperación y la cancelación descritas corresponden a estas únicas
+pruebas, no a todos los posibles fallos distribuidos.
 
 ## 10. Heroku, Supabase y límites
 
@@ -127,7 +161,11 @@ locales por proceso; PostgreSQL comparte snapshots, advisory locks y bloqueos
 transaccionales de confirmación, pero no sustituye admisión distribuida. No se
 demostró soporte funcional de dos dynos. El pool documentado es 5 conexiones
 por proceso, sin overflow predeterminado: dos procesos podrían reservar hasta
-10, sujeto a configuración efectiva. No se verificaron cuota ni pooler Supabase.
+10, sujeto a configuración efectiva. El máximo configurado es
+`procesos × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`, sin contar otros clientes. El
+timeout documentado es 30 s. La shell de auditoría no tenía definidas esas tres
+variables ni `DATABASE_URL`; esto no demuestra la configuración desplegada. No
+se verificaron cuota ni pooler Supabase.
 No se ejecutó Locust ni se dispuso de resultados de Fabricio para incorporarlos.
 
 ## 11. Defectos y limitaciones
@@ -145,9 +183,9 @@ experimento estaban en el árbol de trabajo al medir.
 
 FF es el punto de partida más rápido en estas cargas desde 100 piezas; a 50
 empató con WF. No recomendar un motor universal a partir de cuadrados uniformes.
-Medir procesos y árbol de trabajadores para C1/C2/C3, añadir geometrías mixtas
-con raster comercial, completar los casos negativos pendientes y coordinar con
-Fabricio resultados de carga HTTP. Antes de dos dynos probar admisión global,
+Añadir geometrías mixtas con raster comercial, repetir de forma controlada las
+mediciones de concurrencia y coordinar con Fabricio resultados de carga HTTP.
+Antes de dos dynos probar admisión global,
 ownership, recuperación, cancelación, idempotencia y confirmación transaccional.
 
 ## 13. En palabras simples
@@ -160,11 +198,12 @@ dos dynos sea seguro para todo el sistema.
 ## Anexos
 
 Los CSV, JSON, manifiestos y gráficos de `results/` son evidencia reproducible.
-La selección unitaria ejecutada contiene 531 pruebas aprobadas; la selección de
+La selección unitaria anterior contiene 531 pruebas aprobadas; la selección de
 concurrencia contiene tres pruebas aprobadas y la prueba integrada de un trabajo
 pasó por separado. La regresión de API/preflight/persistencia V2 tuvo 88 pruebas
 aprobadas y una advertencia de deprecación de Starlette/TestClient. Los conjuntos
 ejecutados anteriormente se solapan y no deben
 sumarse como casos únicos. Las gráficas G1–G5 muestran tiempo, RSS, CPU, merma y
-cobertura; G6 resume estados y G8 la cobertura de completitud por escala. La
-ausencia de G7 corresponde a la medición de concurrencia pendiente.
+cobertura; G6 resume estados, G7 compara recursos de concurrencia y G8 la
+completitud por escala. El registro complementario de esta continuación está en
+`PRUEBAS.md`.

@@ -16,7 +16,10 @@ def main():
     document.add_heading('NewGlass: backend y seis motores', 0)
     document.add_paragraph('Informe técnico — resultados y límites observados')
     document.add_page_break()
+    table = None
     for line in args.report.read_text(encoding='utf-8').splitlines():
+        if not line.startswith('|'):
+            table = None
         if line.startswith('# '):
             document.add_heading(line[2:], level=1)
         elif line.startswith('## '):
@@ -24,7 +27,13 @@ def main():
         elif line.startswith('|'):
             if set(line.replace('|', '').replace('-', '').replace(':', '').strip()) == set():
                 continue
-            document.add_paragraph(' | '.join(cell.strip() for cell in line.strip('|').split('|')))
+            cells = [cell.strip().replace('`', '') for cell in line.strip('|').split('|')]
+            if table is None:
+                table = document.add_table(rows=0, cols=len(cells))
+                table.style = 'Table Grid'
+            row = table.add_row()
+            for target, value in zip(row.cells, cells):
+                target.text = value
         elif line.strip():
             document.add_paragraph(line.replace('**', '').replace('`', ''))
     figures = [('G1_time.png', 'Tiempo mediano de cálculo por cantidad de piezas.'),

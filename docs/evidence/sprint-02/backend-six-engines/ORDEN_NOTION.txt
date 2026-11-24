@@ -7,7 +7,6 @@
 07. CPU de proceso: results/G3_cpu.png
 08. Merma: results/G4_waste.png
 09. Completitud por carga: results/G8_capacity.png
-10. Admisión por proceso: tests/integration/optimization/test_scale_multiprocess_admission.py
-11. Protocolo y limitaciones: experiments/sprint2_quality/scale_protocol.md
-
-Pendiente: medición de tiempo, CPU y RSS de uno frente a dos trabajos y gráfico G7.
+10. Uno frente a dos trabajos: concurrency/G7_concurrencia_recursos.png
+11. Respuestas HTTP y admisión local: concurrency/concurrency_details.json
+12. Recuperación y cancelación: concurrency/recovery_cancel_observations.json

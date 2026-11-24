@@ -17,7 +17,15 @@ conexión a producción ni confirmación de cortes.
 - Piloto: 24 observaciones, todas completas y validadas. Calentamiento: 24
   observaciones separadas. Medición: 120 observaciones, todas completas y
   validadas. Esto no es una cuenta de tests de pytest.
+- Continuación: `test_six_engines_scale_contract.py`, **24 passed**, incluye
+  nuevas aserciones de selectores, fragmentación, conteos, HF y reproducibilidad
+  de M6. Esta selección se solapa con parte de las 531 anteriores.
+- `test_scale_http_resources.py`: **2 passed**, servidores Uvicorn reales con
+  PostgreSQL temporal. La prueba de recursos cubre R1, R2a, R2b y R3; la de
+  recuperación verifica cancelación desde otro servidor e interrupción controlada
+  del dueño. La validación final no sobrescribió las mediciones guardadas.
 
-El test integrado de dos coordinadores no es una prueba HTTP de dos servidores
-ni mide el CPU o RSS agregado. No demuestra recuperación o cancelación entre
-procesos. Ver el informe para los límites y trabajo pendiente.
+La prueba anterior de dos coordinadores no era HTTP. La continuación añade HTTP
+y muestreo del árbol de cada servidor; se conserva una sola medición por
+escenario, con las limitaciones descritas en el informe. No sumar suites que se
+solapan ni interpretar esos escenarios como una batería estadística.

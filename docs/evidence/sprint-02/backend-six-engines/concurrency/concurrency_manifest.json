@@ -1,0 +1,21 @@
+{
+    "backend_sha":  "b0aeac7",
+    "measurement_harness_commit":  "d50cfa7",
+    "operating_system":  "WSL2/Linux",
+    "python":  "3.11.17",
+    "postgresql":  "16, temporary loopback",
+    "scenarios":  4,
+    "observations_per_scenario":  1,
+    "sample_interval_ms":  20,
+    "cpu":  "sampled user and system per server process tree; lower bound for short-lived processes",
+    "rss":  "sampled simultaneous sum per tree; may double-count shared pages and miss peaks",
+    "excludes":  "client and temporary PostgreSQL",
+    "files_sha256":  {
+                         "concurrency_details.json":  "586afaf7dfce08c930e26c8a6c318c7524b56204ea703e3d0709e2ee443553a9",
+                         "concurrency_raw_results.csv":  "e260f874d68df29ad662937eb03a6fee8c956c7e02f7e86e69b6ba5c98cbb61c",
+                         "recovery_cancel_observations.json":  "f14a6164f00b717ada0b038b11859328d45b4a0dd67cb9a43f6ae73b119731b7",
+                         "G7_concurrencia_recursos.png":  "e62b2920c0d007d37d0f762c15113914aa04371ac0c672eb01bd8efecdc45c59",
+                         "README.md":  "40c2d48523aaeac3c1dfe72e96c14777158e50eb4ba6935495fc245d7c7a7098",
+                         "concurrency_summary.csv":  "1eda794db715730750149f93f17e76a84ef3ec2009f3711612020b02cb95f1f9"
+                     }
+}
