@@ -1,0 +1,44 @@
+{
+  "frontend_sha": "428652bdaee0ebf58a3bf8a7bcb33878dc765e44",
+  "browser": "153.0.8010.12",
+  "viewport": {
+    "width": 1600,
+    "height": 1100
+  },
+  "comparisons": [
+    {
+      "case_id": "CP-01",
+      "comparison_id": 1,
+      "input_sha256": "2f8fe868f52fc44863d83d3e570ab0280ec94c0da9ee9be2d10b0753d9621740",
+      "quality_matches": true,
+      "inventory_unchanged": true
+    },
+    {
+      "case_id": "CP-05",
+      "comparison_id": 2,
+      "input_sha256": "a9acf02b79634464bb5847ef040bc39728d8940cbed139cc3265b33189c43709",
+      "quality_matches": true,
+      "inventory_unchanged": true
+    },
+    {
+      "case_id": "CP-06",
+      "comparison_id": 3,
+      "input_sha256": "2d359b8300a4e5ecbca1e634b304194546a9fc7a69e55252a385061f4d43461a",
+      "quality_matches": true,
+      "inventory_unchanged": true
+    }
+  ],
+  "captures": [
+    "01-comparacion-seis-motores.png",
+    "02-tabla-completa.png",
+    "03-datos-tecnicos.png",
+    "04-configuracion.png",
+    "05-patron-diferenciador-M6.png",
+    "06-multi-plancha.png",
+    "09-fuentes-multi-plancha.png",
+    "07-plancha-retazo.png",
+    "08-trazabilidad-material.png"
+  ],
+  "page_errors": [],
+  "confirmed": false
+}

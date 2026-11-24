@@ -1,0 +1,72 @@
+{
+  "case_id": "CP-06",
+  "schema_version": 1,
+  "rotation_allowed": true,
+  "order_ids": [
+    1
+  ],
+  "config": {
+    "resolution_mm": 1,
+    "angular_step_deg": 5,
+    "margin_mm": 3,
+    "separation_mm": 3
+  },
+  "residual_limits": {
+    "minimum_width_mm": 10,
+    "minimum_height_mm": 10
+  },
+  "pieces": [
+    {
+      "id_pedido": 1,
+      "id_pieza": 1,
+      "cantidad": 4,
+      "id_tipo_vidrio": 1,
+      "espesor_mm": 6,
+      "tipo_forma": "RECTANGULO",
+      "geometria": {
+        "type": "RECTANGULO",
+        "width_mm": 400,
+        "height_mm": 600
+      }
+    },
+    {
+      "id_pedido": 1,
+      "id_pieza": 2,
+      "cantidad": 3,
+      "id_tipo_vidrio": 1,
+      "espesor_mm": 6,
+      "tipo_forma": "RECTANGULO",
+      "geometria": {
+        "type": "RECTANGULO",
+        "width_mm": 200,
+        "height_mm": 300
+      }
+    }
+  ],
+  "stock": [
+    {
+      "material_id": 1,
+      "quantity": 1,
+      "source": "RETAZO",
+      "glass_type_id": 1,
+      "thickness_mm": 6,
+      "geometry": {
+        "type": "RECTANGULO",
+        "width_mm": 650,
+        "height_mm": 850
+      }
+    },
+    {
+      "material_id": 2,
+      "quantity": 2,
+      "source": "PLANCHA",
+      "glass_type_id": 1,
+      "thickness_mm": 6,
+      "geometry": {
+        "type": "RECTANGULO",
+        "width_mm": 1200,
+        "height_mm": 1800
+      }
+    }
+  ]
+}

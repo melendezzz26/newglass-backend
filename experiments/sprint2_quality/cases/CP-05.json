@@ -1,0 +1,47 @@
+{
+  "case_id": "CP-05",
+  "schema_version": 1,
+  "rotation_allowed": true,
+  "order_ids": [
+    1
+  ],
+  "config": {
+    "resolution_mm": 1,
+    "angular_step_deg": 5,
+    "margin_mm": 3,
+    "separation_mm": 3
+  },
+  "residual_limits": {
+    "minimum_width_mm": 10,
+    "minimum_height_mm": 10
+  },
+  "pieces": [
+    {
+      "id_pedido": 1,
+      "id_pieza": 1,
+      "cantidad": 8,
+      "id_tipo_vidrio": 1,
+      "espesor_mm": 6,
+      "tipo_forma": "RECTANGULO",
+      "geometria": {
+        "type": "RECTANGULO",
+        "width_mm": 700,
+        "height_mm": 900
+      }
+    }
+  ],
+  "stock": [
+    {
+      "material_id": 1,
+      "quantity": 8,
+      "source": "PLANCHA",
+      "glass_type_id": 1,
+      "thickness_mm": 6,
+      "geometry": {
+        "type": "RECTANGULO",
+        "width_mm": 1200,
+        "height_mm": 1800
+      }
+    }
+  ]
+}
