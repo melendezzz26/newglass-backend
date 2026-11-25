@@ -81,10 +81,12 @@ jobs:
             --ignore=tests/integration/optimization/test_comparison_v2_http_restart.py \
             --ignore=tests/integration/optimization/test_distributed_progress.py \
             --ignore=tests/integration/optimization/test_comparison_supervision_v2.py \
+            --ignore=tests/integration/optimization/test_scale_multiprocess_admission.py \
             --ignore=tests/unit/optimization/test_sequential_runner.py \
             -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/general.xml"
           python -m pytest tests/integration/optimization/test_comparison_calculation.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/comparison-calculation.xml"
           python -m pytest tests/integration/optimization/test_comparison_supervision_v2.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/comparison-supervision.xml"
+          python -m pytest tests/integration/optimization/test_scale_multiprocess_admission.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/scale-admission.xml"
           python -m pytest tests/integration/optimization/test_comparison_queue_v2.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/comparison-queue.xml"
           python -m pytest tests/integration/optimization/test_comparison_v2_http_restart.py tests/integration/optimization/test_distributed_progress.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/separated-worker.xml"
           python -m pytest tests/unit/optimization/test_sequential_runner.py -q -ra --junitxml="$RUNNER_TEMP/newglass-backend-junit/sequential-runner.xml"

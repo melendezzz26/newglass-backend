@@ -1,0 +1,2521 @@
+[
+  {
+    "scenario": "R1",
+    "responses": [
+      {
+        "status": 201,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 1,
+          "version": 2,
+          "status": "EN_EJECUCION",
+          "input_sha256": "ae08e0b808aa66b9a40cf0bce2e8a36729223f4eab98fa993c4ba49c61d2e0f9",
+          "order_ids": [
+            3
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 3,
+              "id_pieza": 3,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 1,
+              "method": "FF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 2,
+              "method": "BF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 3,
+              "method": "WF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 4,
+              "method": "HF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 5,
+              "method": "M5",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 6,
+              "method": "M6-BS",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": false,
+          "incomplete": false,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": false,
+          "cancellation_status": "NONE"
+        },
+        "request_wall_ms": 260.1275819999955,
+        "server": 0
+      }
+    ],
+    "final": [
+      {
+        "profile": "comparison-v2",
+        "schema_version": 2,
+        "comparison_id": 1,
+        "version": 43,
+        "status": "COMPLETADA",
+        "input_sha256": "ae08e0b808aa66b9a40cf0bce2e8a36729223f4eab98fa993c4ba49c61d2e0f9",
+        "order_ids": [
+          3
+        ],
+        "configuration": {
+          "resolucion_raster_mm": "1.000",
+          "margen_mm": "0.00",
+          "separacion_mm": "0.00",
+          "paso_angular_grados": "5.00"
+        },
+        "configuration_id": 1,
+        "configuration_version": 1,
+        "requested_pieces": [
+          {
+            "area_mm2": "4.00",
+            "cantidad": 2,
+            "dimensiones": {
+              "height_mm": 2,
+              "width_mm": 2
+            },
+            "espesor_mm": "6.0",
+            "geometria": {
+              "height_mm": 2,
+              "type": "RECTANGULO",
+              "width_mm": 2
+            },
+            "id_pedido": 3,
+            "id_pieza": 3,
+            "id_tipo_vidrio": 7,
+            "material_nombre": "Material de prueba 7",
+            "tipo_forma": "RECTANGULO"
+          }
+        ],
+        "executions": [
+          {
+            "execution_id": 1,
+            "method": "FF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151093248,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 109621248,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24760320,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 2,
+            "method": "BF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151515136,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110014464,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24752128,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 3,
+            "method": "WF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151863296,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110317568,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24809472,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 4,
+            "method": "HF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "accepted_pocket": 0,
+                "activation_attempts": 1,
+                "anchors_checked": 0,
+                "boundary_rows": 0,
+                "budget_exhausted": 0,
+                "check_rows": 0,
+                "coverage_fallback": 0,
+                "fallback_used": 2,
+                "max_region_anchors_observed": 0,
+                "max_region_checks_observed": 0,
+                "orientations_inspected": 2,
+                "placement_checks": 0,
+                "pocket_candidates": 0,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152121344,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110616576,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24788992,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "seed_probes": 0,
+                "sheet_fallback": 0
+              }
+            }
+          },
+          {
+            "execution_id": 5,
+            "method": "M5",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152485888,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110895104,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24821760,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 6,
+            "method": "M6-BS",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 12
+            },
+            "computation_time_ms": 12,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "alternatives_pruned": 0,
+                "bounded_candidates": 1,
+                "candidate_limit": 12,
+                "completed_levels": 2,
+                "expansions": 3,
+                "geometry_probes": 10,
+                "max_frontier": 2,
+                "parents": 2,
+                "positions_per_orientation": 1,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152801280,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111042560,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24981504,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "state_bytes_bound": 264470,
+                "state_bytes_peak": 264470
+              }
+            }
+          }
+        ],
+        "selected_execution_id": null,
+        "terminal": true,
+        "incomplete": false,
+        "released": false,
+        "confirmed": false,
+        "selection_allowed": true,
+        "confirmable": false,
+        "confirmation": null,
+        "methods": [
+          "FF",
+          "BF",
+          "WF",
+          "HF",
+          "M5",
+          "M6-BS"
+        ],
+        "supervisor_stopped": true,
+        "cancellation_status": "NONE"
+      }
+    ],
+    "job_observed_wall_ms": [
+      6084.249
+    ],
+    "cross_server": null
+  },
+  {
+    "scenario": "R2_distinct",
+    "responses": [
+      {
+        "status": 503,
+        "body": {
+          "detail": {
+            "code": "OPTIMIZER_BUSY",
+            "message": "El optimizador est\u00e1 atendiendo otros c\u00e1lculos. Intenta nuevamente en unos segundos.",
+            "limit": {
+              "name": "active_runs",
+              "maximum": 1,
+              "actual": 1,
+              "scope": null
+            },
+            "request_accepted": false
+          }
+        },
+        "request_wall_ms": 109.95492600000034,
+        "server": 0
+      },
+      {
+        "status": 201,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 2,
+          "version": 2,
+          "status": "EN_EJECUCION",
+          "input_sha256": "6608baca711a863977cbb75934a3e966fda4e0a969b828f93fe6523b4ba8325a",
+          "order_ids": [
+            5
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 5,
+              "id_pieza": 5,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 7,
+              "method": "FF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 8,
+              "method": "BF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 9,
+              "method": "WF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 10,
+              "method": "HF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 11,
+              "method": "M5",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 12,
+              "method": "M6-BS",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": false,
+          "incomplete": false,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": false,
+          "cancellation_status": "NONE"
+        },
+        "request_wall_ms": 123.53860000000338,
+        "server": 0
+      }
+    ],
+    "final": [
+      {
+        "profile": "comparison-v2",
+        "schema_version": 2,
+        "comparison_id": 2,
+        "version": 43,
+        "status": "COMPLETADA",
+        "input_sha256": "6608baca711a863977cbb75934a3e966fda4e0a969b828f93fe6523b4ba8325a",
+        "order_ids": [
+          5
+        ],
+        "configuration": {
+          "resolucion_raster_mm": "1.000",
+          "margen_mm": "0.00",
+          "separacion_mm": "0.00",
+          "paso_angular_grados": "5.00"
+        },
+        "configuration_id": 1,
+        "configuration_version": 1,
+        "requested_pieces": [
+          {
+            "area_mm2": "4.00",
+            "cantidad": 2,
+            "dimensiones": {
+              "height_mm": 2,
+              "width_mm": 2
+            },
+            "espesor_mm": "6.0",
+            "geometria": {
+              "height_mm": 2,
+              "type": "RECTANGULO",
+              "width_mm": 2
+            },
+            "id_pedido": 5,
+            "id_pieza": 5,
+            "id_tipo_vidrio": 7,
+            "material_nombre": "Material de prueba 7",
+            "tipo_forma": "RECTANGULO"
+          }
+        ],
+        "executions": [
+          {
+            "execution_id": 7,
+            "method": "FF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152936448,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111370240,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24821760,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 8,
+            "method": "BF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152997888,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111431680,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24809472,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 9,
+            "method": "WF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152997888,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111501312,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24674304,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 10,
+            "method": "HF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "accepted_pocket": 0,
+                "activation_attempts": 1,
+                "anchors_checked": 0,
+                "boundary_rows": 0,
+                "budget_exhausted": 0,
+                "check_rows": 0,
+                "coverage_fallback": 0,
+                "fallback_used": 2,
+                "max_region_anchors_observed": 0,
+                "max_region_checks_observed": 0,
+                "orientations_inspected": 2,
+                "placement_checks": 0,
+                "pocket_candidates": 0,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 153333760,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111697920,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24862720,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "seed_probes": 0,
+                "sheet_fallback": 0
+              }
+            }
+          },
+          {
+            "execution_id": 11,
+            "method": "M5",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 153550848,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 111915008,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24903680,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 12,
+            "method": "M6-BS",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 13
+            },
+            "computation_time_ms": 13,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "alternatives_pruned": 0,
+                "bounded_candidates": 1,
+                "candidate_limit": 12,
+                "completed_levels": 2,
+                "expansions": 3,
+                "geometry_probes": 10,
+                "max_frontier": 2,
+                "parents": 2,
+                "positions_per_orientation": 1,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154099712,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112123904,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25198592,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "state_bytes_bound": 264470,
+                "state_bytes_peak": 264470
+              }
+            }
+          }
+        ],
+        "selected_execution_id": null,
+        "terminal": true,
+        "incomplete": false,
+        "released": false,
+        "confirmed": false,
+        "selection_allowed": true,
+        "confirmable": false,
+        "confirmation": null,
+        "methods": [
+          "FF",
+          "BF",
+          "WF",
+          "HF",
+          "M5",
+          "M6-BS"
+        ],
+        "supervisor_stopped": true,
+        "cancellation_status": "NONE"
+      }
+    ],
+    "job_observed_wall_ms": [
+      5933.411
+    ],
+    "cross_server": null
+  },
+  {
+    "scenario": "R2_same",
+    "responses": [
+      {
+        "status": 503,
+        "body": {
+          "detail": {
+            "code": "OPTIMIZER_BUSY",
+            "message": "Ya tienes un c\u00e1lculo en curso. Espera a que termine o revisa su resultado.",
+            "limit": {
+              "name": "active_runs_per_user",
+              "maximum": 1,
+              "actual": 1,
+              "scope": null
+            },
+            "request_accepted": false
+          }
+        },
+        "request_wall_ms": 100.54540000000145,
+        "server": 0
+      },
+      {
+        "status": 201,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 3,
+          "version": 2,
+          "status": "EN_EJECUCION",
+          "input_sha256": "8079ff478cadc68aa592a55bbcfd6a22bc0b02fdada70e42d9df465f4f5f972c",
+          "order_ids": [
+            7
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 7,
+              "id_pieza": 7,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 13,
+              "method": "FF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 14,
+              "method": "BF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 15,
+              "method": "WF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 16,
+              "method": "HF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 17,
+              "method": "M5",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 18,
+              "method": "M6-BS",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": false,
+          "incomplete": false,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": false,
+          "cancellation_status": "NONE"
+        },
+        "request_wall_ms": 108.40605999999298,
+        "server": 0
+      }
+    ],
+    "final": [
+      {
+        "profile": "comparison-v2",
+        "schema_version": 2,
+        "comparison_id": 3,
+        "version": 43,
+        "status": "COMPLETADA",
+        "input_sha256": "8079ff478cadc68aa592a55bbcfd6a22bc0b02fdada70e42d9df465f4f5f972c",
+        "order_ids": [
+          7
+        ],
+        "configuration": {
+          "resolucion_raster_mm": "1.000",
+          "margen_mm": "0.00",
+          "separacion_mm": "0.00",
+          "paso_angular_grados": "5.00"
+        },
+        "configuration_id": 1,
+        "configuration_version": 1,
+        "requested_pieces": [
+          {
+            "area_mm2": "4.00",
+            "cantidad": 2,
+            "dimensiones": {
+              "height_mm": 2,
+              "width_mm": 2
+            },
+            "espesor_mm": "6.0",
+            "geometria": {
+              "height_mm": 2,
+              "type": "RECTANGULO",
+              "width_mm": 2
+            },
+            "id_pedido": 7,
+            "id_pieza": 7,
+            "id_tipo_vidrio": 7,
+            "material_nombre": "Material de prueba 7",
+            "tipo_forma": "RECTANGULO"
+          }
+        ],
+        "executions": [
+          {
+            "execution_id": 13,
+            "method": "FF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154001408,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112295936,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24936448,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 14,
+            "method": "BF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154071040,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112431104,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24862720,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 15,
+            "method": "WF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154079232,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112467968,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24834048,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 16,
+            "method": "HF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 3
+            },
+            "computation_time_ms": 3,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "accepted_pocket": 0,
+                "activation_attempts": 1,
+                "anchors_checked": 0,
+                "boundary_rows": 0,
+                "budget_exhausted": 0,
+                "check_rows": 0,
+                "coverage_fallback": 0,
+                "fallback_used": 2,
+                "max_region_anchors_observed": 0,
+                "max_region_checks_observed": 0,
+                "orientations_inspected": 2,
+                "placement_checks": 0,
+                "pocket_candidates": 0,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154116096,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112508928,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24834048,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "seed_probes": 0,
+                "sheet_fallback": 0
+              }
+            }
+          },
+          {
+            "execution_id": 17,
+            "method": "M5",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154370048,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112599040,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24993792,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 18,
+            "method": "M6-BS",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 13
+            },
+            "computation_time_ms": 13,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "alternatives_pruned": 0,
+                "bounded_candidates": 1,
+                "candidate_limit": 12,
+                "completed_levels": 2,
+                "expansions": 3,
+                "geometry_probes": 10,
+                "max_frontier": 2,
+                "parents": 2,
+                "positions_per_orientation": 1,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154517504,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 112799744,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24940544,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "state_bytes_bound": 264470,
+                "state_bytes_peak": 264470
+              }
+            }
+          }
+        ],
+        "selected_execution_id": null,
+        "terminal": true,
+        "incomplete": false,
+        "released": false,
+        "confirmed": false,
+        "selection_allowed": true,
+        "confirmable": false,
+        "confirmation": null,
+        "methods": [
+          "FF",
+          "BF",
+          "WF",
+          "HF",
+          "M5",
+          "M6-BS"
+        ],
+        "supervisor_stopped": true,
+        "cancellation_status": "NONE"
+      }
+    ],
+    "job_observed_wall_ms": [
+      6389.67
+    ],
+    "cross_server": null
+  },
+  {
+    "scenario": "R3",
+    "responses": [
+      {
+        "status": 201,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 4,
+          "version": 2,
+          "status": "EN_EJECUCION",
+          "input_sha256": "ad548e1f35a4aa52c1cc2135856dfd3ce748e20f53e0181ba278fe17356b7bdf",
+          "order_ids": [
+            8
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 8,
+              "id_pieza": 8,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 19,
+              "method": "FF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 20,
+              "method": "BF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 21,
+              "method": "WF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 22,
+              "method": "HF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 23,
+              "method": "M5",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 24,
+              "method": "M6-BS",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": false,
+          "incomplete": false,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": false,
+          "cancellation_status": "NONE"
+        },
+        "request_wall_ms": 105.8753949999982,
+        "server": 0
+      },
+      {
+        "status": 201,
+        "body": {
+          "profile": "comparison-v2",
+          "schema_version": 2,
+          "comparison_id": 5,
+          "version": 2,
+          "status": "EN_EJECUCION",
+          "input_sha256": "a7ac9cd22c6fef5cd3e7bc24e6586ebf920d58263e123dea83c1807685b4b874",
+          "order_ids": [
+            9
+          ],
+          "configuration": {
+            "resolucion_raster_mm": "1.000",
+            "margen_mm": "0.00",
+            "separacion_mm": "0.00",
+            "paso_angular_grados": "5.00"
+          },
+          "configuration_id": 1,
+          "configuration_version": 1,
+          "requested_pieces": [
+            {
+              "area_mm2": "4.00",
+              "cantidad": 2,
+              "dimensiones": {
+                "height_mm": 2,
+                "width_mm": 2
+              },
+              "espesor_mm": "6.0",
+              "geometria": {
+                "height_mm": 2,
+                "type": "RECTANGULO",
+                "width_mm": 2
+              },
+              "id_pedido": 9,
+              "id_pieza": 9,
+              "id_tipo_vidrio": 7,
+              "material_nombre": "Material de prueba 7",
+              "tipo_forma": "RECTANGULO"
+            }
+          ],
+          "executions": [
+            {
+              "execution_id": 25,
+              "method": "FF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 26,
+              "method": "BF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 27,
+              "method": "WF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 28,
+              "method": "HF",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 29,
+              "method": "M5",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            },
+            {
+              "execution_id": 30,
+              "method": "M6-BS",
+              "status": "EN_EJECUCION",
+              "dispatch_state": "QUEUED",
+              "outcome": null,
+              "result_available": false,
+              "complete": false,
+              "eligible": false,
+              "placed_units": 0,
+              "total_units": 2,
+              "metrics": null,
+              "computation_time_ms": null,
+              "diagnostic": null
+            }
+          ],
+          "selected_execution_id": null,
+          "terminal": false,
+          "incomplete": false,
+          "released": false,
+          "confirmed": false,
+          "selection_allowed": false,
+          "confirmable": false,
+          "confirmation": null,
+          "methods": [
+            "FF",
+            "BF",
+            "WF",
+            "HF",
+            "M5",
+            "M6-BS"
+          ],
+          "supervisor_stopped": false,
+          "cancellation_status": "NONE"
+        },
+        "request_wall_ms": 275.1081950000014,
+        "server": 1
+      }
+    ],
+    "final": [
+      {
+        "profile": "comparison-v2",
+        "schema_version": 2,
+        "comparison_id": 4,
+        "version": 43,
+        "status": "COMPLETADA",
+        "input_sha256": "ad548e1f35a4aa52c1cc2135856dfd3ce748e20f53e0181ba278fe17356b7bdf",
+        "order_ids": [
+          8
+        ],
+        "configuration": {
+          "resolucion_raster_mm": "1.000",
+          "margen_mm": "0.00",
+          "separacion_mm": "0.00",
+          "paso_angular_grados": "5.00"
+        },
+        "configuration_id": 1,
+        "configuration_version": 1,
+        "requested_pieces": [
+          {
+            "area_mm2": "4.00",
+            "cantidad": 2,
+            "dimensiones": {
+              "height_mm": 2,
+              "width_mm": 2
+            },
+            "espesor_mm": "6.0",
+            "geometria": {
+              "height_mm": 2,
+              "type": "RECTANGULO",
+              "width_mm": 2
+            },
+            "id_pedido": 8,
+            "id_pieza": 8,
+            "id_tipo_vidrio": 7,
+            "material_nombre": "Material de prueba 7",
+            "tipo_forma": "RECTANGULO"
+          }
+        ],
+        "executions": [
+          {
+            "execution_id": 19,
+            "method": "FF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154853376,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113057792,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25022464,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 20,
+            "method": "BF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154853376,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113070080,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24899584,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 21,
+            "method": "WF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154857472,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113090560,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25006080,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 22,
+            "method": "HF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 3
+            },
+            "computation_time_ms": 3,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "accepted_pocket": 0,
+                "activation_attempts": 1,
+                "anchors_checked": 0,
+                "boundary_rows": 0,
+                "budget_exhausted": 0,
+                "check_rows": 0,
+                "coverage_fallback": 0,
+                "fallback_used": 2,
+                "max_region_anchors_observed": 0,
+                "max_region_checks_observed": 0,
+                "orientations_inspected": 2,
+                "placement_checks": 0,
+                "pocket_candidates": 0,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154914816,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113123328,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25014272,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "seed_probes": 0,
+                "sheet_fallback": 0
+              }
+            }
+          },
+          {
+            "execution_id": 23,
+            "method": "M5",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 154914816,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113238016,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24805376,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 24,
+            "method": "M6-BS",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 16
+            },
+            "computation_time_ms": 16,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "alternatives_pruned": 0,
+                "bounded_candidates": 1,
+                "candidate_limit": 12,
+                "completed_levels": 2,
+                "expansions": 3,
+                "geometry_probes": 10,
+                "max_frontier": 2,
+                "parents": 2,
+                "positions_per_orientation": 1,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 155058176,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 113332224,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24952832,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "state_bytes_bound": 264410,
+                "state_bytes_peak": 264410
+              }
+            }
+          }
+        ],
+        "selected_execution_id": null,
+        "terminal": true,
+        "incomplete": false,
+        "released": false,
+        "confirmed": false,
+        "selection_allowed": true,
+        "confirmable": false,
+        "confirmation": null,
+        "methods": [
+          "FF",
+          "BF",
+          "WF",
+          "HF",
+          "M5",
+          "M6-BS"
+        ],
+        "supervisor_stopped": true,
+        "cancellation_status": "NONE"
+      },
+      {
+        "profile": "comparison-v2",
+        "schema_version": 2,
+        "comparison_id": 5,
+        "version": 43,
+        "status": "COMPLETADA",
+        "input_sha256": "a7ac9cd22c6fef5cd3e7bc24e6586ebf920d58263e123dea83c1807685b4b874",
+        "order_ids": [
+          9
+        ],
+        "configuration": {
+          "resolucion_raster_mm": "1.000",
+          "margen_mm": "0.00",
+          "separacion_mm": "0.00",
+          "paso_angular_grados": "5.00"
+        },
+        "configuration_id": 1,
+        "configuration_version": 1,
+        "requested_pieces": [
+          {
+            "area_mm2": "4.00",
+            "cantidad": 2,
+            "dimensiones": {
+              "height_mm": 2,
+              "width_mm": 2
+            },
+            "espesor_mm": "6.0",
+            "geometria": {
+              "height_mm": 2,
+              "type": "RECTANGULO",
+              "width_mm": 2
+            },
+            "id_pedido": 9,
+            "id_pieza": 9,
+            "id_tipo_vidrio": 7,
+            "material_nombre": "Material de prueba 7",
+            "tipo_forma": "RECTANGULO"
+          }
+        ],
+        "executions": [
+          {
+            "execution_id": 25,
+            "method": "FF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151330816,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 109481984,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25153536,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 26,
+            "method": "BF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151412736,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 109875200,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24801280,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 27,
+            "method": "WF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 1
+            },
+            "computation_time_ms": 1,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 151855104,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110157824,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24969216,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 28,
+            "method": "HF",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 3
+            },
+            "computation_time_ms": 3,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "accepted_pocket": 0,
+                "activation_attempts": 1,
+                "anchors_checked": 0,
+                "boundary_rows": 0,
+                "budget_exhausted": 0,
+                "check_rows": 0,
+                "coverage_fallback": 0,
+                "fallback_used": 2,
+                "max_region_anchors_observed": 0,
+                "max_region_checks_observed": 0,
+                "orientations_inspected": 2,
+                "placement_checks": 0,
+                "pocket_candidates": 0,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152117248,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110428160,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24911872,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "seed_probes": 0,
+                "sheet_fallback": 0
+              }
+            }
+          },
+          {
+            "execution_id": 29,
+            "method": "M5",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 2
+            },
+            "computation_time_ms": 2,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152436736,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110718976,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 24944640,
+                "runtime_worker_peak_virtual_bytes": 35360768
+              }
+            }
+          },
+          {
+            "execution_id": 30,
+            "method": "M6-BS",
+            "status": "COMPLETADA",
+            "dispatch_state": "TERMINATED",
+            "outcome": "COMPLETE",
+            "result_available": true,
+            "complete": true,
+            "eligible": true,
+            "placed_units": 2,
+            "total_units": 2,
+            "metrics": {
+              "aprovechamiento_pct": "100.000",
+              "merma_mm2": "0.0000",
+              "planchas_nuevas_usadas": 1,
+              "retazo_recuperable_mm2": "0",
+              "area_material_total_mm2": "8.0000",
+              "area_piezas_colocadas_mm2": "8.00",
+              "tiempo_computacional_ms": 17
+            },
+            "computation_time_ms": 17,
+            "diagnostic": {
+              "origin": "ENGINE",
+              "termination_reason": "COMPLETED",
+              "statistics": {
+                "alternatives_pruned": 0,
+                "bounded_candidates": 1,
+                "candidate_limit": 12,
+                "completed_levels": 2,
+                "expansions": 3,
+                "geometry_probes": 10,
+                "max_frontier": 2,
+                "parents": 2,
+                "positions_per_orientation": 1,
+                "runtime_aggregate_limit_bytes": 1073741824,
+                "runtime_aggregate_peak_rss_bytes": 152834048,
+                "runtime_dispatched": 1,
+                "runtime_engine_started": 1,
+                "runtime_limit_aggregate_rss": 0,
+                "runtime_limit_supervisor_rss": 0,
+                "runtime_not_started_global": 0,
+                "runtime_supervisor_limit_bytes": 251658240,
+                "runtime_supervisor_peak_rss_bytes": 110940160,
+                "runtime_worker_address_limit_bytes": 268435456,
+                "runtime_worker_allocation_failed": 0,
+                "runtime_worker_peak_rss_bytes": 25124864,
+                "runtime_worker_peak_virtual_bytes": 35360768,
+                "state_bytes_bound": 264530,
+                "state_bytes_peak": 264530
+              }
+            }
+          }
+        ],
+        "selected_execution_id": null,
+        "terminal": true,
+        "incomplete": false,
+        "released": false,
+        "confirmed": false,
+        "selection_allowed": true,
+        "confirmable": false,
+        "confirmation": null,
+        "methods": [
+          "FF",
+          "BF",
+          "WF",
+          "HF",
+          "M5",
+          "M6-BS"
+        ],
+        "supervisor_stopped": true,
+        "cancellation_status": "NONE"
+      }
+    ],
+    "job_observed_wall_ms": [
+      4899.135,
+      4829.184
+    ],
+    "cross_server": {
+      "status": 200,
+      "same_snapshot": true
+    }
+  }
+]
