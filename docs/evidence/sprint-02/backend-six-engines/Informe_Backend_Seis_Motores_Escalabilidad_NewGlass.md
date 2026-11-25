@@ -274,6 +274,7 @@ indicados al principio.
 | [Patrón FF](visual/06_Resultado_Optimizador.png) | EV-100 | 100 | Reproducción local | Mostrar piezas y fuente en el visor. |
 | [Validación técnica](visual/07_Pruebas_Validadas.png) | EV-050 a EV-300 | 50–300 | Respuestas locales | Verificar cantidades entre pedido y comparación. |
 | [Control de estado](visual/08_Control_Concurrencia.png) | EV-300 | 300 | Solicitud local | Mostrar el rechazo al volver a solicitar el mismo pedido. |
+| [Pedidos independientes](visual/08B_Concurrencia_Pedidos_Independientes.png) | CONC-A / CONC-B | 50 cada uno | API y worker separados; PostgreSQL temporal | Mostrar cola durable y avance automático. |
 
 Cada tabla de comparación muestra las unidades colocadas y solicitadas por
 motor. La vista FF muestra una fuente del pedido EV-100; no representa todas
@@ -284,6 +285,34 @@ atributos de calidad. 300 fue la mayor carga evaluada, no un máximo demostrado.
 
 Durante EV-300 una segunda solicitud sobre el mismo pedido devolvió HTTP 409
 `STATE_CONFLICT` porque el pedido no estaba pendiente. Esto muestra el control
-de estado del pedido, no demuestra `OPTIMIZER_BUSY` ni la admisión de dos
-pedidos independientes. La evidencia histórica de concurrencia está en
+contra doble inicio incompatible del mismo pedido, no demuestra `OPTIMIZER_BUSY`
+ni la admisión de dos pedidos independientes. La evidencia histórica de concurrencia está en
 `concurrency/` y corresponde a dos servidores locales, no dos dynos.
+
+### Pedidos independientes y coordinación durable actual
+
+Una prueba funcional separada utilizó el proveedor actual de comparación V2,
+un servidor Uvicorn, un worker separado, PostgreSQL temporal y el piloto durable
+habilitado con una plaza activa. Dos usuarios enviaron simultáneamente pedidos
+sintéticos distintos de 50 unidades: CONC-A (pedido 1, comparación 3) y CONC-B
+(pedido 2, comparación 1). Ambas respuestas fueron HTTP 201; la aceptación se
+infiere de esas respuestas y los identificadores persistidos, no de un campo
+`request_accepted` devuelto. Se observó CONC-B `RUNNING` mientras CONC-A estaba
+`WAITING`; después CONC-B llegó a `TERMINAL`, CONC-A pasó automáticamente a
+`RUNNING` sin reenviar su solicitud y ambos terminaron `COMPLETADA`, con seis
+motores y 50/50 unidades cada uno. No se confirmó ningún corte.
+
+La [observación completa](visual/independent_orders_observation.json) conserva
+los estados y tiempos relativos de esta única ejecución. Los tiempos ayudan a
+ordenar eventos, no son métricas del benchmark. Esta prueba aporta evidencia
+funcional de capacidad y continuidad de procesamiento en una configuración
+local; no prueba recuperación ante fallos ni rendimiento con múltiples plazas,
+dynos o usuarios adicionales. El servidor de esta prueba usa el coordinador
+productivo actual y el worker independiente, a diferencia del servidor E2E
+utilizado para las capturas de escala.
+
+Como relación pedagógica con ISO/IEC 25010, la plaza activa y la cola aportan
+evidencia de eficiencia de desempeño y capacidad; la coherencia de estados y el
+avance observado aportan evidencia limitada de fiabilidad. No se ensayó
+recuperación ni se declara certificación. Las mediciones históricas de CPU,
+RAM y concurrencia multiproceso no se modificaron.

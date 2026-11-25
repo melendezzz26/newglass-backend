@@ -17,4 +17,15 @@ for case in manifest['cases']:
 for capture in manifest['captures']:
     assert capture['reproduction'] and not capture['historical_measurement']
     assert hashlib.sha256((VISUAL / capture['filename']).read_bytes()).hexdigest() == capture['sha256']
+observation = VISUAL / manifest['current_independent_orders_observation']
+assert hashlib.sha256(observation.read_bytes()).hexdigest() == manifest['current_independent_orders_observation_sha256']
+evidence = json.loads(observation.read_text(encoding='utf-8'))
+assert len({row['order_id'] for row in evidence['submissions']}) == 2
+assert len({row['comparison_id'] for row in evidence['submissions']}) == 2
+assert all(row['http_status'] == 201 for row in evidence['submissions'])
+assert evidence['running_and_waiting_observed'] and evidence['automatic_advance_without_resubmission']
+assert any(set(row['states'].values()) == {'RUNNING', 'WAITING'} for row in evidence['timeline'])
+assert all(row['terminal'] and row['engines_complete'] == 6 for row in evidence['final'].values())
+assert next(row for row in manifest['captures'] if row['filename'] == '08_Control_Concurrencia.png')['independent_orders'] is False
+assert next(row for row in manifest['captures'] if row['filename'] == '08B_Concurrencia_Pedidos_Independientes.png')['independent_orders'] is True
 print(f"PASS: {len(expected)} cases, {len(manifest['captures'])} capture hashes")

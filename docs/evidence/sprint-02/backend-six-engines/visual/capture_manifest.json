@@ -221,17 +221,44 @@
       "comparison_id": 4,
       "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
       "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
-      "evidence_type": "respuesta HTTP de control de estado",
+      "evidence_type": "protección contra doble inicio del mismo pedido",
       "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
       "reproduction": true,
       "historical_measurement": false,
       "notes": "HTTP 409 STATE_CONFLICT al solicitar de nuevo el mismo pedido; no demuestra OPTIMIZER_BUSY.",
-      "sha256": "4ac621987a500729893a17bfbbf646c4652a3f15d2661911b70de38c17075184"
+      "sha256": "4ac621987a500729893a17bfbbf646c4652a3f15d2661911b70de38c17075184",
+      "independent_orders": false,
+      "result": "HTTP 409 STATE_CONFLICT: same order was no longer pending"
+    },
+    {
+      "filename": "08B_Concurrencia_Pedidos_Independientes.png",
+      "case_id": "CONC-A / CONC-B",
+      "piece_count": 50,
+      "order_id": [
+        1,
+        2
+      ],
+      "comparison_id": [
+        3,
+        1
+      ],
+      "backend_sha": "6dff57efe76d1b990ab20bb7f439ad42768e582d",
+      "frontend_sha": null,
+      "evidence_type": "evidencia funcional de cola durable con pedidos independientes",
+      "environment": "one real Uvicorn API, one real standalone worker, disposable loopback PostgreSQL; durable pilot enabled",
+      "reproduction": true,
+      "historical_measurement": false,
+      "independent_orders": true,
+      "result": "201 y 201; RUNNING/WAITING; avance automatico; ambos COMPLETADA",
+      "notes": "Una observacion; piloto durable habilitado, una plaza activa. HTTP 201 implica aceptacion; no se afirmo un campo request_accepted devuelto por la API.",
+      "sha256": "19e5a10b2713be2eed84365ab49b2d880c3e7a2989f6477908cd131ccf421cbf"
     }
   ],
   "concurrency_observation": {
     "http_status": 409,
     "code": "STATE_CONFLICT",
     "scope": "Segunda solicitud sobre el mismo pedido; no demuestra OPTIMIZER_BUSY ni concurrencia entre pedidos independientes."
-  }
+  },
+  "current_independent_orders_observation": "independent_orders_observation.json",
+  "current_independent_orders_observation_sha256": "238ee90dd0fc6e1c2b68c555fd43a4b6ad312c7b6dd9420a16c909d8e6b7f493"
 }
