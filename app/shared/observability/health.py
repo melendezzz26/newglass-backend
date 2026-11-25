@@ -1,5 +1,6 @@
 """Health público sin detalles internos ni cola de comprobaciones ilimitada."""
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from threading import BoundedSemaphore
 
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 router = APIRouter(prefix="/health", tags=["health"])
+logger = logging.getLogger(__name__)
 READINESS_TIMEOUT_SECONDS = 3
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="readiness")
 _available = BoundedSemaphore(1)
@@ -60,6 +62,9 @@ async def ready():
                 # timeout/cancelación HTTP: nunca se acumulan probes en la cola.
                 if await asyncio.wait_for(asyncio.shield(pending), READINESS_TIMEOUT_SECONDS):
                     return {"status": "ready"}
+            except (TimeoutError, asyncio.TimeoutError):
+                logger.debug("Readiness check timed out after %s s", READINESS_TIMEOUT_SECONDS)
             except Exception:
-                pass
+                # Sanitización estricta: omitir mensaje de excepción para no filtrar credenciales ni URLs en logs
+                logger.warning("Readiness check failed")
     return JSONResponse(status_code=503, content={"status": "not_ready"})
