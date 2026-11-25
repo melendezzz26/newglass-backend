@@ -219,3 +219,68 @@ sumarse como casos únicos. Las gráficas G1–G5 muestran tiempo, RSS, CPU, mer
 cobertura; G6 resume estados, G7 compara recursos de concurrencia y G8 la
 completitud por escala. El registro complementario de esta continuación está en
 `PRUEBAS.md`.
+
+## Relación con atributos de calidad
+
+La batería aporta evidencia de eficiencia de desempeño: comportamiento temporal
+(tiempo de cálculo y, cuando corresponde, tiempo de pared), utilización de
+recursos (CPU y RSS) y capacidad observada (cargas completadas y cobertura).
+También aporta evidencia de adecuación funcional mediante la completitud de
+piezas, la validación geométrica y los casos discriminantes de las heurísticas.
+
+ISO/IEC 25010 orienta la selección de atributos de calidad; ISO/IEC 25023
+proporciona un marco para estructurar su medición. La siguiente correspondencia
+es pedagógica y no constituye una certificación ni afirma conformidad normativa.
+
+| Atributo | Medida utilizada en este estudio |
+|---|---|
+| Comportamiento temporal | Tiempo mediano de cálculo; tiempo de pared cuando corresponde. |
+| Utilización de recursos | CPU y RSS del proceso, incluidas las fases indicadas en metodología. |
+| Capacidad observada | Carga completada entre las escalas ensayadas. |
+| Corrección funcional | Validación geométrica raster y casos discriminantes. |
+| Completitud funcional | Piezas colocadas respecto de las solicitadas. |
+
+## Lectura de los gráficos
+
+Los datos y hashes originales no se han modificado. G1 muestra el crecimiento
+temporal por escala: M6 crece más que los otros motores en este fixture
+homogéneo. G2 muestra RSS observado; las diferencias pequeñas no prueban una
+causa algorítmica porque incluyen preparación y validación. G3 muestra CPU del
+proceso como indicador de costo computacional. G4 muestra la merma material de
+este fixture, sin extrapolarla a geometrías comerciales. G5 muestra cobertura y
+G6 los estados: todas las mediciones completaron. G7 compara recursos en uno y
+dos procesos locales, no en dynos. G8 muestra las escalas completadas; 300 es
+la mayor escala evaluada en este fixture, no una capacidad máxima demostrada.
+
+## Evidencia visual del proceso experimental
+
+Los gráficos cuantifican el comportamiento; estas capturas muestran cómo se
+reprodujeron los escenarios en NewGlass. Son **reproducciones visuales** con
+backend `deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0`, frontend
+`5cb33bb17ebfcae4296b7198832a643cae56083a`, PostgreSQL temporal y datos
+sintéticos, sin confirmar cortes. No sustituyen ni modifican las mediciones
+históricas realizadas sobre los SHA indicados al principio.
+
+| Evidencia | Caso | Piezas | Entorno | Propósito |
+|---|---|---:|---|---|
+| [50 piezas](visual/01_Caso_50_Piezas.png) | EV-050 | 50 | Reproducción local | Mostrar cobertura y motores. |
+| [100 piezas](visual/02_Caso_100_Piezas.png) | EV-100 | 100 | Reproducción local | Mostrar cobertura y motores. |
+| [200 piezas](visual/03_Caso_200_Piezas.png) | EV-200 | 200 | Reproducción local | Mostrar cobertura y motores. |
+| [300 piezas](visual/04_Caso_300_Piezas.png) | EV-300 | 300 | Reproducción local | Mostrar la mayor escala de la batería. |
+| [Seis motores](visual/05_Comparacion_Seis_Motores.png) | EV-100 | 100 | Reproducción local | Comparar los seis resultados. |
+| [Patrón FF](visual/06_Resultado_Optimizador.png) | EV-100 | 100 | Reproducción local | Mostrar piezas y fuente en el visor. |
+| [Validación técnica](visual/07_Pruebas_Validadas.png) | EV-050 a EV-300 | 50–300 | Respuestas locales | Verificar cantidades entre pedido y comparación. |
+| [Control de estado](visual/08_Control_Concurrencia.png) | EV-300 | 300 | Solicitud local | Mostrar el rechazo al volver a solicitar el mismo pedido. |
+
+Cada tabla de comparación muestra las unidades colocadas y solicitadas por
+motor. La vista FF muestra una fuente del pedido EV-100; no representa todas
+las unidades en una sola plancha. El [manifiesto](visual/capture_manifest.json)
+registra las respuestas contrastadas, los identificadores y hashes de imagen.
+Las capturas complementan la medición, pero no cuantifican por sí solas los
+atributos de calidad. 300 fue la mayor carga evaluada, no un máximo demostrado.
+
+Durante EV-300 una segunda solicitud sobre el mismo pedido devolvió HTTP 409
+`STATE_CONFLICT` porque el pedido no estaba pendiente. Esto muestra el control
+de estado del pedido, no demuestra `OPTIMIZER_BUSY` ni la admisión de dos
+pedidos independientes. La evidencia histórica de concurrencia está en
+`concurrency/` y corresponde a dos servidores locales, no dos dynos.

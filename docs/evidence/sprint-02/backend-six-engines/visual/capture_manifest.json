@@ -1,0 +1,237 @@
+{
+  "note": "Estas capturas son reproducciones visuales y no reemplazan las mediciones históricas registradas en scale_manifest.json.",
+  "generated_utc": "2026-11-25T12:33:54.857708+00:00",
+  "cases": [
+    {
+      "case_id": "EV-050",
+      "total_units": 50,
+      "order_id": 1,
+      "comparison_id": 1,
+      "glass": "Calidad EV-050",
+      "thickness_mm": 6,
+      "stock_sheets": 1,
+      "configuration": {
+        "resolucion_raster_mm": "10.000",
+        "margen_mm": "10.00",
+        "separacion_mm": "10.00",
+        "paso_angular_grados": "5.00"
+      },
+      "input_sha256": "db731219702b3dced7dae9f1be33a65843fb2d3c595e98cec88eb1e9bf7b4b5f",
+      "order_created_utc": "2026-11-25T12:27:36.655338Z",
+      "api_requested_units": 50,
+      "placed_units_by_engine": {
+        "FF": 50,
+        "BF": 50,
+        "WF": 50,
+        "HF": 50,
+        "M5": 50,
+        "M6-BS": 50
+      }
+    },
+    {
+      "case_id": "EV-100",
+      "total_units": 100,
+      "order_id": 2,
+      "comparison_id": 2,
+      "glass": "Calidad EV-100",
+      "thickness_mm": 6,
+      "stock_sheets": 2,
+      "configuration": {
+        "resolucion_raster_mm": "10.000",
+        "margen_mm": "10.00",
+        "separacion_mm": "10.00",
+        "paso_angular_grados": "5.00"
+      },
+      "input_sha256": "e1ae2ab9ced7bbeb4696168bc8ec56bd7692465e0a661eb49acc247b6e50b17d",
+      "order_created_utc": "2026-11-25T12:28:01.220618Z",
+      "api_requested_units": 100,
+      "placed_units_by_engine": {
+        "FF": 100,
+        "BF": 100,
+        "WF": 100,
+        "HF": 100,
+        "M5": 100,
+        "M6-BS": 100
+      }
+    },
+    {
+      "case_id": "EV-200",
+      "total_units": 200,
+      "order_id": 3,
+      "comparison_id": 3,
+      "glass": "Calidad EV-200",
+      "thickness_mm": 6,
+      "stock_sheets": 4,
+      "configuration": {
+        "resolucion_raster_mm": "10.000",
+        "margen_mm": "10.00",
+        "separacion_mm": "10.00",
+        "paso_angular_grados": "5.00"
+      },
+      "input_sha256": "d810d772a828605327fef309667cb14200fb15d1c3d70210e7903d319cc0be71",
+      "order_created_utc": "2026-11-25T12:28:35.516224Z",
+      "api_requested_units": 200,
+      "placed_units_by_engine": {
+        "FF": 200,
+        "BF": 200,
+        "WF": 200,
+        "HF": 200,
+        "M5": 200,
+        "M6-BS": 200
+      }
+    },
+    {
+      "case_id": "EV-300",
+      "total_units": 300,
+      "order_id": 4,
+      "comparison_id": 4,
+      "glass": "Calidad EV-300",
+      "thickness_mm": 6,
+      "stock_sheets": 5,
+      "configuration": {
+        "resolucion_raster_mm": "10.000",
+        "margen_mm": "10.00",
+        "separacion_mm": "10.00",
+        "paso_angular_grados": "5.00"
+      },
+      "input_sha256": "fb2683fbe35f246b47b6cad86ef40df77c638bb7b293a344c7b03166c1f721e5",
+      "order_created_utc": "2026-11-25T12:29:13.850195Z",
+      "api_requested_units": 300,
+      "placed_units_by_engine": {
+        "FF": 300,
+        "BF": 300,
+        "WF": 300,
+        "HF": 300,
+        "M5": 300,
+        "M6-BS": 300
+      }
+    }
+  ],
+  "captures": [
+    {
+      "filename": "01_Caso_50_Piezas.png",
+      "case_id": "EV-050",
+      "piece_count": 50,
+      "order_id": 1,
+      "comparison_id": 1,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: comparación de motores",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Cantidad contrastada con respuestas reales de pedido y comparación.",
+      "sha256": "9920f3d7f7b80e9455375ee4c9f9b6b52ef4125bdbce0017935a8dbf95a9217b"
+    },
+    {
+      "filename": "02_Caso_100_Piezas.png",
+      "case_id": "EV-100",
+      "piece_count": 100,
+      "order_id": 2,
+      "comparison_id": 2,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: comparación de motores",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Cantidad contrastada con respuestas reales de pedido y comparación.",
+      "sha256": "345041807d536518323f0f9d46ae8afc471444daec7ecdfb55f450856bebc938"
+    },
+    {
+      "filename": "03_Caso_200_Piezas.png",
+      "case_id": "EV-200",
+      "piece_count": 200,
+      "order_id": 3,
+      "comparison_id": 3,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: comparación de motores",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Cantidad contrastada con respuestas reales de pedido y comparación.",
+      "sha256": "b8b5ab128e62b7e9664ea432bbb53438c718afefa35d8b081a0d2b33f7a7c8d0"
+    },
+    {
+      "filename": "04_Caso_300_Piezas.png",
+      "case_id": "EV-300",
+      "piece_count": 300,
+      "order_id": 4,
+      "comparison_id": 4,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: comparación de motores",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Cantidad contrastada con respuestas reales de pedido y comparación.",
+      "sha256": "7ac8bcc5a6f1d704b4ff277a11f8526ec09ed95dc15a4cb5ca119a8d48ba6ff7"
+    },
+    {
+      "filename": "05_Comparacion_Seis_Motores.png",
+      "case_id": "EV-100",
+      "piece_count": 100,
+      "order_id": 2,
+      "comparison_id": 2,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: seis motores",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Vista real de la comparación EV-100.",
+      "sha256": "901c13ff701232aa12bc700cc663cfd3a323478b949fe127b7075b55d3d28573"
+    },
+    {
+      "filename": "06_Resultado_Optimizador.png",
+      "case_id": "EV-100",
+      "piece_count": 100,
+      "order_id": 2,
+      "comparison_id": 2,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "interfaz: patrón FF",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Vista real de la comparación EV-100.",
+      "sha256": "a4959daeaa7a2946a60dd22a717db1d7450f036b35ec62388b45cdf4503fbca6"
+    },
+    {
+      "filename": "07_Pruebas_Validadas.png",
+      "case_id": "EV-050/100/200/300",
+      "piece_count": null,
+      "order_id": null,
+      "comparison_id": null,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "verificación técnica",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "Vista de la verificación derivada de las respuestas reales.",
+      "sha256": "3c9707254c60971f4835ad613a13e53ef8a6b92deac8925d5ac4e9194efb21e0"
+    },
+    {
+      "filename": "08_Control_Concurrencia.png",
+      "case_id": "EV-300",
+      "piece_count": 300,
+      "order_id": 4,
+      "comparison_id": 4,
+      "backend_sha": "deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0",
+      "frontend_sha": "5cb33bb17ebfcae4296b7198832a643cae56083a",
+      "evidence_type": "respuesta HTTP de control de estado",
+      "environment": "WSL2 local; PostgreSQL temporal; datos sintéticos",
+      "reproduction": true,
+      "historical_measurement": false,
+      "notes": "HTTP 409 STATE_CONFLICT al solicitar de nuevo el mismo pedido; no demuestra OPTIMIZER_BUSY.",
+      "sha256": "7d229c3877d5890166a3e4cdf3aab2f8a151365b5969c431dfa65463cfa03389"
+    }
+  ],
+  "concurrency_observation": {
+    "http_status": 409,
+    "code": "STATE_CONFLICT",
+    "scope": "Segunda solicitud sobre el mismo pedido; no demuestra OPTIMIZER_BUSY ni concurrencia entre pedidos independientes."
+  }
+}
