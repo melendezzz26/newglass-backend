@@ -258,8 +258,11 @@ Los gráficos cuantifican el comportamiento; estas capturas muestran cómo se
 reprodujeron los escenarios en NewGlass. Son **reproducciones visuales** con
 backend `deeb1e0ed77e5ffcbb5b4d431abeb6aa05d951f0`, frontend
 `5cb33bb17ebfcae4296b7198832a643cae56083a`, PostgreSQL temporal y datos
-sintéticos, sin confirmar cortes. No sustituyen ni modifican las mediciones
-históricas realizadas sobre los SHA indicados al principio.
+sintéticos, sin confirmar cortes. El servidor `tests.e2e_server` sustituye el
+proveedor productivo de comparación por un coordinador local de prueba para el
+protocolo visual; por tanto, no verifica la coordinación productiva actual.
+No sustituyen ni modifican las mediciones históricas realizadas sobre los SHA
+indicados al principio.
 
 | Evidencia | Caso | Piezas | Entorno | Propósito |
 |---|---|---:|---|---|

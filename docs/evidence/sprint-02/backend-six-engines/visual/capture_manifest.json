@@ -1,6 +1,6 @@
 {
-  "note": "Estas capturas son reproducciones visuales y no reemplazan las mediciones históricas registradas en scale_manifest.json.",
-  "generated_utc": "2026-11-25T12:39:18.826114+00:00",
+  "note": "Estas capturas son reproducciones visuales y no reemplazan las mediciones históricas registradas en scale_manifest.json. tests.e2e_server sustituye el proveedor productivo de comparación por un coordinador local de prueba; no verifica la coordinación productiva actual.",
+  "generated_utc": "2026-11-25T12:41:28.870145+00:00",
   "cases": [
     {
       "case_id": "EV-050",
