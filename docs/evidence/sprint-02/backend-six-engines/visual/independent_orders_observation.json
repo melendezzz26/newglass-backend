@@ -1,0 +1,97 @@
+{
+  "type": "current functional evidence; not a historical benchmark",
+  "timestamp_utc": "2026-11-25T12:59:05.639258+00:00",
+  "environment": "one real Uvicorn API, one real standalone worker, disposable loopback PostgreSQL; durable pilot enabled",
+  "fixture": "two users, two independent synthetic 50-unit orders; no cut confirmation",
+  "submissions": [
+    {
+      "actor": "A",
+      "order_id": 1,
+      "comparison_id": 3,
+      "http_status": 201,
+      "request_accepted": true,
+      "request_accepted_note": "inferred from HTTP 201 and persisted comparison id",
+      "started_s": 0.002,
+      "received_s": 1.052
+    },
+    {
+      "actor": "O",
+      "order_id": 2,
+      "comparison_id": 1,
+      "http_status": 201,
+      "request_accepted": true,
+      "request_accepted_note": "inferred from HTTP 201 and persisted comparison id",
+      "started_s": 0.001,
+      "received_s": 0.901
+    }
+  ],
+  "timeline": [
+    {
+      "elapsed_s": 1.157,
+      "states": {
+        "A": "WAITING",
+        "O": "WAITING"
+      }
+    },
+    {
+      "elapsed_s": 7.283,
+      "states": {
+        "A": "WAITING",
+        "O": "RUNNING"
+      }
+    },
+    {
+      "elapsed_s": 37.412,
+      "states": {
+        "A": "WAITING",
+        "O": "TERMINAL"
+      }
+    },
+    {
+      "elapsed_s": 37.987,
+      "states": {
+        "A": "RUNNING",
+        "O": "TERMINAL"
+      }
+    },
+    {
+      "elapsed_s": 66.041,
+      "states": {
+        "A": "TERMINAL",
+        "O": "TERMINAL"
+      }
+    }
+  ],
+  "running_and_waiting_observed": true,
+  "automatic_advance_without_resubmission": true,
+  "final": {
+    "A": {
+      "status": "COMPLETADA",
+      "terminal": true,
+      "engines_complete": 6,
+      "units_placed_per_engine": [
+        50,
+        50,
+        50,
+        50,
+        50,
+        50
+      ]
+    },
+    "O": {
+      "status": "COMPLETADA",
+      "terminal": true,
+      "engines_complete": 6,
+      "units_placed_per_engine": [
+        50,
+        50,
+        50,
+        50,
+        50,
+        50
+      ]
+    }
+  },
+  "backend_sha": "6dff57efe76d1b990ab20bb7f439ad42768e582d",
+  "frontend_sha": null
+}

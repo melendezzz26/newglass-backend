@@ -1,0 +1,17 @@
+NEWGLASS - EVIDENCIA FUNCIONAL ACTUAL
+Un backend real, un worker separado, PostgreSQL temporal; piloto durable activado.
+Dos usuarios, dos pedidos sinteticos independientes; una plaza activa.
+
+Usuario A: pedido #1, comparacion #3, HTTP 201
+Usuario O: pedido #2, comparacion #1, HTTP 201
+
+Estados observados (segundos desde las solicitudes):
+   1.157 s   usuario A: WAITING    usuario O: WAITING
+   7.283 s   usuario A: WAITING    usuario O: RUNNING
+  37.412 s   usuario A: WAITING    usuario O: TERMINAL
+  37.987 s   usuario A: RUNNING    usuario O: TERMINAL
+  66.041 s   usuario A: TERMINAL   usuario O: TERMINAL
+
+Ambas comparaciones: COMPLETADA, seis motores, 50/50 piezas.
+El trabajo en espera avanzo sin reenviar su solicitud.
+Observacion funcional unica; no es una medicion del benchmark historico.
