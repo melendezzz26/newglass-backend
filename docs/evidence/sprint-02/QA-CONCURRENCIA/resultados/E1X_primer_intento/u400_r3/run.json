@@ -1,0 +1,16 @@
+{
+  "scenario": "E1X",
+  "users": 400,
+  "repetition": 3,
+  "run_id": "E1Xu400r35e479a",
+  "spawn_rate": 40.0,
+  "run_time_cap_s": 75,
+  "started": 1795619912.8081887,
+  "finished": 1795620015.1956294,
+  "locust_exit": 0,
+  "classes": [
+    "AdministradorReader",
+    "AlmaceneroReader",
+    "OperarioReader"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "accounts": {
+    "admin": 80,
+    "almacenero": 80,
+    "operario": 80,
+    "comparison": 10,
+    "confirm": 1
+  },
+  "read_orders": 300,
+  "clients": 40,
+  "read_sheets": 60,
+  "read_remnants": 120,
+  "comparison_orders": 10,
+  "confirm_orders": 60
+}

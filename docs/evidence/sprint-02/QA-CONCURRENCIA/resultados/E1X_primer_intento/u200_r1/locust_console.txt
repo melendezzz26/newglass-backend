@@ -1,0 +1,325 @@
+
+-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,703] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,715] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,725] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,734] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,745] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,750] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,763] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,766] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,768] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,770] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,774] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,793] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,878] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,889] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:04,960] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,034] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,047] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,088] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,115] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,120] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,136] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,139] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,141] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,143] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,147] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,148] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,151] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,152] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,153] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,158] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,167] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,171] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,173] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+[2026-11-25 10:11:05,346] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      GET /api/auth/me                                                                  10    1(10.00%) |   6339      65   31010    220 |    0.11        0.01
+GET      GET /api/clients                                                                   5    3(60.00%) |  30798     104   61060  31000 |    0.05        0.03
+GET      GET /api/inventory/planchas                                                       27   11(40.74%) |  19512       5   61823    620 |    0.29        0.12
+GET      GET /api/inventory/retazos                                                        16    9(56.25%) |  36647     312   61810  61000 |    0.17        0.10
+GET      GET /api/inventory/tipos-vidrio                                                    4    1(25.00%) |  15484     159   61036    220 |    0.04        0.01
+GET      GET /api/orders                                                                   16    3(18.75%) |   7948     126   60800    490 |    0.17        0.03
+GET      GET /api/orders/[id]                                                              14    8(57.14%) |  22192       5   92570  31000 |    0.15        0.09
+GET      GET /api/users                                                                     5    3(60.00%) |  30894       6   61744  31000 |    0.05        0.03
+GET      GET /comparisons-v2/history                                                       12    5(41.67%) |  18142     118   61486    610 |    0.13        0.05
+POST     POST /api/auth/login                                                             113   58(51.33%) |  41517     214   91653  31000 |    1.22        0.63
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                       222  102(45.95%) |  31054       5   92570    890 |    2.39        1.10
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      GET /api/auth/me                                                                      250    390    410  31000  31000  31000  31000  31000  31000  31000  31000     10
+GET      GET /api/clients                                                                    31000  61000  61000  61000  61000  61000  61000  61000  61000  61000  61000      5
+GET      GET /api/inventory/planchas                                                           620  31000  31000  31000  61000  62000  62000  62000  62000  62000  62000     27
+GET      GET /api/inventory/retazos                                                          61000  61000  62000  62000  62000  62000  62000  62000  62000  62000  62000     16
+GET      GET /api/inventory/tipos-vidrio                                                       530    530  61000  61000  61000  61000  61000  61000  61000  61000  61000      4
+GET      GET /api/orders                                                                       490    500    880    880  31000  61000  61000  61000  61000  61000  61000     16
+GET      GET /api/orders/[id]                                                                31000  31000  31000  31000  31000  93000  93000  93000  93000  93000  93000     14
+GET      GET /api/users                                                                      31000  61000  61000  62000  62000  62000  62000  62000  62000  62000  62000      5
+GET      GET /comparisons-v2/history                                                           620  31000  31000  31000  61000  61000  61000  61000  61000  61000  61000     12
+POST     POST /api/auth/login                                                                31000  90000  90000  91000  91000  91000  92000  92000  92000  92000  92000    113
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                            890  61000  61000  62000  91000  91000  92000  92000  93000  93000  93000    222
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+11                 GET GET /api/inventory/planchas: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/planchas')
+58                 POST POST /api/auth/login: login 500                                                                
+1                  GET GET /api/auth/me: HTTPError('500 Server Error: Internal Server Error for url: GET /api/auth/me')
+8                  GET GET /api/orders/[id]: HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders/[id]')
+3                  GET GET /api/orders: HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders')  
+5                  GET GET /comparisons-v2/history: HTTPError('500 Server Error: Internal Server Error for url: GET /comparisons-v2/history')
+3                  GET GET /api/users: HTTPError('500 Server Error: Internal Server Error for url: GET /api/users')    
+9                  GET GET /api/inventory/retazos: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/retazos')
+3                  GET GET /api/clients: HTTPError('500 Server Error: Internal Server Error for url: GET /api/clients')
+1                  GET GET /api/inventory/tipos-vidrio: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/tipos-vidrio')
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+

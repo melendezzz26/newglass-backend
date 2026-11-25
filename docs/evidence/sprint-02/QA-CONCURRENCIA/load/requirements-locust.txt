@@ -1,0 +1,6 @@
+# Solo para el entorno de pruebas de carga (S2-QA-CONCURRENCIA).
+# No se agrega a requirements.txt de producción. Instalar junto con requirements.txt:
+#   python -m pip install -r requirements.txt -r docs/evidence/sprint-02/QA-CONCURRENCIA/load/requirements-locust.txt
+locust==2.37.10
+matplotlib==3.10.3
+psutil==7.0.0

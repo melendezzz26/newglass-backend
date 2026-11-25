@@ -1,0 +1,12 @@
+t_start_epoch_s,method,name,status,response_ms,code,retry_after
+1795618125.1807,POST,POST /api/auth/login,200,195.28,,
+1795618125.3761,POST,POST /comparisons-v2 (admisión),201,86.70,,
+1795618125.4629,GET,GET /comparisons-v2/[id]/progress,200,9.00,,
+1795618126.4804,GET,GET /comparisons-v2/[id]/progress,200,8.53,,
+1795618127.4973,GET,GET /comparisons-v2/[id]/progress,200,7.89,,
+1795618128.5138,GET,GET /comparisons-v2/[id]/progress,200,7.61,,
+1795618129.5300,GET,GET /comparisons-v2/[id]/progress,200,9.36,,
+1795618130.5462,GET,GET /comparisons-v2/[id]/progress,200,15.31,,
+1795618130.5616,GET,GET /comparisons-v2/[id],200,22.63,,
+1795618130.5844,POST,POST /comparisons-v2/[id]/release,200,62.38,,
+1795618125.4613,METRIC,tiempo hasta TERMINAL (cliente),-1,5185.51,,

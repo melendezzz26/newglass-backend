@@ -1,0 +1,15 @@
+{
+  "scenario": "E3",
+  "users": 2,
+  "repetition": 6,
+  "run_id": "E3u2r341fa53",
+  "spawn_rate": 2,
+  "run_time_cap_s": 2400,
+  "started": 1795620383.1225667,
+  "finished": 1795620479.0926492,
+  "locust_exit": 0,
+  "classes": [
+    "ConfirmUser"
+  ],
+  "note": "segunda tanda de E3 (cl\u00faster nuevo), renumerada"
+}

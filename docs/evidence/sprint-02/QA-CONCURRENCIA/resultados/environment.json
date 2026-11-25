@@ -1,0 +1,18 @@
+{
+  "backend_sha": "aa6883f888a2fa43629ed9d7f6110ca3645887e4",
+  "os": "Ubuntu 24.04.4 LTS",
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "wsl": true,
+  "cpu_model": "Intel(R) Core(TM) i9-14900HX",
+  "logical_cpus": 32,
+  "ram_gib": 7.61,
+  "python": "3.12.3",
+  "postgresql": "postgres (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+  "locust": "2.37.10",
+  "uvicorn": "Running uvicorn 0.54.0 with CPython 3.12.3 on Linux",
+  "api_command": "uvicorn main:app --host 127.0.0.1 --workers 1 (Procfile en loopback)",
+  "worker_command": "python -m app.modules.optimization.worker_v2 (piloto durable, 1 plaza)",
+  "sample_interval_ms": 200,
+  "e1_run_seconds": 75,
+  "e3_reps": 20
+}

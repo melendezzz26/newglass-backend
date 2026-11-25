@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,POST /api/auth/login,CatchResponseError('login 500'),57

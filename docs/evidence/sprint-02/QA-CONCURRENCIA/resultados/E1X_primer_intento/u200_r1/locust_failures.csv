@@ -1,0 +1,11 @@
+Method,Name,Error,Occurrences
+GET,GET /api/inventory/planchas,HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/planchas'),11
+POST,POST /api/auth/login,CatchResponseError('login 500'),58
+GET,GET /api/auth/me,HTTPError('500 Server Error: Internal Server Error for url: GET /api/auth/me'),1
+GET,GET /api/users,HTTPError('500 Server Error: Internal Server Error for url: GET /api/users'),3
+GET,GET /api/orders/[id],HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders/[id]'),8
+GET,GET /api/inventory/tipos-vidrio,HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/tipos-vidrio'),1
+GET,GET /api/orders,HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders'),3
+GET,GET /api/clients,HTTPError('500 Server Error: Internal Server Error for url: GET /api/clients'),3
+GET,GET /comparisons-v2/history,HTTPError('500 Server Error: Internal Server Error for url: GET /comparisons-v2/history'),5
+GET,GET /api/inventory/retazos,HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/retazos'),9

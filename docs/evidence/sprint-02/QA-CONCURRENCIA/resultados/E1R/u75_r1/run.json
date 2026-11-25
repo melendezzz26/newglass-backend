@@ -1,0 +1,16 @@
+{
+  "scenario": "E1R",
+  "users": 75,
+  "repetition": 1,
+  "run_id": "E1Ru75r1a294ef",
+  "spawn_rate": 7.5,
+  "run_time_cap_s": 75,
+  "started": 1795620624.2081153,
+  "finished": 1795620698.1691074,
+  "locust_exit": 0,
+  "classes": [
+    "AdministradorReader",
+    "AlmaceneroReader",
+    "OperarioReader"
+  ]
+}

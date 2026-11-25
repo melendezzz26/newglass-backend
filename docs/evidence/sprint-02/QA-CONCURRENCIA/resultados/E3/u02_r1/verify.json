@@ -1,0 +1,649 @@
+{
+  "sheet_before": 40,
+  "sheet_after": 35,
+  "sheet_delta": 5,
+  "stored_sheet_units": 5,
+  "repetitions": 20,
+  "double_discounts": 0,
+  "incorrect_responses": 0,
+  "unreadable_after_confirm": 0,
+  "reps": [
+    {
+      "rep": 0,
+      "comparison_id": 1,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.31,
+      "accepted": 1,
+      "stored_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "stored_remnants_consumed": [],
+      "movement_remnants_consumed": [],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:57:56.426321+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:57:56.112277+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 1,
+      "comparison_id": 2,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        121
+      ],
+      "movement_remnants_consumed": [
+        121
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:02.734668+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:01.625556+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 2,
+      "comparison_id": 3,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        122
+      ],
+      "movement_remnants_consumed": [
+        122
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:07.991822+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:07.337485+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 3,
+      "comparison_id": 4,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.24,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        123
+      ],
+      "movement_remnants_consumed": [
+        123
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:12.230757+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:11.973095+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 4,
+      "comparison_id": 5,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.29,
+      "accepted": 1,
+      "stored_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "stored_remnants_consumed": [
+        124
+      ],
+      "movement_remnants_consumed": [
+        124
+      ],
+      "stored_remnants_created": 2,
+      "remnants_in_db": 2,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:17.635595+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:16.603477+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 5,
+      "comparison_id": 6,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        126
+      ],
+      "movement_remnants_consumed": [
+        126
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:22.153048+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:21.793810+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 6,
+      "comparison_id": 7,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        127
+      ],
+      "movement_remnants_consumed": [
+        127
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:27.408667+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:26.472703+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 7,
+      "comparison_id": 8,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        128
+      ],
+      "movement_remnants_consumed": [
+        128
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:32.657151+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:31.773034+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 8,
+      "comparison_id": 9,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.3,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        129
+      ],
+      "movement_remnants_consumed": [
+        129
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:36.884200+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:36.366169+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 9,
+      "comparison_id": 10,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.29,
+      "accepted": 1,
+      "stored_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "stored_remnants_consumed": [
+        130
+      ],
+      "movement_remnants_consumed": [
+        130
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:41.110864+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:40.829608+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 10,
+      "comparison_id": 11,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.55,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        131
+      ],
+      "movement_remnants_consumed": [
+        131
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:46.386341+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:45.500793+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 11,
+      "comparison_id": 12,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.35,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        132
+      ],
+      "movement_remnants_consumed": [
+        132
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:51.033657+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:49.931991+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 12,
+      "comparison_id": 13,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        133
+      ],
+      "movement_remnants_consumed": [
+        133
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:55.263173+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:54.956994+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 13,
+      "comparison_id": 14,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.43,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        134
+      ],
+      "movement_remnants_consumed": [
+        134
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:58:59.533335+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:58:59.215897+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 14,
+      "comparison_id": 15,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.4,
+      "accepted": 1,
+      "stored_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "stored_remnants_consumed": [
+        135
+      ],
+      "movement_remnants_consumed": [
+        135
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:03.823065+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:03.609004+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 15,
+      "comparison_id": 16,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.26,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        136
+      ],
+      "movement_remnants_consumed": [
+        136
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:09.275362+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:08.195668+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 16,
+      "comparison_id": 17,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.31,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        137
+      ],
+      "movement_remnants_consumed": [
+        137
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:14.652441+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:14.103868+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 17,
+      "comparison_id": 18,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        138
+      ],
+      "movement_remnants_consumed": [
+        138
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:19.209175+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:19.171152+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 18,
+      "comparison_id": 19,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.27,
+      "accepted": 1,
+      "stored_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "stored_remnants_consumed": [
+        139
+      ],
+      "movement_remnants_consumed": [
+        139
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:23.483137+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:23.158898+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    },
+    {
+      "rep": 19,
+      "comparison_id": 20,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "stored_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "stored_remnants_consumed": [
+        140
+      ],
+      "movement_remnants_consumed": [
+        140
+      ],
+      "stored_remnants_created": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "confirmed_at": "2026-11-25T14:59:28.797024+00:00",
+      "supervisor_stopped_at": "2026-11-25T14:59:28.060585+00:00",
+      "confirmed_before_stop": false,
+      "readback_status": 200,
+      "single_effect": true,
+      "double_discount": false,
+      "response_ok": true
+    }
+  ],
+  "ok": true
+}

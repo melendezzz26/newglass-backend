@@ -1,0 +1,14 @@
+{
+  "scenario": "E2",
+  "users": 1,
+  "repetition": 2,
+  "run_id": "E2u1r2f5ae0a",
+  "spawn_rate": 1,
+  "run_time_cap_s": 1200,
+  "started": 1795618133.7959745,
+  "finished": 1795618140.5638819,
+  "locust_exit": 0,
+  "classes": [
+    "ComparisonUser"
+  ]
+}

@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,POST /comparisons-v2 (admisión),CatchResponseError('409 STATE_CONFLICT'),1

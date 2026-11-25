@@ -1,0 +1,9 @@
+{
+  "access_200": 1364,
+  "access_500": 305,
+  "errors": {
+    "ERROR:    Exception in ASGI application": 1083,
+    "sqlalchemy.exc.TimeoutError: QueuePool limit of size 5 overflow 0 reached, connection timed out, timeout 30.00": 1135
+  },
+  "note": "Una sola API para las 9 corridas (100, 200 y 400 usuarios); desde u100_r2 la API arrastra el bloqueo de la corrida anterior."
+}

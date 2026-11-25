@@ -1,0 +1,13 @@
+{
+  "order_states": {
+    "PENDIENTE": 10
+  },
+  "worker_jobs": {
+    "TERMINAL": {
+      "n": 22,
+      "with_slot": 0
+    }
+  },
+  "inventory_movements": 0,
+  "ok": true
+}

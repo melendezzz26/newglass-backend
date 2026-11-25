@@ -1,0 +1,545 @@
+{
+  "sheet_before": 40,
+  "sheet_after": 35,
+  "sheet_delta": 5,
+  "receipt_sheet_units": 4,
+  "repetitions": 20,
+  "double_discounts": 1,
+  "reps": [
+    {
+      "rep": 0,
+      "comparison_id": 1,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "receipt_remnants_consumed": [],
+      "movement_remnants_consumed": [],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 1,
+      "comparison_id": 2,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        121
+      ],
+      "movement_remnants_consumed": [
+        121
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 2,
+      "comparison_id": 3,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.26,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        122
+      ],
+      "movement_remnants_consumed": [
+        122
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 3,
+      "comparison_id": 4,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        123
+      ],
+      "movement_remnants_consumed": [
+        123
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 4,
+      "comparison_id": 5,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.38,
+      "accepted": 1,
+      "receipt_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "receipt_remnants_consumed": [
+        124
+      ],
+      "movement_remnants_consumed": [
+        124
+      ],
+      "movements": 2,
+      "receipt_remnants": 2,
+      "remnants_in_db": 2,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 5,
+      "comparison_id": 6,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        126
+      ],
+      "movement_remnants_consumed": [
+        126
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 6,
+      "comparison_id": 7,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        127
+      ],
+      "movement_remnants_consumed": [
+        127
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 7,
+      "comparison_id": 8,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.2,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        128
+      ],
+      "movement_remnants_consumed": [
+        128
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 8,
+      "comparison_id": 9,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        129
+      ],
+      "movement_remnants_consumed": [
+        129
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 9,
+      "comparison_id": 10,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.24,
+      "accepted": 1,
+      "receipt_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "receipt_remnants_consumed": [
+        130
+      ],
+      "movement_remnants_consumed": [
+        130
+      ],
+      "movements": 2,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 10,
+      "comparison_id": 11,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        131
+      ],
+      "movement_remnants_consumed": [
+        131
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 11,
+      "comparison_id": 12,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        132
+      ],
+      "movement_remnants_consumed": [
+        132
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 12,
+      "comparison_id": 13,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.23,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        133
+      ],
+      "movement_remnants_consumed": [
+        133
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 13,
+      "comparison_id": 14,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        134
+      ],
+      "movement_remnants_consumed": [
+        134
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 14,
+      "comparison_id": 15,
+      "statuses": [
+        422,
+        500
+      ],
+      "codes": [
+        "INTERNAL_ERROR",
+        "NOT_CONFIRMABLE"
+      ],
+      "send_skew_ms": 0.21,
+      "accepted": 0,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 1,
+      "receipt_remnants_consumed": [],
+      "movement_remnants_consumed": [
+        135
+      ],
+      "movements": 2,
+      "receipt_remnants": null,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": true
+    },
+    {
+      "rep": 15,
+      "comparison_id": 16,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.24,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        136
+      ],
+      "movement_remnants_consumed": [
+        136
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 16,
+      "comparison_id": 17,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.26,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        137
+      ],
+      "movement_remnants_consumed": [
+        137
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 17,
+      "comparison_id": 18,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.22,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        138
+      ],
+      "movement_remnants_consumed": [
+        138
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 18,
+      "comparison_id": 19,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.38,
+      "accepted": 1,
+      "receipt_sheet_units": 0,
+      "movement_sheet_units": 0,
+      "receipt_remnants_consumed": [
+        139
+      ],
+      "movement_remnants_consumed": [
+        139
+      ],
+      "movements": 1,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    },
+    {
+      "rep": 19,
+      "comparison_id": 20,
+      "statuses": [
+        200,
+        409
+      ],
+      "codes": [
+        "",
+        "ALREADY_CONFIRMED"
+      ],
+      "send_skew_ms": 0.25,
+      "accepted": 1,
+      "receipt_sheet_units": 1,
+      "movement_sheet_units": 1,
+      "receipt_remnants_consumed": [
+        140
+      ],
+      "movement_remnants_consumed": [
+        140
+      ],
+      "movements": 2,
+      "receipt_remnants": 1,
+      "remnants_in_db": 1,
+      "order_state": "CONFIRMADO",
+      "double_discount": false
+    }
+  ],
+  "ok": false
+}

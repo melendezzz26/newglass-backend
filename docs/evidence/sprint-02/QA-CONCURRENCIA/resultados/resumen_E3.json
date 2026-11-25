@@ -1,0 +1,58 @@
+{
+  "runs": 6,
+  "repetitions": 120,
+  "double_discounts": 0,
+  "incorrect_responses": 0,
+  "unreadable_after_confirm": 0,
+  "anomalies": [],
+  "confirmed_before_stop": 0,
+  "second_codes": [
+    "ALREADY_CONFIRMED"
+  ],
+  "sheet_before": 40,
+  "sheet_after": 27,
+  "sheet_delta": 26,
+  "stored_sheet_units": 26,
+  "remnants_consumed": 118,
+  "max_send_skew_ms": 0.86,
+  "orders_confirmed": 120,
+  "confirm_p50_ms": 71.19899700001042,
+  "confirm_p95_ms": 123.43921799998725,
+  "confirm_n": 240,
+  "http_requests": 1381,
+  "failures": 0,
+  "controlled": 0,
+  "client_errors": 120,
+  "clock_step_range_ms": [
+    -2491.7,
+    0.0
+  ],
+  "api_rss_peak": 124.67,
+  "worker_rss_peak": 170.61,
+  "ok": true,
+  "initial": {
+    "repetitions": 20,
+    "incorrect_responses": 1,
+    "http_requests": 202,
+    "failures": 1,
+    "anomalies": [
+      {
+        "rep": 14,
+        "comparison_id": 15,
+        "statuses": [
+          422,
+          500
+        ],
+        "codes": [
+          "INTERNAL_ERROR",
+          "NOT_CONFIRMABLE"
+        ],
+        "movement_sheet_units": 1,
+        "movements": 2,
+        "order_state": "CONFIRMADO"
+      }
+    ],
+    "sheet_before": 40,
+    "sheet_after": 35
+  }
+}

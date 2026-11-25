@@ -1,0 +1,57 @@
+
+[2026-11-25 10:43:48,622] DESKTOP-7GL09L0/ERROR/locust.user.users: 
+Traceback (most recent call last):
+  File "/home/fabrilar/newglass-qa/conc/.venv/lib/python3.12/site-packages/locust/user/users.py", line 149, in run
+    self.on_start()
+  File "/home/fabrilar/newglass-qa/conc/backend/experiments/load/locustfile.py", line 141, in on_start
+    raise StopUser()
+locust.exception.StopUser
+
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      GET /api/auth/me                                                                  36    5(13.89%) |   8570       2   61678    100 |    0.37        0.05
+GET      GET /api/clients                                                                  24    7(29.17%) |  17975       3   91122    240 |    0.25        0.07
+GET      GET /api/inventory/planchas                                                      124   15(12.10%) |   6069       3   91762    190 |    1.27        0.15
+GET      GET /api/inventory/retazos                                                        71   11(15.49%) |   8360       4   61648    210 |    0.73        0.11
+GET      GET /api/inventory/tipos-vidrio                                                   64    9(14.06%) |   8756       3   91585    140 |    0.66        0.09
+GET      GET /api/orders                                                                  112   21(18.75%) |   9659       3   61787    180 |    1.15        0.22
+GET      GET /api/orders/[id]                                                              86   20(23.26%) |  14696       3   91792    240 |    0.88        0.20
+GET      GET /api/roles                                                                    10     0(0.00%) |    117       7     242     87 |    0.10        0.00
+GET      GET /api/users                                                                    11     1(9.09%) |   5618       4   60346    130 |    0.11        0.01
+GET      GET /comparisons-v2/history                                                       49   13(26.53%) |  15053       4   91827    290 |    0.50        0.13
+POST     POST /api/auth/login                                                              90     1(1.11%) |   1332     189   31082    240 |    0.92        0.01
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                       677  103(15.21%) |   8734       2   91827    210 |    6.94        1.06
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      GET /api/auth/me                                                                      100    170    200    200  60000  62000  62000  62000  62000  62000  62000     36
+GET      GET /api/clients                                                                      290    390  61000  61000  62000  62000  91000  91000  91000  91000  91000     24
+GET      GET /api/inventory/planchas                                                           190    260    320    350  31000  60000  61000  62000  92000  92000  92000    124
+GET      GET /api/inventory/retazos                                                            210    310    350    420  31000  62000  62000  62000  62000  62000  62000     71
+GET      GET /api/inventory/tipos-vidrio                                                       150    230    310    340  62000  62000  62000  92000  92000  92000  92000     64
+GET      GET /api/orders                                                                       190    270    380    460  60000  61000  61000  61000  62000  62000  62000    112
+GET      GET /api/orders/[id]                                                                  240    330    430  31000  62000  62000  92000  92000  92000  92000  92000     86
+GET      GET /api/roles                                                                        130    160    230    230    240    240    240    240    240    240    240     10
+GET      GET /api/users                                                                        130    270    280    280    430  60000  60000  60000  60000  60000  60000     11
+GET      GET /comparisons-v2/history                                                           290    360  31000  31000  61000  62000  92000  92000  92000  92000  92000     49
+POST     POST /api/auth/login                                                                  370    400    420    420    450    470  31000  31000  31000  31000  31000     90
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                            210    300    380    420  60000  61000  62000  92000  92000  92000  92000    677
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+1                  POST POST /api/auth/login: login 500                                                                
+9                  GET GET /api/inventory/tipos-vidrio: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/tipos-vidrio')
+15                 GET GET /api/inventory/planchas: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/planchas')
+21                 GET GET /api/orders: HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders')  
+7                  GET GET /api/clients: HTTPError('500 Server Error: Internal Server Error for url: GET /api/clients')
+11                 GET GET /api/inventory/retazos: HTTPError('500 Server Error: Internal Server Error for url: GET /api/inventory/retazos')
+20                 GET GET /api/orders/[id]: HTTPError('500 Server Error: Internal Server Error for url: GET /api/orders/[id]')
+5                  GET GET /api/auth/me: HTTPError('500 Server Error: Internal Server Error for url: GET /api/auth/me')
+13                 GET GET /comparisons-v2/history: HTTPError('500 Server Error: Internal Server Error for url: GET /comparisons-v2/history')
+1                  GET GET /api/users: HTTPError('500 Server Error: Internal Server Error for url: GET /api/users')    
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+

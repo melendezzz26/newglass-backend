@@ -1,0 +1,19 @@
+id,medida,formula,valor,umbral,veredicto
+PTb-1,"Tiempo medio de respuesta, lecturas (50 usuarios)",media = Σt/n; pXX = t[ceil(p·n)],media 8.8 · p50 6.7 · p95 17.6 · p99 41.4 ms (n=16160),Se informa; veredicto vía PTb-2,Cumple (vía PTb-2)
+PTb-2,"Adecuación del tiempo de respuesta, lecturas",X = p95 / 2000 ms,"X máx = 0.011 (5 usuarios, p95 22.6 ms)",X ≤ 1 en cada nivel,Cumple
+PTb-2,"Adecuación del tiempo de respuesta, admisión de comparación",X = p95 admisión / 2000 ms,"X máx = 0.156 (10 usuarios, p95 311 ms; n=30, muestra insuficiente)",X ≤ 1 en cada nivel,Cumple
+PTb-5,"Rendimiento (throughput), lecturas","X = completadas / ventana; eficiencia = X / (N / (0,6 s + t̄₁))",83.9 req/s con 50 usuarios; eficiencia mín 1.00 (1 usuarios),"Eficiencia ≥ 0,90",Cumple
+PCa-1,Capacidad de procesamiento,"máx PTb-5 en niveles con p95 ≤ objetivo, 0 % 5xx y eficiencia ≥ 0,90",124.1 req/s (75 usuarios); degrada desde 100 usuarios,Sin degradación hasta 50 usuarios,Cumple
+PCa-2,"Capacidad de acceso de usuarios, lecturas",máx N con p95 ≤ 2000 ms y 0 % 5xx en las 3 repeticiones,"75 usuarios con ramp-up de N/10 usuarios/s (falla con 100); con ramp-up lento de 2 usuarios/s, 100 usuarios: 2/3 repeticiones cumplen, p95 42.7 ms, 66 × 5xx",≥ 50 usuarios,Cumple
+PCa-cola,Capacidad de la cola de comparaciones,"admitidas (201), conflictos (409) y cola llena (503) por nivel","Simultáneas 1–8: 31/45 admitidas, 26 × 409 STATE_CONFLICT en E2; 10 simultáneas: admitidas [6, 6, 6] y 0 × 503. Escalonadas (E2b, 10): admitidas [9, 9, 9], 3 × 503 OPTIMIZER_BUSY",≤ 8 simultáneas: 100 % admitidas; exceso con 503 + Retry-After,No cumple
+PRu-1,CPU de la API (lecturas),Δ CPU árbol / Δt × 100,media máx 34.2 % · pico 63.6 % de un núcleo,Media ≤ 80 % de un núcleo,Cumple
+PRu-1,CPU del worker y motores (comparaciones),Δ CPU árbol / Δt × 100,media 89.5 % · pico 143.2 %,Se informa,Informativa
+PRu-2,RSS pico de API y worker,máx Σ RSS sincronizado del árbol,API 128.3 MiB · worker+motores 173.7 MiB,API ≤ 512 MiB; worker ≤ 448 MiB,Cumple
+RFa,Tasa de fallos (5xx no controlados),5xx no controlados / total × 100,"Escenarios nominales (E1 ≤ 50, E2, E2b, E3 con su corrida inicial): 1 de 32707 = 0.0031 %. Sobrecarga exploratoria (E1-R): 75 usuarios 0 de 24010 (0.0 %); 100 usuarios 57 de 58 (98.3 %)",0 % en escenarios nominales,No cumple
+RRc,Rechazos controlados,(503 OPTIMIZER_BUSY + 429 PROGRESS_BUSY) / total × 100,E1 0 (0 %); E2 0 × 503 y 13 × 429 de 883 = 1.47 %,"E1 0 %; E2 solo 503 con 10 usuarios y 429 en /progress, con Retry-After",Cumple
+TQ-1,Tiempo de espera en cola,t(RUNNING) − t(WAITING) (PostgreSQL),ver G4 y e2_comparaciones.csv,Se informa por posición,Informativa
+TQ-2,Tiempo total por comparación,t(TERMINAL) − t(WAITING),ver G4 y e2_comparaciones.csv,Se informa por posición,Informativa
+RFt-1,Orden FIFO y avance automático,inversiones; avanzados / admitidos,0 inversiones; 76/76 avanzaron solos (E2 + E2b),0 inversiones y 100 %,Cumple
+MP-05,Comparaciones completas,COMPLETADA con 6 motores / admitidas × 100,"216/216 = 100.0 % (E2, E2b y E3)",100 %,Cumple
+RIn-1,Integridad de la confirmación concurrente,repeticiones cuyo efecto en stock/movimientos difiere de UNA confirmación,"0 de 120 descuentos dobles; planchas descontadas Δ 26 = 26 de los recibos persistidos (6 corridas, dos clústeres que parten de 40)",0 descuentos dobles,Cumple
+RFa-conf,Respuesta correcta a la confirmación concurrente,repeticiones con exactamente una 200 y una 409 sin efecto / total,"139 de 140 (99.3 %). Corrida inicial: 1 de 20 con 500 + 422 y la confirmación aplicada una vez; corridas de diagnóstico: 0 de 120, 0 ilegibles después",100 % de respuestas correctas,No cumple

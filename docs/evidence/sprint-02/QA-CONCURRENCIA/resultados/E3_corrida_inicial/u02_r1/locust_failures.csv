@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences
+POST,POST /comparisons-v2/[id]/confirm,HTTPError('422 Client Error: Unprocessable Entity for url: POST /comparisons-v2/[id]/confirm'),1
+POST,POST /comparisons-v2/[id]/confirm,HTTPError('500 Server Error: Internal Server Error for url: POST /comparisons-v2/[id]/confirm'),1

@@ -1,0 +1,14 @@
+{
+  "scenario": "E3",
+  "users": 2,
+  "repetition": 1,
+  "run_id": "E3u2r19cf9ce",
+  "spawn_rate": 2,
+  "run_time_cap_s": 2400,
+  "started": 1795618669.3277066,
+  "finished": 1795618769.9685082,
+  "locust_exit": 0,
+  "classes": [
+    "ConfirmUser"
+  ]
+}
