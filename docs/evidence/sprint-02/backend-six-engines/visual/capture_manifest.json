@@ -1,6 +1,6 @@
 {
   "note": "Estas capturas son reproducciones visuales y no reemplazan las mediciones históricas registradas en scale_manifest.json.",
-  "generated_utc": "2026-11-25T12:33:54.857708+00:00",
+  "generated_utc": "2026-11-25T12:39:18.826114+00:00",
   "cases": [
     {
       "case_id": "EV-050",
@@ -211,7 +211,7 @@
       "reproduction": true,
       "historical_measurement": false,
       "notes": "Vista de la verificación derivada de las respuestas reales.",
-      "sha256": "3c9707254c60971f4835ad613a13e53ef8a6b92deac8925d5ac4e9194efb21e0"
+      "sha256": "904e27bc37dbc5c36233822a317c3a27d1c11d819a6f55431ebc33ae1a294f44"
     },
     {
       "filename": "08_Control_Concurrencia.png",
@@ -226,7 +226,7 @@
       "reproduction": true,
       "historical_measurement": false,
       "notes": "HTTP 409 STATE_CONFLICT al solicitar de nuevo el mismo pedido; no demuestra OPTIMIZER_BUSY.",
-      "sha256": "7d229c3877d5890166a3e4cdf3aab2f8a151365b5969c431dfa65463cfa03389"
+      "sha256": "4ac621987a500729893a17bfbbf646c4652a3f15d2661911b70de38c17075184"
     }
   ],
   "concurrency_observation": {
